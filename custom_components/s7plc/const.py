@@ -212,13 +212,17 @@ DEFAULT_PRESET_MODE_AUTO_VALUE = None
 DEFAULT_PRESET_MODE_DRY_VALUE = None
 DEFAULT_PRESET_MODE_FAN_ONLY_VALUE = None
 
-# Optional: opt-in bidirectional preset_mode_address readback (see
-# climate.py's hvac_mode property). Off by default to preserve the
-# pre-existing write-only behavior for installations where the PLC treats
-# preset_mode_address purely as a command (may reset/modify it independently
-# of the commanded mode), so reading it back could misreport hvac_mode.
+# Bidirectional readback for the setpoint climate ("client") entity: when
+# enabled, both hvac_mode (via preset_mode_address) and target_temperature
+# (via target_temperature_address) are read back from the PLC, instead of
+# only ever reflecting the last value commanded from HA. On by default -
+# a setpoint-controlled thermostat is expected to read back both by
+# default. Explicitly disabling it (e.g. for a PLC that treats
+# preset_mode_address purely as a command and may reset/modify it
+# independently of the commanded mode) falls back to internally tracked
+# values for both, restored on startup via RestoreEntity.
 CONF_PRESET_MODE_BIDIRECTIONAL = "preset_mode_bidirectional"
-DEFAULT_PRESET_MODE_BIDIRECTIONAL = False
+DEFAULT_PRESET_MODE_BIDIRECTIONAL = True
 
 # Climate control modes
 CONTROL_MODE_DIRECT = "direct"
