@@ -1133,6 +1133,25 @@ def test_panel_covers_bool_addresses_use_bool_placeholder() -> None:
     assert "address_help_bool" in source
 
 
+def test_panel_texts_addresses_use_string_placeholder() -> None:
+    """Text entity address/command_address fields hold STRING or WSTRING
+    values, not REAL — they must not show the generic REAL-flavored
+    address example used by numeric address fields."""
+    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
+
+    assert "const STRING_FIELDS" in source
+    string_fields_line = next(
+        line
+        for line in source.splitlines()
+        if line.strip().startswith("texts: [") and "address" in line
+    )
+    for key in ("address", "command_address"):
+        assert key in string_fields_line, f"{key} missing from texts STRING_FIELDS"
+
+    assert "stringAddress=STRING_FIELDS[type]?.includes(key)" in source
+    assert "address_example_string" in source
+
+
 def test_panel_close_command_address_required_for_traditional() -> None:
     """close_command_address is required in the editor's save validation
     for traditional covers, same as the config flow."""
