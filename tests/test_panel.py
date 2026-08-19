@@ -1077,6 +1077,30 @@ def test_panel_preserves_status_value_fields_when_status_address_unused() -> Non
     assert "COVER_STATUS_VALUE_FIELDS.forEach(k=>delete entity[k])" not in source
 
 
+def test_panel_does_not_hide_end_stop_addresses() -> None:
+    """opening_state_address/closing_state_address must never be hidden
+    based on cover_status_address/use_state_topics: they always gate
+    entity availability (S7Cover.available checks these topics
+    unconditionally), regardless of use_state_topics. An earlier version
+    of this panel hid them when use_state_topics was unchecked, which
+    could hide a field that's still actively affecting the entity -
+    reverted per maintainer review on PR #103."""
+    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
+
+    assert "COVER_END_STOP_FIELDS" not in source
+
+
+def test_panel_hides_operate_time_in_toggle_mode() -> None:
+    """toggle_mode pulses open_command_address for a fixed short duration
+    (DEFAULT_PULSE_DURATION) instead of the timer-based operate_time -
+    hidden once toggle_mode is checked since it has no effect there."""
+    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
+
+    assert (
+        "if(sel.value==='traditional'&&form.elements.toggle_mode?.checked)"
+        "{hidden=[...hidden,'close_command_address','operate_time'];}"
+    ) in source
+
 
 def test_panel_hides_invert_tilt_when_tilt_state_address_unused() -> None:
     """In Position mode, invert_tilt has nothing to invert without
@@ -1133,25 +1157,158 @@ def test_panel_covers_bool_addresses_use_bool_placeholder() -> None:
     assert "address_help_bool" in source
 
 
+def test_panel_climates_bool_addresses_use_bool_placeholder() -> None:
+    """Thermostat heating/cooling output, action, and on/off addresses are
+    all single PLC bits, not REAL values — they must not show the generic
+    REAL-flavored address example/help used by numeric address fields."""
+    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
+
+    bool_fields_line = next(
+        line
+        for line in source.splitlines()
+        if line.strip().startswith("climates: [") and "heating_output_address" in line
+    )
+    for key in (
+        "heating_output_address",
+        "cooling_output_address",
+        "heating_action_address",
+        "cooling_action_address",
+        "on_off_address",
+    ):
+        assert key in bool_fields_line, f"{key} missing from climates BOOL_FIELDS"
+
+    # Fields not on that list (e.g. status/preset addresses) stay untouched.
+    assert "hvac_status_address" not in bool_fields_line
+    assert "preset_mode_address" not in bool_fields_line
+
+
+def test_panel_texts_addresses_use_string_placeholder() -> None:
+    """Text entity address/command_address fields hold STRING or WSTRING
+    values, not REAL — they must not show the generic REAL-flavored
+    address example used by numeric address fields."""
+    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
+
+    assert "const STRING_FIELDS" in source
+    string_fields_line = next(
+        line
+        for line in source.splitlines()
+        if line.strip().startswith("texts: [") and "address" in line
+    )
+    for key in ("address", "command_address"):
+        assert key in string_fields_line, f"{key} missing from texts STRING_FIELDS"
+
+    assert "stringAddress=STRING_FIELDS[type]?.includes(key)" in source
+    assert "address_example_string" in source
+
+
 def test_panel_close_command_address_required_for_traditional() -> None:
     """close_command_address is required in the editor's save validation
-    for traditional covers, same as the config flow."""
+    for traditional covers, same as the config flow - unless toggle_mode
+    is enabled, in which case it's not needed at all (single-button
+    covers only use open_command_address)."""
     source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
 
     assert (
         "const needed=mode==='position'?'position_state_address':"
         "'open_command_address';if(!entity[needed]||(mode==='traditional'"
-        "&&!entity.close_command_address))throw "
+        "&&!entity.toggle_mode&&!entity.close_command_address))throw "
         "Error(this.t('cover_required_error'));"
     ) in source
 
 
-def test_panel_checkbox_label_can_shrink_to_fit_the_dialog() -> None:
-    """Regression test: a checkbox field's label/description span is a
-    flex child of .check (display:flex, justify-content:space-between).
-    Flex items default to min-width:auto, so a long unbroken label could
-    refuse to wrap and push the switch itself past the dialog's right
-    edge instead of wrapping onto multiple lines."""
+def test_panel_checkbox_switch_sits_next_to_title_not_the_full_description() -> None:
+    """Regression test, two rounds:
+    round 1 - a checkbox field's label/description lived in one flex
+    child of .check (display:flex, justify-content:space-between). Flex
+    items default to min-width:auto, so a long unbroken label like
+    toggle_mode's refused to wrap and pushed the switch past the dialog's
+    right edge.
+    round 2 - after fixing that (min-width:0, letting the label wrap),
+    .check's align-items:center then centered the switch vertically
+    across the *entire* wrapped multi-line text block, landing it on top
+    of a middle line instead of beside the title.
+    Fix: the switch now shares a row with only the title (<span
+    class="check-row">), sized to that single line; the description sits
+    in its own <small> below, spanning the full width with nothing beside
+    it to overlap regardless of how many lines it wraps to."""
     source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
 
-    assert ".visual-form .check>span{min-width:0}" in source
+    assert (
+        '<label class="check" data-field="${key}">'
+        '<span class="check-row"><b>${this.escape(label)}</b>'
+        '<input name="${key}" type="checkbox" ${value?\'checked\':\'\'}></span>'
+    ) in source
+    assert ".visual-form .check{display:flex;flex-direction:column;" in source
+    assert (
+        ".visual-form .check .check-row{display:flex;align-items:center;"
+        "justify-content:space-between;"
+    ) in source
+    assert ".visual-form .check .check-row>b{min-width:0}" in source
+
+
+def test_panel_checkbox_description_wraps_long_unbroken_tokens() -> None:
+    """Regression test: toggle_mode's description contains a long run of
+    text with no spaces, only slashes ("otwieranie/zatrzymana/zamykanie/
+    zatrzymana)."), and browsers don't reliably treat "/" as a line-break
+    opportunity - that single token could overflow past the box's right
+    edge instead of wrapping. overflow-wrap:break-word forces a break
+    inside such a token when it doesn't otherwise fit."""
+    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
+
+    check_rule = next(
+        line
+        for line in source.splitlines()
+        if line.strip().startswith(".visual-form .check{display:flex;flex-direction:column;")
+    )
+    assert "overflow-wrap:break-word" in check_rule
+
+
+def test_panel_regular_field_description_wraps_long_unbroken_tokens() -> None:
+    """Same bug as the checkbox one above, but for ordinary (non-checkbox)
+    fields: cover_status_address's description contains
+    "(otwarta/zamknięta/otwieranie/zamykanie/zatrzymana)" with no spaces,
+    only slashes - overflowed past the field's right edge instead of
+    wrapping, since only .check had overflow-wrap:break-word, not the
+    regular label rule used by every text/select field."""
+    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
+
+    label_rule = next(
+        line
+        for line in source.splitlines()
+        if line.strip().startswith(".visual-form label:not(.check){")
+    )
+    assert "overflow-wrap:break-word" in label_rule
+
+
+def test_panel_exposes_toggle_mode_field() -> None:
+    """The visual editor lets you enable toggle_mode for traditional
+    covers, and clears close_command_address on save when it's on (a
+    cover is either two-address or toggle, never both)."""
+    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
+
+    covers_line = next(
+        line for line in source.splitlines() if line.strip().startswith("covers:[")
+    )
+    assert '"toggle_mode"' in covers_line
+    assert "toggle_mode" in source, "toggle_mode missing a translated label"
+
+    # Meaningless for position covers, same as open/close_command_address.
+    position_hidden_line = next(
+        line
+        for line in source.splitlines()
+        if line.strip().startswith("position:") and "cover_opening_address" in line
+    )
+    assert "toggle_mode" in position_hidden_line
+
+    # Dynamic hide: checking the box hides close_command_address (and
+    # operate_time, see test_panel_hides_operate_time_in_toggle_mode).
+    assert "form.elements.toggle_mode.onchange=syncMode" in source
+    assert (
+        "if(sel.value==='traditional'&&form.elements.toggle_mode?.checked)"
+        "{hidden=[...hidden,'close_command_address','operate_time'];}"
+    ) in source
+    # Strip on save so a stale value doesn't linger once toggle_mode is on.
+    assert (
+        "if(mode==='traditional'&&entity.toggle_mode){"
+        "delete entity.close_command_address;}"
+    ) in source

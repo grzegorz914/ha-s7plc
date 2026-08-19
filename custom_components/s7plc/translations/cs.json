@@ -306,10 +306,11 @@
           "area": "Oblast",
           "device_class": "Třída zařízení",
           "scan_interval": "Interval čtení (s)",
-          "add_another": "Přidat další po uložení"
+          "add_another": "Přidat další po uložení",
+          "toggle_mode": "Režim jednoho tlačítka"
         },
         "data_description": {
-          "open_command_address": "Adresa PLC pro spuštění otevírání (např. Q0.0, DB1,X0.0).",
+          "open_command_address": "Adresa PLC pro spuštění otevírání (např. Q0.0, DB1,X0.0). V režimu jednoho tlačítka používaná postupně (otevírání/zastavení/zavírání/zastavení).",
           "close_command_address": "Adresa PLC pro spuštění zavírání (např. Q0.1, DB1,X0.1).",
           "opening_state_address": "Volitelná adresa v PLC, která signalizuje, že je krytina otevřená.",
           "closing_state_address": "Volitelná adresa v PLC, která signalizuje, že je krytina zavřená.",
@@ -322,13 +323,14 @@
           "cover_status_opening_values": "Hodnota(y) PLC znamenající, že se kryt otevírá, čtená z výše uvedené adresy stavu. Jedno nebo více celých čísel oddělených čárkami (např. 1 nebo 2,3). Ponechte prázdné pro přeskočení tohoto stavu.",
           "cover_status_closing_values": "Hodnota(y) PLC znamenající, že se kryt zavírá, čtená z výše uvedené adresy stavu. Jedno nebo více celých čísel oddělených čárkami. Ponechte prázdné pro přeskočení tohoto stavu.",
           "cover_status_stopped_values": "Hodnota(y) PLC znamenající, že kryt je zastaven (nehýbe se), čtená z výše uvedené adresy stavu. Jedno nebo více celých čísel oddělených čárkami. Ponechte prázdné pro přeskočení tohoto stavu.",
-          "operate_time": "Počet sekund, po které má být příkaz aktivní, než se výstupy resetují a stav pohybu se vymaže.",
+          "operate_time": "Maximální doba, po kterou zůstane příkaz aktivní. Reálná zpětná vazba o pohybu (adresa stavu, nebo booleovské adresy otevírání/zavírání/zastavení) zastaví kryt, jakmile potvrdí, že pohyb skončil; tento časovač zasáhne pouze pokud není nastavena žádná zpětná vazba, nebo pokud nikdy nepotvrdí.",
           "use_state_topics": "Zapněte pro použití stavových adres k určení polohy krytiny. Pokud je vypnuto, poloha se odhaduje podle doby chodu.",
           "name": "Volitelný srozumitelný název krytiny.",
           "area": "Oblast Home Assistantu, do které má být tato entita přiřazena.",
           "device_class": "Třída zařízení Home Assistant pro upřesnění UI/chování (např. shutter, blind, garage).",
           "scan_interval": "Přepíše interval čtení pro tyto tagy v sekundách. Ponechte prázdné pro použití výchozího intervalu PLC.",
-          "add_another": "Zůstat v tomto kroku a přidat další krytiny."
+          "add_another": "Zůstat v tomto kroku a přidat další krytiny.",
+          "toggle_mode": "Impulzní tlačítko místo samostatných adres otevírání/zavírání: každé stisknutí spustí další akci - otevírá se/zastaveno/zavírá se/zastaveno. Adresa zavírání se nepoužívá. Vyžaduje detekci pohybu: adresu stavu se všemi 4 hodnotami stavu, nebo adresu otevírání a adresu zavírání."
         }
       },
       "covers_position": {
@@ -528,7 +530,7 @@
           "current_temperature_address": "Adresa aktuální teploty",
           "target_temperature_address": "Adresa cílové teploty",
           "preset_mode_address": "Adresa režimu předvolby",
-          "preset_mode_bidirectional": "Obousměrný režim přednastavení",
+          "preset_mode_bidirectional": "Obousměrná komunikace",
           "on_off_address": "Adresa zap./vyp.",
           "preset_mode_off_value": "Hodnota pro režim VYPNUTO",
           "preset_mode_heat_value": "Hodnota pro režim TOPENÍ",
@@ -558,7 +560,7 @@
           "current_temperature_address": "Adresa PLC pro čtení aktuální teploty (např. DB1,REAL0, DB2,INT4).",
           "target_temperature_address": "Adresa PLC pro zápis a čtení nastavené cílové teploty (např. DB1,REAL4, DB2,INT8).",
           "preset_mode_address": "Volitelná adresa PLC pro zápis režimu HVAC pomocí hodnoty nastavené níže pro každý režim. Užitečné, pokud PLC potřebuje povolit/zakázat regulaci klimatizace. Ve výchozím nastavení pouze pro zápis; povolením preset_mode_bidirectional ji lze také číst zpět.",
-          "preset_mode_bidirectional": "Také čte preset_mode_address zpět a použije ji jako aktuální režim HVAC. Ve výchozím nastavení vypnuto kvůli zpětné kompatibilitě: některá PLC považují tuto adresu čistě za příkaz a mohou ji resetovat nebo upravit nezávisle na požadovaném režimu, což by při zpětném čtení mohlo vést k nesprávnému hlášení režimu.",
+          "preset_mode_bidirectional": "Ve výchozím nastavení zapnuto - čte zpět jak požadovanou teplotu (target_temperature_address), tak režim HVAC (preset_mode_address) z PLC. Po vypnutí jsou obě hodnoty sledovány pouze lokálně, na základě posledního příkazu odeslaného z HA.",
           "on_off_address": "Volitelná booleovská adresa PLC pro zapnutí/vypnutí tohoto termostatu, pro zařízení bez vlastního režimu VYPNUTO (např. topení/chlazení zapínané samostatným výstupem). Zapisuje Nepravda/0, když je cílový režim nastaven na VYPNUTO, a Pravda/1 pro jakýkoli jiný režim. Ponechte prázdné pro použití standardního chování VYPNUTO. Také zpětně čtena z PLC pro zobrazení skutečného stavu zap./vyp. (obousměrná komunikace).",
           "preset_mode_off_value": "Hodnota PLC zapsaná při nastavení režimu na VYPNUTO (např. 0). Ponechte prázdné pro skrytí tohoto režimu ze seznamu režimů termostatu. Pokud je nakonfigurována on_off_address, je toto pro VYPNUTO ignorováno: režim zůstává dostupný a je přepínán prostřednictvím této adresy.",
           "preset_mode_heat_value": "Hodnota PLC zapsaná při nastavení režimu na TOPENÍ (např. 1). Ponechte prázdné pro skrytí tohoto režimu ze seznamu režimů termostatu.",
@@ -642,7 +644,7 @@
           "current_temperature_address": "Adresa aktuální teploty",
           "target_temperature_address": "Adresa cílové teploty",
           "preset_mode_address": "Adresa předvoleného režimu",
-          "preset_mode_bidirectional": "Obousměrný režim přednastavení",
+          "preset_mode_bidirectional": "Obousměrná komunikace",
           "on_off_address": "Adresa zap./vyp.",
           "preset_mode_off_value": "Hodnota pro režim VYPNUTO",
           "preset_mode_heat_value": "Hodnota pro režim TOPENÍ",
@@ -671,7 +673,7 @@
           "current_temperature_address": "Adresa v PLC pro čtení aktuální teploty (např. DB1,REAL0, DB2,INT4).",
           "target_temperature_address": "Adresa v PLC pro zápis a čtení cílové teploty (např. DB1,REAL4, DB2,INT8).",
           "preset_mode_address": "Volitelná adresa PLC pro zápis režimu HVAC pomocí hodnoty nastavené níže pro každý režim. Ve výchozím nastavení pouze pro zápis; povolením preset_mode_bidirectional ji lze také číst zpět.",
-          "preset_mode_bidirectional": "Také čte preset_mode_address zpět a použije ji jako aktuální režim HVAC. Ve výchozím nastavení vypnuto kvůli zpětné kompatibilitě: některá PLC považují tuto adresu čistě za příkaz a mohou ji resetovat nebo upravit nezávisle na požadovaném režimu, což by při zpětném čtení mohlo vést k nesprávnému hlášení režimu.",
+          "preset_mode_bidirectional": "Ve výchozím nastavení zapnuto - čte zpět jak požadovanou teplotu (target_temperature_address), tak režim HVAC (preset_mode_address) z PLC. Po vypnutí jsou obě hodnoty sledovány pouze lokálně, na základě posledního příkazu odeslaného z HA.",
           "on_off_address": "Volitelná booleovská adresa PLC pro zapnutí/vypnutí tohoto termostatu, pro zařízení bez vlastního režimu VYPNUTO (např. topení/chlazení zapínané samostatným výstupem). Zapisuje Nepravda/0, když je cílový režim nastaven na VYPNUTO, a Pravda/1 pro jakýkoli jiný režim. Ponechte prázdné pro použití standardního chování VYPNUTO. Také zpětně čtena z PLC pro zobrazení skutečného stavu zap./vyp. (obousměrná komunikace).",
           "preset_mode_off_value": "Hodnota PLC zapsaná při nastavení režimu na VYPNUTO (např. 0). Ponechte prázdné pro skrytí tohoto režimu ze seznamu režimů termostatu. Pokud je nakonfigurována on_off_address, je toto pro VYPNUTO ignorováno: režim zůstává dostupný a je přepínán prostřednictvím této adresy.",
           "preset_mode_heat_value": "Hodnota PLC zapsaná při nastavení režimu na TOPENÍ (např. 1). Ponechte prázdné pro skrytí tohoto režimu ze seznamu režimů termostatu.",
@@ -827,10 +829,11 @@
           "name": "Název",
           "area": "Oblast",
           "device_class": "Třída zařízení",
-          "scan_interval": "Interval čtení (s)"
+          "scan_interval": "Interval čtení (s)",
+          "toggle_mode": "Režim jednoho tlačítka"
         },
         "data_description": {
-          "open_command_address": "Adresa PLC, která spouští otevírání.",
+          "open_command_address": "Adresa PLC, která spouští otevírání. V režimu jednoho tlačítka používaná postupně (otevírání/zastavení/zavírání/zastavení).",
           "close_command_address": "Adresa PLC, která spouští zavírání.",
           "opening_state_address": "Volitelná adresa v PLC, která signalizuje, že je krytina otevřená.",
           "closing_state_address": "Volitelná adresa v PLC, která signalizuje, že je krytina zavřená.",
@@ -843,12 +846,13 @@
           "cover_status_opening_values": "Hodnota(y) PLC znamenající, že se kryt otevírá, čtená z výše uvedené adresy stavu. Jedno nebo více celých čísel oddělených čárkami (např. 1 nebo 2,3). Ponechte prázdné pro přeskočení tohoto stavu.",
           "cover_status_closing_values": "Hodnota(y) PLC znamenající, že se kryt zavírá, čtená z výše uvedené adresy stavu. Jedno nebo více celých čísel oddělených čárkami. Ponechte prázdné pro přeskočení tohoto stavu.",
           "cover_status_stopped_values": "Hodnota(y) PLC znamenající, že kryt je zastaven (nehýbe se), čtená z výše uvedené adresy stavu. Jedno nebo více celých čísel oddělených čárkami. Ponechte prázdné pro přeskočení tohoto stavu.",
-          "operate_time": "Počet sekund, po které má krytina běžet, než integrace resetuje příkazové výstupy a vymaže stavové příznaky.",
+          "operate_time": "Maximální doba, po kterou zůstane příkaz aktivní. Reálná zpětná vazba o pohybu (adresa stavu, nebo booleovské adresy otevírání/zavírání/zastavení) zastaví kryt, jakmile potvrdí, že pohyb skončil; tento časovač zasáhne pouze pokud není nastavena žádná zpětná vazba, nebo pokud nikdy nepotvrdí.",
           "use_state_topics": "Zapněte pro použití stavových adres k určení polohy krytiny. Pokud je vypnuto, poloha se odhaduje podle doby chodu.",
           "name": "Volitelný srozumitelný název krytiny.",
           "area": "Oblast Home Assistantu, do které má být tato entita přiřazena.",
           "device_class": "Třída zařízení Home Assistant pro upřesnění UI/chování (např. shutter, blind, garage).",
-          "scan_interval": "Přepíše interval čtení pro tyto tagy v sekundách. Ponechte prázdné pro použití výchozího intervalu PLC."
+          "scan_interval": "Přepíše interval čtení pro tyto tagy v sekundách. Ponechte prázdné pro použití výchozího intervalu PLC.",
+          "toggle_mode": "Impulzní tlačítko místo samostatných adres otevírání/zavírání: každé stisknutí spustí další akci - otevírá se/zastaveno/zavírá se/zastaveno. Adresa zavírání se nepoužívá. Vyžaduje detekci pohybu: adresu stavu se všemi 4 hodnotami stavu, nebo adresu otevírání a adresu zavírání."
         }
       },
       "edit_cover_position": {
@@ -1038,7 +1042,8 @@
       "sync_same_address": "Synchronizace stavu vyžaduje adresu příkazu odlišnou od adresy stavu.",
       "invalid_integer": "Zadejte celé číslo (desetinná čísla nejsou povolena).",
       "duplicate_preset_value": "Stejnou hodnotu nelze přiřadit dvěma různým režimům HVAC.",
-      "duplicate_status_value": "Stejnou hodnotu nelze přiřadit dvěma různým stavům HVAC."
+      "duplicate_status_value": "Stejnou hodnotu nelze přiřadit dvěma různým stavům HVAC.",
+      "toggle_mode_requires_feedback": "Režim jednoho tlačítka vyžaduje reálnou zpětnou vazbu, aby fungoval správně: adresu stavu se všemi 4 hodnotami stavu, nebo adresu otevírání a adresu zavírání pro pohyb spolu s oběma adresami koncových spínačů/polohy pro ustálený stav."
     }
   },
   "issues": {

@@ -306,10 +306,11 @@
           "area": "Area",
           "device_class": "Classe dispositivo",
           "scan_interval": "Intervallo di scansione (s)",
-          "add_another": "Aggiungi un altro dopo il salvataggio"
+          "add_another": "Aggiungi un altro dopo il salvataggio",
+          "toggle_mode": "Modalità pulsante singolo"
         },
         "data_description": {
-          "open_command_address": "Indirizzo PLC per attivare l'apertura (es. Q0.0, DB1,X0.0).",
+          "open_command_address": "Indirizzo PLC per attivare l'apertura (es. Q0.0, DB1,X0.0). In modalità pulsante singolo, usato in sequenza (apertura/fermo/chiusura/fermo).",
           "close_command_address": "Indirizzo PLC per attivare la chiusura (es. Q0.1, DB1,X0.1).",
           "opening_state_address": "Indirizzo PLC opzionale che indica che la cover è aperta.",
           "closing_state_address": "Indirizzo PLC opzionale che indica che la cover è chiusa.",
@@ -322,13 +323,14 @@
           "cover_status_opening_values": "Valore/i PLC che indicano che la copertura si sta aprendo, letti dall'indirizzo di stato sopra. Uno o più numeri interi separati da virgole (es. 1 oppure 2,3). Lascia vuoto per saltare questo stato.",
           "cover_status_closing_values": "Valore/i PLC che indicano che la copertura si sta chiudendo, letti dall'indirizzo di stato sopra. Uno o più numeri interi separati da virgole. Lascia vuoto per saltare questo stato.",
           "cover_status_stopped_values": "Valore/i PLC che indicano che la copertura è ferma (non in movimento), letti dall'indirizzo di stato sopra. Uno o più numeri interi separati da virgole. Lascia vuoto per saltare questo stato.",
-          "operate_time": "Secondi in cui mantenere attivo il comando prima di riportare l'uscita a falso e azzerare lo stato di movimento.",
+          "operate_time": "Tempo massimo per cui mantenere attivo il comando. Il feedback di movimento reale (indirizzo di stato, o gli indirizzi booleani apertura/chiusura/fermo) ferma la tapparella non appena conferma che il movimento è terminato; questo timer interviene solo se non è configurato alcun feedback, o se non conferma mai.",
           "use_state_topics": "Abilita per usare gli indirizzi di feedback di stato per determinare la posizione della cover. Se disabilitato, la posizione viene dedotta dal tempo di manovra.",
           "name": "Nome descrittivo opzionale per la cover.",
           "area": "Area di Home Assistant a cui assegnare questa entità.",
           "device_class": "Classe dispositivo di Home Assistant per affinare l'interfaccia/il comportamento (es. shutter, blind, garage).",
           "scan_interval": "Frequenza di polling specifica per questi tag in secondi. Usa valori decimali per precisione al millisecondo. Se omesso, viene usato l'intervallo di scansione predefinito del PLC.",
-          "add_another": "Rimani in questo step per aggiungere altre cover."
+          "add_another": "Rimani in questo step per aggiungere altre cover.",
+          "toggle_mode": "Pulsante a impulso invece di indirizzi separati di apertura/chiusura: ogni pressione avvia l'azione successiva - si apre/fermo/si chiude/fermo. L'indirizzo di chiusura non viene utilizzato. Richiede il rilevamento del movimento: un indirizzo di stato con tutti e 4 i valori di stato, oppure un indirizzo di apertura e un indirizzo di chiusura."
         }
       },
       "covers_position": {
@@ -528,7 +530,7 @@
           "current_temperature_address": "Indirizzo temperatura corrente",
           "target_temperature_address": "Indirizzo temperatura target",
           "preset_mode_address": "Indirizzo modalità preset",
-          "preset_mode_bidirectional": "Modalità preset bidirezionale",
+          "preset_mode_bidirectional": "Comunicazione bidirezionale",
           "on_off_address": "Indirizzo on/off",
           "preset_mode_off_value": "Valore modalità OFF",
           "preset_mode_heat_value": "Valore modalità Riscaldamento",
@@ -558,7 +560,7 @@
           "current_temperature_address": "Indirizzo PLC per leggere la temperatura corrente (es. DB1,REAL0, DB2,INT4).",
           "target_temperature_address": "Indirizzo PLC per scrivere e leggere il setpoint della temperatura target (es. DB1,REAL4, DB2,INT8).",
           "preset_mode_address": "Indirizzo PLC opzionale per scrivere la modalità HVAC, usando il valore configurato di seguito per ciascuna modalità. Utile se il PLC deve abilitare/disabilitare il controllo climatico. Di sola scrittura per impostazione predefinita; abilita preset_mode_bidirectional per leggerlo anche in lettura.",
-          "preset_mode_bidirectional": "Legge anche preset_mode_address e lo usa come modalità HVAC corrente. Disattivato per impostazione predefinita per compatibilità con le versioni precedenti: alcuni PLC trattano questo indirizzo esclusivamente come un comando e potrebbero azzerarlo o modificarlo indipendentemente dalla modalità richiesta, il che potrebbe segnalare la modalità in modo errato se letto.",
+          "preset_mode_bidirectional": "Attivo per impostazione predefinita - rilegge sia la temperatura richiesta (target_temperature_address) sia la modalità HVAC (preset_mode_address) dal PLC. Disattivandolo, entrambe vengono tracciate solo localmente, in base all'ultimo comando inviato da HA.",
           "on_off_address": "Indirizzo PLC booleano opzionale per accendere/spegnere questo termostato, per dispositivi privi di una propria modalità OFF (es. un riscaldatore/raffreddatore acceso/spento tramite un'uscita separata). Scrive Falso/0 quando la modalità target è impostata su OFF, e Vero/1 per qualsiasi altra modalità. Lascia vuoto per usare invece il comportamento OFF standard. Viene anche riletto dal PLC per riflettere lo stato on/off effettivo (bidirezionale).",
           "preset_mode_off_value": "Valore PLC scritto quando la modalità è impostata su OFF (es. 0). Lascia vuoto per nascondere questa modalità dall'elenco delle modalità del termostato. Se on_off_address è configurato, questo viene ignorato per OFF: la modalità rimane disponibile e viene commutata tramite tale indirizzo.",
           "preset_mode_heat_value": "Valore PLC scritto quando la modalità è impostata su Riscaldamento (es. 1). Lascia vuoto per nascondere questa modalità dall'elenco delle modalità del termostato.",
@@ -715,10 +717,11 @@
           "name": "Nome",
           "area": "Area",
           "device_class": "Classe dispositivo",
-          "scan_interval": "Intervallo di scansione (s)"
+          "scan_interval": "Intervallo di scansione (s)",
+          "toggle_mode": "Modalità pulsante singolo"
         },
         "data_description": {
-          "open_command_address": "Indirizzo PLC che attiva l'apertura.",
+          "open_command_address": "Indirizzo PLC che attiva l'apertura. In modalità pulsante singolo, usato in sequenza (apertura/fermo/chiusura/fermo).",
           "close_command_address": "Indirizzo PLC che attiva la chiusura.",
           "opening_state_address": "Indirizzo PLC opzionale che segnala che la cover è aperta.",
           "closing_state_address": "Indirizzo PLC opzionale che segnala che la cover è chiusa.",
@@ -731,12 +734,13 @@
           "cover_status_opening_values": "Valore/i PLC che indicano che la copertura si sta aprendo, letti dall'indirizzo di stato sopra. Uno o più numeri interi separati da virgole (es. 1 oppure 2,3). Lascia vuoto per saltare questo stato.",
           "cover_status_closing_values": "Valore/i PLC che indicano che la copertura si sta chiudendo, letti dall'indirizzo di stato sopra. Uno o più numeri interi separati da virgole. Lascia vuoto per saltare questo stato.",
           "cover_status_stopped_values": "Valore/i PLC che indicano che la copertura è ferma (non in movimento), letti dall'indirizzo di stato sopra. Uno o più numeri interi separati da virgole. Lascia vuoto per saltare questo stato.",
-          "operate_time": "Secondi di funzionamento prima che l'integrazione ripristini gli output di comando e azzeri le segnalazioni di movimento.",
+          "operate_time": "Tempo massimo per cui mantenere attivo il comando. Il feedback di movimento reale (indirizzo di stato, o gli indirizzi booleani apertura/chiusura/fermo) ferma la tapparella non appena conferma che il movimento è terminato; questo timer interviene solo se non è configurato alcun feedback, o se non conferma mai.",
           "use_state_topics": "Abilita per usare gli indirizzi di feedback di stato per determinare la posizione della cover. Se disabilitato, la posizione viene dedotta dal tempo di manovra.",
           "name": "Nome descrittivo opzionale per la cover.",
           "area": "Area di Home Assistant a cui assegnare questa entità.",
           "device_class": "Classe dispositivo di Home Assistant per affinare l'interfaccia/il comportamento (es. shutter, blind, garage).",
-          "scan_interval": "Frequenza di polling specifica per questi tag in secondi. Usa valori decimali per precisione al millisecondo. Se omesso, viene usato l'intervallo di scansione predefinito del PLC."
+          "scan_interval": "Frequenza di polling specifica per questi tag in secondi. Usa valori decimali per precisione al millisecondo. Se omesso, viene usato l'intervallo di scansione predefinito del PLC.",
+          "toggle_mode": "Pulsante a impulso invece di indirizzi separati di apertura/chiusura: ogni pressione avvia l'azione successiva - si apre/fermo/si chiude/fermo. L'indirizzo di chiusura non viene utilizzato. Richiede il rilevamento del movimento: un indirizzo di stato con tutti e 4 i valori di stato, oppure un indirizzo di apertura e un indirizzo di chiusura."
         }
       },
       "edit_cover_position": {
@@ -924,7 +928,7 @@
           "current_temperature_address": "Indirizzo temperatura corrente",
           "target_temperature_address": "Indirizzo temperatura target",
           "preset_mode_address": "Indirizzo modalità preset",
-          "preset_mode_bidirectional": "Modalità preset bidirezionale",
+          "preset_mode_bidirectional": "Comunicazione bidirezionale",
           "on_off_address": "Indirizzo on/off",
           "preset_mode_off_value": "Valore modalità OFF",
           "preset_mode_heat_value": "Valore modalità Riscaldamento",
@@ -953,7 +957,7 @@
           "current_temperature_address": "Indirizzo PLC per leggere la temperatura corrente (es. DB1,REAL0, DB2,INT4).",
           "target_temperature_address": "Indirizzo PLC per scrivere e leggere il setpoint della temperatura target (es. DB1,REAL4, DB2,INT8).",
           "preset_mode_address": "Indirizzo PLC opzionale per scrivere la modalità HVAC, usando il valore configurato di seguito per ciascuna modalità. Di sola scrittura per impostazione predefinita; abilita preset_mode_bidirectional per leggerlo anche in lettura.",
-          "preset_mode_bidirectional": "Legge anche preset_mode_address e lo usa come modalità HVAC corrente. Disattivato per impostazione predefinita per compatibilità con le versioni precedenti: alcuni PLC trattano questo indirizzo esclusivamente come un comando e potrebbero azzerarlo o modificarlo indipendentemente dalla modalità richiesta, il che potrebbe segnalare la modalità in modo errato se letto.",
+          "preset_mode_bidirectional": "Attivo per impostazione predefinita - rilegge sia la temperatura richiesta (target_temperature_address) sia la modalità HVAC (preset_mode_address) dal PLC. Disattivandolo, entrambe vengono tracciate solo localmente, in base all'ultimo comando inviato da HA.",
           "on_off_address": "Indirizzo PLC booleano opzionale per accendere/spegnere questo termostato, per dispositivi privi di una propria modalità OFF (es. un riscaldatore/raffreddatore acceso/spento tramite un'uscita separata). Scrive Falso/0 quando la modalità target è impostata su OFF, e Vero/1 per qualsiasi altra modalità. Lascia vuoto per usare invece il comportamento OFF standard. Viene anche riletto dal PLC per riflettere lo stato on/off effettivo (bidirezionale).",
           "preset_mode_off_value": "Valore PLC scritto quando la modalità è impostata su OFF (es. 0). Lascia vuoto per nascondere questa modalità dall'elenco delle modalità del termostato. Se on_off_address è configurato, questo viene ignorato per OFF: la modalità rimane disponibile e viene commutata tramite tale indirizzo.",
           "preset_mode_heat_value": "Valore PLC scritto quando la modalità è impostata su Riscaldamento (es. 1). Lascia vuoto per nascondere questa modalità dall'elenco delle modalità del termostato.",
@@ -1038,7 +1042,8 @@
       "sync_same_address": "La sincronizzazione stato richiede un indirizzo comando diverso dall'indirizzo stato.",
       "invalid_integer": "Inserisci un numero intero (i decimali non sono consentiti).",
       "duplicate_preset_value": "Lo stesso valore non può essere assegnato a due modalità HVAC diverse.",
-      "duplicate_status_value": "Lo stesso valore non può essere assegnato a due stati HVAC diversi."
+      "duplicate_status_value": "Lo stesso valore non può essere assegnato a due stati HVAC diversi.",
+      "toggle_mode_requires_feedback": "La modalità pulsante singolo richiede un feedback reale per funzionare correttamente: un indirizzo di stato configurato con tutti e 4 i valori di stato, oppure un indirizzo di apertura e un indirizzo di chiusura per il movimento insieme a entrambi gli indirizzi di finecorsa/posizione per lo stato stabile."
     }
   },
   "issues": {

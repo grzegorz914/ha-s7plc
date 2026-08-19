@@ -306,10 +306,11 @@
           "area": "Bereich",
           "device_class": "Geräteklasse",
           "scan_interval": "Scan-Intervall (s)",
-          "add_another": "Nach dem Speichern weitere hinzufügen ?"
+          "add_another": "Nach dem Speichern weitere hinzufügen ?",
+          "toggle_mode": "Ein-Tasten-Modus"
         },
         "data_description": {
-          "open_command_address": "SPS-Adresse zum Auslösen des Öffnens (z. B. Q0.0, DB1,X0.0).",
+          "open_command_address": "SPS-Adresse zum Auslösen des Öffnens (z. B. Q0.0, DB1,X0.0). Im Ein-Tasten-Modus nacheinander verwendet (Öffnen/Stopp/Schließen/Stopp).",
           "close_command_address": "SPS-Adresse zum Auslösen des Schließens (z. B. Q0.1, DB1,X0.1).",
           "opening_state_address": "SPS-Adresse, die anzeigt, dass die Jalousie/Raffstore geöffnet ist (optional).",
           "closing_state_address": "SPS-Adresse, die anzeigt, dass die Jalousie/Raffstore geschlossen ist (optional).",
@@ -322,13 +323,14 @@
           "cover_status_opening_values": "SPS-Wert(e) für 'Abdeckung öffnet sich', gelesen von der obigen Statusadresse. Eine oder mehrere ganze Zahlen, durch Kommas getrennt (z.B. 1 oder 2,3). Leer lassen, um diesen Status zu überspringen.",
           "cover_status_closing_values": "SPS-Wert(e) für 'Abdeckung schließt sich', gelesen von der obigen Statusadresse. Eine oder mehrere ganze Zahlen, durch Kommas getrennt. Leer lassen, um diesen Status zu überspringen.",
           "cover_status_stopped_values": "SPS-Wert(e) für 'Abdeckung gestoppt' (keine Bewegung), gelesen von der obigen Statusadresse. Eine oder mehrere ganze Zahlen, durch Kommas getrennt. Leer lassen, um diesen Status zu überspringen.",
-          "operate_time": "Zeit (s), um den Befehl aktiv zu halten, bevor die Ausgänge zurückgesetzt und der Bewegungszustand gelöscht wird.",
+          "operate_time": "Maximale Zeit, für die der Befehl aktiv bleibt. Echtes Bewegungs-Feedback (Statusadresse oder die booleschen Öffnen-/Schließen-/Gestoppt-Adressen) stoppt die Abdeckung, sobald es das Ende der Bewegung bestätigt; dieser Timer greift nur, wenn kein solches Feedback konfiguriert ist oder es nie bestätigt.",
           "use_state_topics": "Aktivieren Sie diese Option, um Adressen zur Bestimmung der Position zu verwenden. Wenn deaktiviert, wird die Position aus der Laufzeit abgeleitet.",
           "name": "Name für die Jalousie/Raffstore (optional).",
           "area": "Home Assistant Bereich, dem diese Entität zugeordnet werden soll.",
           "device_class": "Home Assistant Geräteklasse zur Verfeinerung der UI/des Verhaltens (z. B. shutter, blind, garage).",
           "scan_interval": "Abfragezyklus für diese Tags in Sekunden. Leerlassen, um den SPS-Standard zu übernehmen.",
-          "add_another": "Weitere Jalousie/Raffstores hinzuzufügen ?"
+          "add_another": "Weitere Jalousie/Raffstores hinzuzufügen ?",
+          "toggle_mode": "Impulstaster anstelle separater Öffnen-/Schließen-Adressen: jeder Tastendruck löst die nächste Aktion aus - öffnet sich/gestoppt/schließt sich/gestoppt. Die Schließadresse wird nicht verwendet. Erfordert eine Bewegungserkennung: eine Statusadresse mit allen 4 Statuswerten, oder eine Öffnungsadresse und eine Schließadresse."
         }
       },
       "covers_position": {
@@ -528,7 +530,7 @@
           "current_temperature_address": "Aktuelle Temperaturadresse",
           "target_temperature_address": "Zieltemperaturadresse",
           "preset_mode_address": "Voreinstellungsmodusadresse",
-          "preset_mode_bidirectional": "Bidirektionaler Voreinstellungsmodus",
+          "preset_mode_bidirectional": "Bidirektionale Kommunikation",
           "on_off_address": "Wert für Ein/Aus",
           "preset_mode_off_value": "Wert für Modus AUS",
           "preset_mode_heat_value": "Wert für Modus HEIZEN",
@@ -558,7 +560,7 @@
           "current_temperature_address": "SPS-Adresse zum Lesen der aktuellen Temperatur (z.B. DB1,REAL0, DB2,INT4).",
           "target_temperature_address": "SPS-Adresse zum Schreiben und Lesen des Zieltemperatur-Sollwerts (z.B. DB1,REAL4, DB2,INT8).",
           "preset_mode_address": "Optionale SPS-Adresse zum Schreiben des HVAC-Modus, wobei der unten für jeden Modus konfigurierte Wert verwendet wird. Nützlich, wenn die SPS die Klimasteuerung aktivieren/deaktivieren muss. Standardmäßig nur zum Schreiben; aktivieren Sie preset_mode_bidirectional, um sie auch zurückzulesen.",
-          "preset_mode_bidirectional": "Liest preset_mode_address auch zurück und verwendet sie als aktuellen HVAC-Modus. Standardmäßig deaktiviert, aus Gründen der Abwärtskompatibilität: Einige SPS behandeln diese Adresse ausschließlich als Befehl und können sie unabhängig vom angeforderten Modus zurücksetzen oder ändern, was beim Zurücklesen zu einer falschen Modusanzeige führen könnte.",
+          "preset_mode_bidirectional": "Standardmäßig aktiviert - liest sowohl die Soll-Temperatur (target_temperature_address) als auch den HVAC-Modus (preset_mode_address) von der SPS zurück. Bei Deaktivierung werden beide nur lokal verfolgt, basierend auf dem letzten von HA gesendeten Befehl.",
           "on_off_address": "Optionale boolesche SPS-Adresse zum Ein-/Ausschalten dieses Thermostats, für Geräte ohne eigenen AUS-Modus (z.B. eine Heizung/Kühlung, die über einen separaten Ausgang ein-/ausgeschaltet wird). Schreibt Falsch/0, wenn der Zielmodus auf AUS gesetzt wird, und Wahr/1 für jeden anderen Modus. Leer lassen, um stattdessen das Standard-AUS-Verhalten zu verwenden. Wird auch von der SPS zurückgelesen, um den tatsächlichen Ein-/Aus-Zustand widerzuspiegeln (bidirektional).",
           "preset_mode_off_value": "SPS-Wert, der geschrieben wird, wenn der Modus auf AUS gesetzt wird (z.B. 0). Leer lassen, um diesen Modus aus der Modusliste des Thermostats auszublenden. Wenn on_off_address konfiguriert ist, wird dies für AUS ignoriert: der Modus bleibt verfügbar und wird stattdessen über diese Adresse geschaltet.",
           "preset_mode_heat_value": "SPS-Wert, der geschrieben wird, wenn der Modus auf HEIZEN gesetzt wird (z.B. 1). Leer lassen, um diesen Modus aus der Modusliste des Thermostats auszublenden.",
@@ -642,7 +644,7 @@
           "current_temperature_address": "Aktuelle Temperaturadresse",
           "target_temperature_address": "Zieltemperaturadresse",
           "preset_mode_address": "Voreinstellungsmodusadresse",
-          "preset_mode_bidirectional": "Bidirektionaler Voreinstellungsmodus",
+          "preset_mode_bidirectional": "Bidirektionale Kommunikation",
           "on_off_address": "Ein/Aus-Adresse",
           "preset_mode_off_value": "Wert für Modus AUS",
           "preset_mode_heat_value": "Wert für Modus HEIZEN",
@@ -671,7 +673,7 @@
           "current_temperature_address": "SPS-Adresse zum Lesen der aktuellen Temperatur (z.B. DB1,REAL0, DB2,INT4).",
           "target_temperature_address": "SPS-Adresse zum Schreiben und Lesen des Zieltemperatur-Sollwerts (z.B. DB1,REAL4, DB2,INT8).",
           "preset_mode_address": "Optionale SPS-Adresse zum Schreiben des HVAC-Modus, wobei der unten für jeden Modus konfigurierte Wert verwendet wird. Standardmäßig nur zum Schreiben; aktivieren Sie preset_mode_bidirectional, um sie auch zurückzulesen.",
-          "preset_mode_bidirectional": "Liest preset_mode_address auch zurück und verwendet sie als aktuellen HVAC-Modus. Standardmäßig deaktiviert, aus Gründen der Abwärtskompatibilität: Einige SPS behandeln diese Adresse ausschließlich als Befehl und können sie unabhängig vom angeforderten Modus zurücksetzen oder ändern, was beim Zurücklesen zu einer falschen Modusanzeige führen könnte.",
+          "preset_mode_bidirectional": "Standardmäßig aktiviert - liest sowohl die Soll-Temperatur (target_temperature_address) als auch den HVAC-Modus (preset_mode_address) von der SPS zurück. Bei Deaktivierung werden beide nur lokal verfolgt, basierend auf dem letzten von HA gesendeten Befehl.",
           "on_off_address": "Optionale boolesche SPS-Adresse zum Ein-/Ausschalten dieses Thermostats, für Geräte ohne eigenen AUS-Modus (z.B. eine Heizung/Kühlung, die über einen separaten Ausgang ein-/ausgeschaltet wird). Schreibt Falsch/0, wenn der Zielmodus auf AUS gesetzt wird, und Wahr/1 für jeden anderen Modus. Leer lassen, um stattdessen das Standard-AUS-Verhalten zu verwenden. Wird auch von der SPS zurückgelesen, um den tatsächlichen Ein-/Aus-Zustand widerzuspiegeln (bidirektional).",
           "preset_mode_off_value": "SPS-Wert, der geschrieben wird, wenn der Modus auf AUS gesetzt wird (z.B. 0). Leer lassen, um diesen Modus aus der Modusliste des Thermostats auszublenden. Wenn on_off_address konfiguriert ist, wird dies für AUS ignoriert: der Modus bleibt verfügbar und wird stattdessen über diese Adresse geschaltet.",
           "preset_mode_heat_value": "SPS-Wert, der geschrieben wird, wenn der Modus auf HEIZEN gesetzt wird (z.B. 1). Leer lassen, um diesen Modus aus der Modusliste des Thermostats auszublenden.",
@@ -827,10 +829,11 @@
           "name": "Name",
           "area": "Bereich",
           "device_class": "Geräteklasse",
-          "scan_interval": "Scan-Intervall (s)"
+          "scan_interval": "Scan-Intervall (s)",
+          "toggle_mode": "Ein-Tasten-Modus"
         },
         "data_description": {
-          "open_command_address": "SPS-Adresse, die das Öffnen auslöst.",
+          "open_command_address": "SPS-Adresse, die das Öffnen auslöst. Im Ein-Tasten-Modus nacheinander verwendet (Öffnen/Stopp/Schließen/Stopp).",
           "close_command_address": "SPS-Adresse, die das Schließen auslöst.",
           "opening_state_address": "SPS-Adresse, die signalisiert, dass die Jalousie/Raffstore geöffnet ist (optional).",
           "closing_state_address": "SPS-Adresse, die signalisiert, dass die Jalousie/Raffstore geschlossen ist (optional).",
@@ -843,12 +846,13 @@
           "cover_status_opening_values": "SPS-Wert(e) für 'Abdeckung öffnet sich', gelesen von der obigen Statusadresse. Eine oder mehrere ganze Zahlen, durch Kommas getrennt (z.B. 1 oder 2,3). Leer lassen, um diesen Status zu überspringen.",
           "cover_status_closing_values": "SPS-Wert(e) für 'Abdeckung schließt sich', gelesen von der obigen Statusadresse. Eine oder mehrere ganze Zahlen, durch Kommas getrennt. Leer lassen, um diesen Status zu überspringen.",
           "cover_status_stopped_values": "SPS-Wert(e) für 'Abdeckung gestoppt' (keine Bewegung), gelesen von der obigen Statusadresse. Eine oder mehrere ganze Zahlen, durch Kommas getrennt. Leer lassen, um diesen Status zu überspringen.",
-          "operate_time": "Sekunden, die die Jalousie/Raffstore betrieben werden soll, bevor die Integration die Befehlsausgänge zurücksetzt und die Zustandsflags löscht.",
+          "operate_time": "Maximale Zeit, für die der Befehl aktiv bleibt. Echtes Bewegungs-Feedback (Statusadresse oder die booleschen Öffnen-/Schließen-/Gestoppt-Adressen) stoppt die Abdeckung, sobald es das Ende der Bewegung bestätigt; dieser Timer greift nur, wenn kein solches Feedback konfiguriert ist oder es nie bestätigt.",
           "use_state_topics": "Aktivieren Sie diese Option, um Zustandsvariablen zur Bestimmung der Jalousie/Raffstoresposition zu verwenden. Wenn deaktiviert, wird die Position aus der Laufzeit abgeleitet.",
           "name": "Name für die Jalousie/Raffstore (optional).",
           "area": "Home Assistant Bereich, dem diese Entität zugeordnet werden soll.",
           "device_class": "Home Assistant Geräteklasse zur Verfeinerung der UI/des Verhaltens (z. B. shutter, blind, garage).",
-          "scan_interval": "Abfragezyklus für diese Variable in Sekunden. Leerlassen, um den SPS-Standard zu übernehmen."
+          "scan_interval": "Abfragezyklus für diese Variable in Sekunden. Leerlassen, um den SPS-Standard zu übernehmen.",
+          "toggle_mode": "Impulstaster anstelle separater Öffnen-/Schließen-Adressen: jeder Tastendruck löst die nächste Aktion aus - öffnet sich/gestoppt/schließt sich/gestoppt. Die Schließadresse wird nicht verwendet. Erfordert eine Bewegungserkennung: eine Statusadresse mit allen 4 Statuswerten, oder eine Öffnungsadresse und eine Schließadresse."
         }
       },
       "edit_cover_position": {
@@ -1038,7 +1042,8 @@
       "sync_same_address": "Die Statussynchronisierung erfordert eine Befehlsadresse, die sich von der Statusadresse unterscheidet.",
       "invalid_integer": "Geben Sie eine ganze Zahl ein (Dezimalzahlen sind nicht zulässig).",
       "duplicate_preset_value": "Derselbe Wert kann nicht zwei verschiedenen HVAC-Modi zugewiesen werden.",
-      "duplicate_status_value": "Derselbe Wert kann nicht zwei verschiedenen HVAC-Status zugewiesen werden."
+      "duplicate_status_value": "Derselbe Wert kann nicht zwei verschiedenen HVAC-Status zugewiesen werden.",
+      "toggle_mode_requires_feedback": "Der Ein-Tasten-Modus benötigt echtes Feedback, um korrekt zu funktionieren: entweder eine Statusadresse mit allen 4 Statuswerten, oder eine Öffnungsadresse und eine Schließadresse für die Bewegung zusammen mit beiden Endlagen-/Positionsadressen für den eingeschwungenen Zustand."
     }
   },
   "issues": {
