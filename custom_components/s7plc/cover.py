@@ -17,6 +17,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.event import async_call_later
 
+from .address import parse_address_and_scale
 from .const import (
     CONF_AREA,
     CONF_CLOSE_COMMAND_ADDRESS,
@@ -58,7 +59,9 @@ from .entity import S7BaseEntity
 from .helpers import (
     default_entity_name,
     get_coordinator_and_device_info,
+    inverse_scale_value,
     parse_mode_values,
+    scale_value,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -75,12 +78,40 @@ async def async_setup_entry(
 
     for item in entry.options.get(CONF_COVERS, []):
         # Check if this is a position-based cover
-        position_state = item.get(CONF_POSITION_STATE_ADDRESS)
+        raw_position_state = item.get(CONF_POSITION_STATE_ADDRESS)
         area = item.get(CONF_AREA)
 
-        if position_state:
-            # Position-based cover (0-100)
-            position_command = item.get(CONF_POSITION_COMMAND_ADDRESS)
+        if raw_position_state:
+            # Position-based cover (0-100), address may carry an inline
+            # Scale(...)
+            try:
+                position_state, position_state_scale = parse_address_and_scale(
+                    raw_position_state
+                )
+            except ValueError:
+                _LOGGER.warning(
+                    "Invalid Scale(...) syntax for cover position_state_address"
+                    " '%s', skipping",
+                    raw_position_state,
+                )
+                continue
+
+            raw_position_command = item.get(CONF_POSITION_COMMAND_ADDRESS)
+            position_command = None
+            position_command_scale = position_state_scale
+            if raw_position_command:
+                try:
+                    position_command, position_command_scale = parse_address_and_scale(
+                        raw_position_command
+                    )
+                except ValueError:
+                    _LOGGER.warning(
+                        "Invalid Scale(...) syntax for cover"
+                        " position_command_address '%s', skipping",
+                        raw_position_command,
+                    )
+                    continue
+
             scan_interval = item.get(CONF_SCAN_INTERVAL)
             invert_position = item.get(CONF_INVERT_POSITION, False)
             stop_command = item.get(CONF_STOP_COMMAND_ADDRESS)
@@ -90,10 +121,39 @@ async def async_setup_entry(
             await coord.add_item(position_topic, position_state, scan_interval)
 
             # Optional: tilt control, symmetric to position above.
-            tilt_state = item.get(CONF_TILT_STATE_ADDRESS)
+            raw_tilt_state = item.get(CONF_TILT_STATE_ADDRESS)
+            tilt_state = None
+            tilt_state_scale = None
             tilt_command = None
-            if tilt_state:
-                tilt_command = item.get(CONF_TILT_COMMAND_ADDRESS)
+            tilt_command_scale = None
+            if raw_tilt_state:
+                try:
+                    tilt_state, tilt_state_scale = parse_address_and_scale(
+                        raw_tilt_state
+                    )
+                except ValueError:
+                    _LOGGER.warning(
+                        "Invalid Scale(...) syntax for cover tilt_state_address"
+                        " '%s', skipping",
+                        raw_tilt_state,
+                    )
+                    continue
+
+                raw_tilt_command = item.get(CONF_TILT_COMMAND_ADDRESS)
+                tilt_command_scale = tilt_state_scale
+                if raw_tilt_command:
+                    try:
+                        tilt_command, tilt_command_scale = parse_address_and_scale(
+                            raw_tilt_command
+                        )
+                    except ValueError:
+                        _LOGGER.warning(
+                            "Invalid Scale(...) syntax for cover"
+                            " tilt_command_address '%s', skipping",
+                            raw_tilt_command,
+                        )
+                        continue
+
                 tilt_topic = f"cover:tilt:{tilt_state}"
                 await coord.add_item(tilt_topic, tilt_state, scan_interval)
 
@@ -104,9 +164,22 @@ async def async_setup_entry(
             # hvac_status_address. Without it, is_opening/is_closing can
             # only ever be False here, since a raw position alone can't
             # tell HA whether the cover is actively moving.
-            cover_status_address = item.get(CONF_COVER_STATUS_ADDRESS)
+            raw_cover_status_address = item.get(CONF_COVER_STATUS_ADDRESS)
+            cover_status_address = None
+            cover_status_scale = None
             cover_status_topic = None
-            if cover_status_address:
+            if raw_cover_status_address:
+                try:
+                    cover_status_address, cover_status_scale = parse_address_and_scale(
+                        raw_cover_status_address
+                    )
+                except ValueError:
+                    _LOGGER.warning(
+                        "Invalid Scale(...) syntax for cover cover_status_address"
+                        " '%s', skipping",
+                        raw_cover_status_address,
+                    )
+                    continue
                 cover_status_topic = f"cover:status:{cover_status_address}"
                 await coord.add_item(
                     cover_status_topic, cover_status_address, scan_interval
@@ -145,11 +218,16 @@ async def async_setup_entry(
                     area,
                     stop_command,
                     stop_pulse,
+                    position_state_scale=position_state_scale,
+                    position_command_scale=position_command_scale,
                     tilt_state_address=tilt_state,
                     tilt_command_address=tilt_command,
                     invert_tilt=invert_tilt,
+                    tilt_state_scale=tilt_state_scale,
+                    tilt_command_scale=tilt_command_scale,
                     cover_status_topic=cover_status_topic,
                     cover_status_address=cover_status_address,
+                    cover_status_scale=cover_status_scale,
                     cover_status_open_values=cover_status_open_values,
                     cover_status_closed_values=cover_status_closed_values,
                     cover_status_opening_values=cover_status_opening_values,
@@ -221,9 +299,22 @@ async def async_setup_entry(
         # climate-style status address + per-status value mapping, same as
         # the Position cover's cover_status_address. Takes priority over
         # the boolean addresses when configured.
-        cover_status_address = item.get(CONF_COVER_STATUS_ADDRESS)
+        raw_cover_status_address = item.get(CONF_COVER_STATUS_ADDRESS)
+        cover_status_address = None
+        cover_status_scale = None
         cover_status_topic = None
-        if cover_status_address:
+        if raw_cover_status_address:
+            try:
+                cover_status_address, cover_status_scale = parse_address_and_scale(
+                    raw_cover_status_address
+                )
+            except ValueError:
+                _LOGGER.warning(
+                    "Invalid Scale(...) syntax for cover cover_status_address"
+                    " '%s', skipping",
+                    raw_cover_status_address,
+                )
+                continue
             cover_status_topic = f"cover:status:{cover_status_address}"
             await coord.add_item(
                 cover_status_topic, cover_status_address, scan_interval
@@ -284,6 +375,7 @@ async def async_setup_entry(
                 cover_stopped_topic=cover_stopped_topic,
                 cover_status_topic=cover_status_topic,
                 cover_status_address=cover_status_address,
+                cover_status_scale=cover_status_scale,
                 cover_status_open_values=cover_status_open_values,
                 cover_status_closed_values=cover_status_closed_values,
                 cover_status_opening_values=cover_status_opening_values,
@@ -326,6 +418,7 @@ class S7Cover(S7BaseEntity, CoverEntity):
         cover_stopped_topic: str | None = None,
         cover_status_topic: str | None = None,
         cover_status_address: str | None = None,
+        cover_status_scale: tuple[float, float, float, float] | None = None,
         cover_status_open_values: str = DEFAULT_COVER_STATUS_OPEN_VALUES,
         cover_status_closed_values: str = DEFAULT_COVER_STATUS_CLOSED_VALUES,
         cover_status_opening_values: str = DEFAULT_COVER_STATUS_OPENING_VALUES,
@@ -377,6 +470,7 @@ class S7Cover(S7BaseEntity, CoverEntity):
         # Takes priority over the boolean addresses when configured.
         self._cover_status_address = cover_status_address
         self._cover_status_topic = cover_status_topic
+        self._cover_status_scale = cover_status_scale
         self._cover_status_values: dict[str, list[int]] = {
             "open": parse_mode_values(cover_status_open_values),
             "closed": parse_mode_values(cover_status_closed_values),
@@ -411,7 +505,11 @@ class S7Cover(S7BaseEntity, CoverEntity):
         if status is None:
             return None
         try:
-            status = int(status)
+            if self._cover_status_scale is not None:
+                rn, rx, sn, sx = self._cover_status_scale
+                status = round(scale_value(float(status), rn, rx, sn, sx))
+            else:
+                status = int(status)
         except (TypeError, ValueError):
             return None
         for movement, values in self._cover_status_values.items():
@@ -729,11 +827,16 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
         suggested_area_id: str | None = None,
         stop_command: str | None = None,
         stop_pulse_duration: float = DEFAULT_PULSE_DURATION,
+        position_state_scale: tuple[float, float, float, float] | None = None,
+        position_command_scale: tuple[float, float, float, float] | None = None,
         tilt_state_address: str | None = None,
         tilt_command_address: str | None = None,
         invert_tilt: bool = False,
+        tilt_state_scale: tuple[float, float, float, float] | None = None,
+        tilt_command_scale: tuple[float, float, float, float] | None = None,
         cover_status_topic: str | None = None,
         cover_status_address: str | None = None,
+        cover_status_scale: tuple[float, float, float, float] | None = None,
         cover_status_open_values: str = DEFAULT_COVER_STATUS_OPEN_VALUES,
         cover_status_closed_values: str = DEFAULT_COVER_STATUS_CLOSED_VALUES,
         cover_status_opening_values: str = DEFAULT_COVER_STATUS_OPENING_VALUES,
@@ -754,6 +857,8 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
         self._invert_position = invert_position
         self._stop_command_address = stop_command
         self._stop_pulse_duration = float(stop_pulse_duration)
+        self._position_state_scale = position_state_scale
+        self._position_command_scale = position_command_scale
 
         self._tilt_state_address = tilt_state_address
         self._tilt_command_address = tilt_command_address or tilt_state_address
@@ -761,12 +866,15 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
             f"cover:tilt:{tilt_state_address}" if tilt_state_address else None
         )
         self._invert_tilt = invert_tilt
+        self._tilt_state_scale = tilt_state_scale
+        self._tilt_command_scale = tilt_command_scale
 
         # Optional real-time movement status: a raw position alone can't
         # tell HA whether the cover is actively moving, so is_opening/
         # is_closing stay False unless this is configured.
         self._cover_status_address = cover_status_address
         self._cover_status_topic = cover_status_topic
+        self._cover_status_scale = cover_status_scale
         self._cover_status_values: dict[str, list[int]] = {
             "open": parse_mode_values(cover_status_open_values),
             "closed": parse_mode_values(cover_status_closed_values),
@@ -797,14 +905,23 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
                 _LOGGER.warning("Invalid device class %s", device_class)
 
     @staticmethod
-    def _clamp_percent(value: Any, invert: bool) -> int | None:
-        """Clamp to 0-100 and invert a raw PLC value.
+    def _clamp_scaled_percent(
+        value: Any,
+        scale: tuple[float, float, float, float] | None,
+        invert: bool,
+    ) -> int | None:
+        """Scale (if configured), clamp to 0-100, and invert a raw PLC value.
 
         Shared by position and tilt, which both read/write a 0-100
-        percentage with an optional invert flag.
+        percentage through an optional linear Scale(...) and an optional
+        invert flag.
         """
         try:
-            pct = int(value)
+            if scale is not None:
+                rn, rx, sn, sx = scale
+                pct = round(scale_value(float(value), rn, rx, sn, sx))
+            else:
+                pct = int(value)
         except (TypeError, ValueError):
             return None
         pct = max(0, min(100, pct))
@@ -820,7 +937,9 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
         value = data.get(self._position_topic)
         if value is None:
             return None
-        return self._clamp_percent(value, self._invert_position)
+        return self._clamp_scaled_percent(
+            value, self._position_state_scale, self._invert_position
+        )
 
     def _get_tilt_value(self) -> int | None:
         """Get the current tilt value from coordinator data."""
@@ -832,7 +951,9 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
         value = data.get(self._tilt_topic)
         if value is None:
             return None
-        return self._clamp_percent(value, self._invert_tilt)
+        return self._clamp_scaled_percent(
+            value, self._tilt_state_scale, self._invert_tilt
+        )
 
     @property
     def available(self) -> bool:
@@ -882,7 +1003,11 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
         if status is None:
             return None
         try:
-            status = int(status)
+            if self._cover_status_scale is not None:
+                rn, rx, sn, sx = self._cover_status_scale
+                status = round(scale_value(float(status), rn, rx, sn, sx))
+            else:
+                status = int(status)
         except (TypeError, ValueError):
             return None
         for movement, values in self._cover_status_values.items():
@@ -931,7 +1056,11 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
 
         # Invert if needed: when user wants 0=open/100=closed,
         # we need to write the inverted value to the PLC
-        plc_value = (100 - position) if self._invert_position else position
+        plc_value: float = (100 - position) if self._invert_position else position
+
+        if self._position_command_scale is not None:
+            rn, rx, sn, sx = self._position_command_scale
+            plc_value = inverse_scale_value(float(plc_value), rn, rx, sn, sx)
 
         await self.coordinator.write_batched(self._position_command_address, plc_value)
 
@@ -957,8 +1086,14 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
         else:
             actual_position = self._get_position_value()
             if actual_position is not None:
+                plc_value: float = actual_position
+                if self._position_command_scale is not None:
+                    rn, rx, sn, sx = self._position_command_scale
+                    plc_value = inverse_scale_value(
+                        float(actual_position), rn, rx, sn, sx
+                    )
                 await self.coordinator.write_batched(
-                    self._position_command_address, actual_position
+                    self._position_command_address, plc_value
                 )
                 self.async_write_ha_state()
                 await self.coordinator.async_request_refresh()
@@ -990,7 +1125,11 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
             return
 
         tilt_position = max(0, min(100, int(tilt_position)))
-        plc_value = (100 - tilt_position) if self._invert_tilt else tilt_position
+        plc_value: float = (100 - tilt_position) if self._invert_tilt else tilt_position
+
+        if self._tilt_command_scale is not None:
+            rn, rx, sn, sx = self._tilt_command_scale
+            plc_value = inverse_scale_value(float(plc_value), rn, rx, sn, sx)
 
         await self.coordinator.write_batched(self._tilt_command_address, plc_value)
 

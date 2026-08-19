@@ -17,6 +17,8 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import selector
 
+from .address import parse_address_and_scale
+
 # Import S7-specific exceptions if available
 try:
     from pyS7.errors import S7CommunicationError, S7ConnectionError
@@ -37,7 +39,6 @@ from .const import (
     CONF_BACKOFF_MAX,
     CONF_BINARY_SENSORS,
     CONF_BRIGHTNESS_COMMAND_ADDRESS,
-    CONF_BRIGHTNESS_SCALE,
     CONF_BRIGHTNESS_STATE_ADDRESS,
     CONF_BUTTON_PULSE,
     CONF_BUTTONS,
@@ -110,8 +111,6 @@ from .const import (
     CONF_RACK,
     CONF_REAL_PRECISION,
     CONF_REMOTE_TSAP,
-    CONF_SCALE_RAW_MAX,
-    CONF_SCALE_RAW_MIN,
     CONF_SCAN_INTERVAL,
     CONF_SENSORS,
     CONF_SLOT,
@@ -131,7 +130,6 @@ from .const import (
     CONF_UID,
     CONF_UNIT_OF_MEASUREMENT,
     CONF_USE_STATE_TOPICS,
-    CONF_VALUE_MULTIPLIER,
     CONNECTION_TYPE_RACK_SLOT,
     CONNECTION_TYPE_TSAP,
     CONTROL_MODE_DIRECT,
@@ -239,9 +237,6 @@ scan_interval_selector = num_sel(min=0.1, max=3600, step=0.1)
 real_precision_selector = num_sel(min=0, max=6, step=1)
 operate_time_selector = num_sel(min=0, max=3600, step=1)
 
-value_multiplier_selector = num_sel(min=-1000, max=1000, step=0.05)
-scale_value_selector = num_sel(step=0.001)
-
 pulse_duration_selector = num_sel(min=0.1, max=60, step=0.1)
 
 number_value_selector = num_sel(step=0.01)
@@ -318,11 +313,6 @@ def _add_schema_sensor(flow) -> vol.Schema:
             vol.Optional(CONF_NAME): selector.TextSelector(),
             vol.Optional(CONF_DEVICE_CLASS): _device_selector_by_type(CONF_SENSORS),
             vol.Optional(CONF_UNIT_OF_MEASUREMENT): selector.TextSelector(),
-            vol.Optional(CONF_VALUE_MULTIPLIER): value_multiplier_selector,
-            vol.Optional(CONF_MIN_VALUE): number_value_selector,
-            vol.Optional(CONF_MAX_VALUE): number_value_selector,
-            vol.Optional(CONF_SCALE_RAW_MIN): scale_value_selector,
-            vol.Optional(CONF_SCALE_RAW_MAX): scale_value_selector,
             vol.Optional(CONF_STATE_CLASS): state_class_selector,
             vol.Optional(CONF_REAL_PRECISION): real_precision_selector,
             vol.Optional(CONF_SCAN_INTERVAL): scan_interval_selector,
@@ -472,11 +462,6 @@ def _add_schema_button(flow) -> vol.Schema:
 
 
 def _add_schema_light(flow) -> vol.Schema:
-    _brightness_scale_sel = selector.NumberSelector(
-        selector.NumberSelectorConfig(
-            min=1, max=65535, step=1, mode=selector.NumberSelectorMode.BOX
-        )
-    )
     return vol.Schema(
         {
             vol.Required(CONF_STATE_ADDRESS): selector.TextSelector(),
@@ -490,7 +475,6 @@ def _add_schema_light(flow) -> vol.Schema:
             ): pulse_duration_selector,
             vol.Optional(CONF_BRIGHTNESS_STATE_ADDRESS): selector.TextSelector(),
             vol.Optional(CONF_BRIGHTNESS_COMMAND_ADDRESS): selector.TextSelector(),
-            vol.Optional(CONF_BRIGHTNESS_SCALE): _brightness_scale_sel,
             vol.Optional(CONF_SCAN_INTERVAL): scan_interval_selector,
             vol.Optional("add_another", default=False): selector.BooleanSelector(),
         }
@@ -506,11 +490,8 @@ def _add_schema_number(flow) -> vol.Schema:
             vol.Optional(CONF_DEVICE_CLASS): _device_selector_by_type(CONF_NUMBERS),
             vol.Optional(CONF_UNIT_OF_MEASUREMENT): selector.TextSelector(),
             vol.Optional(CONF_STEP): positive_number_selector,
-            vol.Optional(CONF_VALUE_MULTIPLIER): value_multiplier_selector,
             vol.Optional(CONF_MIN_VALUE): number_value_selector,
             vol.Optional(CONF_MAX_VALUE): number_value_selector,
-            vol.Optional(CONF_SCALE_RAW_MIN): scale_value_selector,
-            vol.Optional(CONF_SCALE_RAW_MAX): scale_value_selector,
             vol.Optional(CONF_REAL_PRECISION): real_precision_selector,
             vol.Optional(CONF_SCAN_INTERVAL): scan_interval_selector,
             vol.Optional(CONF_AREA): flow._get_area_selector(),
@@ -676,11 +657,6 @@ def _edit_schema_sensor(flow, item: dict[str, Any]) -> vol.Schema:
     for key, sel in [
         (CONF_DEVICE_CLASS, _device_selector_by_type(CONF_SENSORS)),
         (CONF_UNIT_OF_MEASUREMENT, selector.TextSelector()),
-        (CONF_VALUE_MULTIPLIER, value_multiplier_selector),
-        (CONF_MIN_VALUE, number_value_selector),
-        (CONF_MAX_VALUE, number_value_selector),
-        (CONF_SCALE_RAW_MIN, scale_value_selector),
-        (CONF_SCALE_RAW_MAX, scale_value_selector),
         (CONF_STATE_CLASS, state_class_selector),
         (CONF_REAL_PRECISION, real_precision_selector),
         (CONF_SCAN_INTERVAL, scan_interval_selector),
@@ -942,11 +918,6 @@ def _edit_schema_button(flow, item: dict[str, Any]) -> vol.Schema:
 
 
 def _edit_schema_light(flow, item: dict[str, Any]) -> vol.Schema:
-    _brightness_scale_sel = selector.NumberSelector(
-        selector.NumberSelectorConfig(
-            min=1, max=65535, step=1, mode=selector.NumberSelectorMode.BOX
-        )
-    )
     d: dict[Any, Any] = {
         vol.Required(
             CONF_STATE_ADDRESS, default=item.get(CONF_STATE_ADDRESS, "")
@@ -971,7 +942,6 @@ def _edit_schema_light(flow, item: dict[str, Any]) -> vol.Schema:
     for key, sel in [
         (CONF_BRIGHTNESS_STATE_ADDRESS, selector.TextSelector()),
         (CONF_BRIGHTNESS_COMMAND_ADDRESS, selector.TextSelector()),
-        (CONF_BRIGHTNESS_SCALE, _brightness_scale_sel),
         (CONF_SCAN_INTERVAL, scan_interval_selector),
         (CONF_AREA, flow._get_area_selector()),
     ]:
@@ -1004,9 +974,6 @@ def _edit_schema_number(flow, item: dict[str, Any]) -> vol.Schema:
     d[k] = v
     for key, sel in [
         (CONF_STEP, positive_number_selector),
-        (CONF_VALUE_MULTIPLIER, value_multiplier_selector),
-        (CONF_SCALE_RAW_MIN, scale_value_selector),
-        (CONF_SCALE_RAW_MAX, scale_value_selector),
         (CONF_REAL_PRECISION, real_precision_selector),
         (CONF_SCAN_INTERVAL, scan_interval_selector),
         (CONF_AREA, flow._get_area_selector()),
@@ -2585,6 +2552,10 @@ class S7PLCOptionsFlow(config_entries.OptionsFlow):
                 for key in address_keys:
                     address = item.get(key)
                     if address:
+                        try:
+                            address, _ = parse_address_and_scale(address)
+                        except ValueError:
+                            pass
                         normalized = self._normalized_address(address)
                         if normalized:
                             if normalized in seen_addresses:

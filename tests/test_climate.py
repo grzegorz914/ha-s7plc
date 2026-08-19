@@ -849,3 +849,112 @@ async def test_setup_entry_setpoint_control_shared_temperature_address(
     assert entities[0]._attr_unique_id == "uid-1"
     assert entities[1]._attr_unique_id == "uid-2"
     assert entities[0]._topic != entities[1]._topic
+
+
+# ============================================================================
+# Inline Scale(...) support (test/full-stack branch: climate is normally
+# scale-free, but this branch extends it for local end-to-end testing)
+# ============================================================================
+
+
+@pytest.mark.asyncio
+async def test_setup_entry_setpoint_control_scaled_temperatures(
+    fake_hass, mock_coordinator
+):
+    """current_temperature_address and target_temperature_address may carry
+    an inline Scale(...); reads come back through the configured scale."""
+    config_entry = MagicMock()
+    config_entry.options = {
+        CONF_CLIMATES: [
+            {
+                CONF_CLIMATE_CONTROL_MODE: CONTROL_MODE_SETPOINT,
+                CONF_CURRENT_TEMPERATURE_ADDRESS: "db1,w0 Scale(0,1000,0,100)",
+                CONF_TARGET_TEMPERATURE_ADDRESS: "db1,w2 Scale(0,1000,0,100)",
+                CONF_NAME: "Scaled Zone",
+                CONF_UID: "uid-scaled",
+            }
+        ]
+    }
+    async_add_entities = MagicMock()
+
+    with patch(
+        "custom_components.s7plc.climate.get_coordinator_and_device_info",
+        return_value=(mock_coordinator, {"name": "Test PLC"}, "test_device"),
+    ):
+        await async_setup_entry(fake_hass, config_entry, async_add_entities)
+
+    climate = async_add_entities.call_args[0][0][0]
+    assert climate._current_temp_address == "db1,w0"
+    assert climate._target_temp_address == "db1,w2"
+
+    # raw 205 in [0,1000] -> engineering 20.5 in [0,100]
+    mock_coordinator.data = {
+        f"{climate._topic}:current_temp": 205,
+        f"{climate._topic}:target_temp": 220,
+    }
+    assert climate.current_temperature == pytest.approx(20.5)
+    assert climate.target_temperature == pytest.approx(22.0)
+
+
+@pytest.mark.asyncio
+async def test_climate_setpoint_write_target_temperature_scaled(mock_coordinator):
+    """Writing a target temperature inverse-scales it back to the raw PLC
+    range before sending."""
+    climate = S7ClimateSetpointControl(
+        mock_coordinator,
+        name="Scaled Zone",
+        unique_id="uid-scaled",
+        device_info={},
+        topic="climate_setpoint:db1,w0",
+        current_temp_address="db1,w0",
+        target_temp_address="db1,w2",
+        preset_mode_address=None,
+        min_temp=7.0,
+        max_temp=35.0,
+        temp_step=0.5,
+        target_temp_scale=(0.0, 1000.0, 0.0, 100.0),
+    )
+    mock_coordinator.write_batched = AsyncMock()
+    mock_coordinator.data = {}
+
+    # 22.0 engineering -> inverse-scaled [0,100]->[0,1000] -> 220
+    await climate.async_set_temperature(temperature=22.0)
+    mock_coordinator.write_batched.assert_called_with("db1,w2", 220.0)
+
+
+def test_climate_setpoint_preset_mode_and_hvac_status_scaled(mock_coordinator):
+    """preset_mode_address and hvac_status_address may also carry an inline
+    Scale(...), even though they hold discrete mode/status codes rather than
+    a continuous analog value — the codes are just interpreted on the
+    engineering side of the scale."""
+    climate = S7ClimateSetpointControl(
+        mock_coordinator,
+        name="Scaled Zone",
+        unique_id="uid-scaled",
+        device_info={},
+        topic="climate_setpoint:db1,w0",
+        current_temp_address="db1,w0",
+        target_temp_address="db1,w2",
+        preset_mode_address="db1,int0",
+        hvac_status_address="db1,int2",
+        preset_mode_bidirectional=True,
+        min_temp=7.0,
+        max_temp=35.0,
+        temp_step=0.5,
+        hvac_status_heating_values="1",
+        preset_mode_off_value=0,
+        preset_mode_heat_value=1,
+        preset_mode_scale=(0.0, 2000.0, 0.0, 10.0),
+        hvac_status_scale=(0.0, 2000.0, 0.0, 10.0),
+    )
+    mock_coordinator.write_batched = AsyncMock()
+
+    # raw 200 in [0,2000] -> engineering 1 in [0,10] -> matches HEAT (value 1)
+    mock_coordinator.data = {
+        f"{climate._topic}:preset_mode": 200,
+        f"{climate._topic}:hvac_status": 200,
+    }
+    assert climate.hvac_mode == HVACMode.HEAT
+    from homeassistant.components.climate import HVACAction
+
+    assert climate.hvac_action == HVACAction.HEATING

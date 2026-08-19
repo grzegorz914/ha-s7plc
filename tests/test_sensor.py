@@ -41,7 +41,6 @@ def sensor_factory(mock_coordinator, device_info):
         topic="sensor:DB1,REAL0",
         address="DB1,REAL0",
         device_class=None,
-        value_multiplier=None,
         scale_raw_min=None,
         scale_raw_max=None,
         min_value=None,
@@ -55,7 +54,6 @@ def sensor_factory(mock_coordinator, device_info):
             topic,
             address,
             device_class,
-            value_multiplier,
             scale_raw_min=scale_raw_min,
             scale_raw_max=scale_raw_max,
             min_value=min_value,
@@ -75,19 +73,6 @@ def test_sensor_basic_initialization(sensor_factory):
     assert sensor._attr_unique_id == "test-sensor"
     assert sensor._topic == "sensor:DB1,REAL0"
     assert sensor._address == "DB1,REAL0"
-    assert sensor._value_multiplier is None
-
-
-def test_sensor_with_value_multiplier(sensor_factory):
-    """Test sensor with value multiplier."""
-    sensor = sensor_factory(value_multiplier=10.5)
-    assert sensor._value_multiplier == 10.5
-
-
-def test_sensor_with_empty_string_multiplier(sensor_factory):
-    """Test sensor with empty string multiplier."""
-    sensor = sensor_factory(value_multiplier="")
-    assert sensor._value_multiplier is None
 
 
 def test_sensor_with_device_class_temperature(sensor_factory):
@@ -161,58 +146,32 @@ def test_sensor_native_value_no_data(sensor_factory, mock_coordinator):
 
 
 def test_sensor_native_value_simple(sensor_factory, mock_coordinator):
-    """Test native_value without multiplier."""
+    """Test native_value without a scale."""
     mock_coordinator.data = {"sensor:DB1,REAL0": 25.5}
     sensor = sensor_factory()
     assert sensor.native_value == 25.5
 
 
-def test_sensor_native_value_with_multiplier(sensor_factory, mock_coordinator):
-    """Test native_value with multiplier."""
-    mock_coordinator.data = {"sensor:DB1,REAL0": 10.0}
-    sensor = sensor_factory(value_multiplier=2.5)
-    assert sensor.native_value == 25.0
-
-
 def test_sensor_native_value_boolean_unchanged(sensor_factory, mock_coordinator):
-    """Test native_value with boolean (should not apply multiplier)."""
+    """Test native_value with boolean (should not apply any scaling)."""
     mock_coordinator.data = {"sensor:DB1,REAL0": True}
-    sensor = sensor_factory(value_multiplier=2.5)
+    sensor = sensor_factory()
     assert sensor.native_value is True
 
 
-def test_sensor_native_value_string_with_multiplier(sensor_factory, mock_coordinator):
-    """Test native_value with string that can be converted to float."""
-    mock_coordinator.data = {"sensor:DB1,REAL0": "15.5"}
-    sensor = sensor_factory(value_multiplier=2.0)
-    assert sensor.native_value == 31.0
-
-
-def test_sensor_native_value_invalid_string_with_multiplier(
-    sensor_factory, mock_coordinator
-):
-    """Test native_value with string that cannot be converted."""
+def test_sensor_native_value_invalid_string(sensor_factory, mock_coordinator):
+    """Test native_value with a string that cannot be converted to a number."""
     mock_coordinator.data = {"sensor:DB1,REAL0": "not_a_number"}
-    sensor = sensor_factory(value_multiplier=2.0)
-    # Should return original value without multiplying
+    sensor = sensor_factory()
     assert sensor.native_value == "not_a_number"
 
 
-def test_sensor_extra_attributes_no_multiplier(sensor_factory):
-    """Test extra_state_attributes without multiplier."""
+def test_sensor_extra_attributes_basic(sensor_factory):
+    """Test extra_state_attributes without a scale."""
     sensor = sensor_factory()
     attrs = sensor.extra_state_attributes
     assert "s7_state_address" in attrs
     assert attrs["s7_state_address"] == "DB1,REAL0"
-    assert "value_multiplier" not in attrs
-
-
-def test_sensor_extra_attributes_with_multiplier(sensor_factory):
-    """Test extra_state_attributes with multiplier."""
-    sensor = sensor_factory(value_multiplier=3.5)
-    attrs = sensor.extra_state_attributes
-    assert "value_multiplier" in attrs
-    assert attrs["value_multiplier"] == 3.5
 
 
 # ============================================================================
@@ -243,19 +202,6 @@ def test_sensor_native_value_with_scale(sensor_factory, mock_coordinator):
     assert sensor.native_value == pytest.approx(50.0)
 
 
-def test_sensor_scale_takes_precedence_over_multiplier(
-    sensor_factory, mock_coordinator
-):
-    """When both are set, scale wins over value_multiplier."""
-    mock_coordinator.data = {"sensor:DB1,REAL0": 50.0}
-    sensor = sensor_factory(
-        value_multiplier=10,
-        scale_raw_min=0, scale_raw_max=100, min_value=0, max_value=1,
-    )
-    # scale: 50 / 100 = 0.5, NOT 50 * 10 = 500
-    assert sensor.native_value == pytest.approx(0.5)
-
-
 def test_sensor_extra_attributes_scale_params(sensor_factory):
     """Scale parameters are exposed in extra_state_attributes."""
     sensor = sensor_factory(
@@ -266,18 +212,6 @@ def test_sensor_extra_attributes_scale_params(sensor_factory):
     assert attrs["scale_raw_max"] == 20000.0
     assert attrs["min_value"] == 0.0
     assert attrs["max_value"] == 100.0
-    assert "value_multiplier" not in attrs
-
-
-def test_sensor_extra_attributes_scale_hides_multiplier(sensor_factory):
-    """When scale is active, value_multiplier is not in attributes."""
-    sensor = sensor_factory(
-        value_multiplier=5,
-        scale_raw_min=0, scale_raw_max=100, min_value=0, max_value=10,
-    )
-    attrs = sensor.extra_state_attributes
-    assert "scale_raw_min" in attrs
-    assert "value_multiplier" not in attrs
 
 
 def test_sensor_device_class_units_mapping():
@@ -347,7 +281,6 @@ async def test_async_setup_entry_with_sensors():
                 "address": "DB1,REAL0",
                 "name": "Temperature",
                 "device_class": "temperature",
-                "value_multiplier": None,
                 "real_precision": None,
                 "scan_interval": None,
                 "uid": "test-uid",
@@ -379,6 +312,51 @@ async def test_async_setup_entry_with_sensors():
         
         # Should request refresh
         mock_coord.async_request_refresh.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_with_inline_scale_address():
+    """A sensor whose stored address embeds Scale(...) (the current storage
+    format for scaling) is set up with a clean address/topic and the scale
+    parsed out into _scale_params."""
+    hass = MagicMock()
+    hass.async_add_executor_job = AsyncMock(return_value=None)
+    entry = MagicMock()
+    entry.options = {
+        "sensors": [
+            {
+                "address": "DB1,REAL0 Scale(0,1,0,10)",
+                "name": "Scaled",
+                "uid": "test-uid",
+            }
+        ]
+    }
+    async_add_entities = MagicMock()
+
+    with patch(
+        "custom_components.s7plc.sensor.get_coordinator_and_device_info"
+    ) as mock_get_coord:
+        mock_coord = MagicMock()
+        mock_coord.add_item = AsyncMock()
+        mock_coord.async_request_refresh = AsyncMock(return_value=None)
+        mock_coord.pys7_metrics = None
+        mock_get_coord.return_value = (
+            mock_coord,
+            {"name": "Test Device"},
+            "test-device",
+        )
+
+        await async_setup_entry(hass, entry, async_add_entities)
+
+        entities = async_add_entities.call_args[0][0]
+        sensor = entities[0]
+        assert isinstance(sensor, S7Sensor)
+        assert sensor._scale_params == (0.0, 1.0, 0.0, 10.0)
+
+        # The coordinator polls the clean address, not the raw stored text.
+        topic, address = mock_coord.add_item.call_args[0][:2]
+        assert topic == "sensor:DB1,REAL0"
+        assert address == "DB1,REAL0"
 
 
 @pytest.mark.asyncio
@@ -459,6 +437,47 @@ async def test_async_setup_entry_with_entity_syncs():
         sync_entities = async_add_entities.call_args_list[1][0][0]
         assert len(sync_entities) == 1
         assert sync_entities[0]._invert_state is True
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_entity_sync_with_inline_scale():
+    """entity_sync's address may carry an inline Scale(...); the coordinator
+    is unaffected (write-only, no polling) but the entity itself is set up
+    with a clean address and the parsed scale."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.options = {
+        "sensors": [],
+        "entity_sync": [
+            {
+                "address": "DB1,REAL0 Scale(0,1000,0,100)",
+                "source_entity": "sensor.test",
+                "name": "Scaled Sync",
+                "uid": "test-uid",
+            }
+        ],
+    }
+    async_add_entities = MagicMock()
+
+    with patch(
+        "custom_components.s7plc.sensor.get_coordinator_and_device_info"
+    ) as mock_get_coord:
+        mock_coord = MagicMock()
+        mock_coord.async_request_refresh = AsyncMock(return_value=None)
+        mock_coord.pys7_metrics = None
+        mock_get_coord.return_value = (
+            mock_coord,
+            {"name": "Test Device"},
+            "test-device",
+        )
+
+        await async_setup_entry(hass, entry, async_add_entities)
+
+        sync_entities = async_add_entities.call_args_list[1][0][0]
+        assert len(sync_entities) == 1
+        entity_sync = sync_entities[0]
+        assert entity_sync._address == "DB1,REAL0"
+        assert entity_sync._scale == (0.0, 1000.0, 0.0, 100.0)
 
 
 @pytest.mark.asyncio
@@ -560,9 +579,10 @@ def entity_sync_factory(fake_hass):
         name: str = "Test Entity Sync",
         coordinator = None,
         invert_state: bool = False,
+        scale = None,
     ):
         coord = coordinator if coordinator is not None else DummyCoordinator()
-        
+
         with patch("custom_components.s7plc.sensor.parse_tag") as mock_parse:
             mock_tag = MagicMock()
             mock_tag.data_type = data_type
@@ -576,11 +596,12 @@ def entity_sync_factory(fake_hass):
                 address=address,
                 source_entity=source_entity,
                 invert_state=invert_state,
+                scale=scale,
             )
             entity_sync.hass = fake_hass
             entity_sync.name = name
             return entity_sync
-    
+
     return _create_entity_sync
 
 
@@ -713,6 +734,48 @@ async def test_entity_sync_numeric_write(entity_sync_factory):
     assert entity_sync._last_written_value == 42.5
     assert entity_sync._write_count == 1
     assert entity_sync._error_count == 0
+
+
+@pytest.mark.asyncio
+async def test_entity_sync_numeric_write_with_scale(entity_sync_factory):
+    """When the entity_sync address carries an inline Scale(...), the
+    source entity's own (engineering) value is inverse-scaled to the raw
+    PLC value before writing."""
+    from conftest import DummyCoordinator
+
+    coord = DummyCoordinator()
+    entity_sync = entity_sync_factory(
+        "db1,r0", DataType.REAL, coordinator=coord, scale=(0.0, 1000.0, 0.0, 100.0)
+    )
+
+    from homeassistant.core import State
+    mock_state = State("sensor.test", "50")
+    await entity_sync._async_write_to_plc(mock_state)
+
+    # engineering 50 in [0,100] -> raw in [0,1000]: 50 * 1000 / 100 = 500
+    assert coord.write_calls[0] == ("write_batched", "db1,r0", 500.0)
+    assert entity_sync._last_written_value == 500.0
+
+
+@pytest.mark.asyncio
+async def test_entity_sync_binary_write_ignores_scale(entity_sync_factory):
+    """Scale(...) never applies to a BIT (binary) entity sync."""
+    from conftest import DummyCoordinator
+
+    coord = DummyCoordinator()
+    entity_sync = entity_sync_factory(
+        "db1,x0.0",
+        DataType.BIT,
+        "binary_sensor.test",
+        coordinator=coord,
+        scale=(0.0, 1000.0, 0.0, 100.0),
+    )
+
+    from homeassistant.core import State
+    mock_state = State("binary_sensor.test", "on")
+    await entity_sync._async_write_to_plc(mock_state)
+
+    assert coord.write_calls[0] == ("write_batched", "db1,x0.0", True)
 
 
 @pytest.mark.asyncio

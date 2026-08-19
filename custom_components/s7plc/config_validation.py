@@ -5,7 +5,12 @@ from typing import Any
 
 from homeassistant.const import CONF_NAME
 
-from .address import get_numeric_limits, parse_tag
+from .address import (
+    format_address_with_scale,
+    get_numeric_limits,
+    parse_address_and_scale,
+    parse_tag,
+)
 from .const import (
     CONF_ADDRESS,
     CONF_AREA,
@@ -97,7 +102,6 @@ from .const import (
     CONF_VALUE_MULTIPLIER,
     CONTROL_MODE_DIRECT,
     CONTROL_MODE_SETPOINT,
-    DEFAULT_BRIGHTNESS_SCALE,
     DEFAULT_COVER_STATUS_CLOSED_VALUES,
     DEFAULT_COVER_STATUS_CLOSING_VALUES,
     DEFAULT_COVER_STATUS_OPEN_VALUES,
@@ -374,36 +378,6 @@ class EntityConfigBuilder:
 
         return result
 
-    @staticmethod
-    def _apply_value_multiplier(item: dict[str, Any], value: Any | None) -> None:
-        normalized = EntityConfigBuilder._normalize_numeric_value(value)
-        if normalized is None:
-            item.pop(CONF_VALUE_MULTIPLIER, None)
-        else:
-            item[CONF_VALUE_MULTIPLIER] = normalized
-
-    @staticmethod
-    def _apply_value_scale(
-        item: dict[str, Any],
-        raw_min: Any | None,
-        raw_max: Any | None,
-    ) -> None:
-        """Store or remove the raw-range scale parameters from *item*.
-
-        Both values must be valid numbers for the scale to be saved.
-        If either is missing/invalid the raw-range keys are cleared from the item.
-        """
-        _normalize = EntityConfigBuilder._normalize_numeric_value
-        rn = _normalize(raw_min)
-        rx = _normalize(raw_max)
-
-        if rn is not None and rx is not None:
-            item[CONF_SCALE_RAW_MIN] = rn
-            item[CONF_SCALE_RAW_MAX] = rx
-        else:
-            for key in (CONF_SCALE_RAW_MIN, CONF_SCALE_RAW_MAX):
-                item.pop(key, None)
-
     def _has_duplicate(
         self,
         option_key: str,
@@ -412,8 +386,17 @@ class EntityConfigBuilder:
         keys: tuple[str, ...] = (CONF_ADDRESS,),
         skip_idx: int | None = None,
     ) -> bool:
-        """Return ``True`` if ``address`` already exists in the options."""
+        """Return ``True`` if ``address`` already exists in the options.
 
+        ``address`` and each stored value are compared ignoring any inline
+        ``Scale(...)`` suffix, so two entries on the same underlying PLC
+        address are still flagged as duplicates regardless of scaling.
+        """
+
+        try:
+            address, _ = parse_address_and_scale(address)
+        except ValueError:
+            pass
         normalized = self._normalized_address(address)
         if normalized is None:
             return False
@@ -422,7 +405,12 @@ class EntityConfigBuilder:
             if skip_idx is not None and idx == skip_idx:
                 continue
             for key in keys:
-                if self._normalized_address(item.get(key)) == normalized:
+                stored = item.get(key)
+                try:
+                    stored, _ = parse_address_and_scale(stored)
+                except ValueError:
+                    pass
+                if self._normalized_address(stored) == normalized:
                     return True
 
         return False
@@ -449,6 +437,30 @@ class EntityConfigBuilder:
             return None, errors
 
         return sanitized, errors
+
+    def _validate_scaled_address_field(
+        self, raw: str | None
+    ) -> tuple[str | None, tuple[float, float, float, float] | None, dict[str, str]]:
+        """Validate an address field that may carry an inline Scale(...) suffix.
+
+        Returns ``(address_for_storage, scale_or_none, errors)``.
+        ``address_for_storage`` already has ``Scale(...)`` re-embedded in
+        canonical form when present, ready to store as-is. On error, address
+        and scale are both ``None``.
+        """
+        try:
+            stripped, scale = parse_address_and_scale(raw)
+        except ValueError:
+            return None, None, {"base": "invalid_scale_syntax"}
+
+        address, errors = self._validate_address_field(stripped)
+        if errors:
+            return None, None, errors
+
+        stored = (
+            format_address_with_scale(address, scale) if scale is not None else address
+        )
+        return stored, scale, {}
 
     def _validate_mode_values_field(
         self, raw: str | None
@@ -559,8 +571,10 @@ class EntityConfigBuilder:
         fields: dict[str, Any] = {}
 
         if user_input.get(CONF_COVER_STATUS_ADDRESS):
-            cover_status_addr, errors = self._validate_address_field(
-                user_input.get(CONF_COVER_STATUS_ADDRESS)
+            cover_status_addr, _cover_status_scale, errors = (
+                self._validate_scaled_address_field(
+                    user_input.get(CONF_COVER_STATUS_ADDRESS)
+                )
             )
             if errors:
                 return {}, errors
@@ -638,8 +652,17 @@ class EntityConfigBuilder:
         *,
         skip_idx: int | None = None,
     ) -> tuple[dict[str, Any] | None, dict[str, str]]:
+        # Split off an optional inline "Scale(raw_min,raw_max,scale_min,
+        # scale_max)" suffix from the address field before validating it.
+        try:
+            stripped_address, inline_scale = parse_address_and_scale(
+                user_input.get(CONF_ADDRESS)
+            )
+        except ValueError:
+            return None, {"base": "invalid_scale_syntax"}
+
         # Validate address
-        address, errors = self._validate_address_field(user_input.get(CONF_ADDRESS))
+        address, errors = self._validate_address_field(stripped_address)
         if errors:
             return None, errors
 
@@ -647,9 +670,17 @@ class EntityConfigBuilder:
         if self._has_duplicate(CONF_SENSORS, address, skip_idx=skip_idx):
             return None, {"base": "duplicate_entry"}
 
+        # Scaling is expressed inline in the stored address itself (e.g.
+        # "DB6,B23 Scale(0,1,0,10)") rather than as separate item keys.
+        stored_address = (
+            format_address_with_scale(address, inline_scale)
+            if inline_scale is not None
+            else address
+        )
+
         # Build item with optional fields
         item = self._build_base_item(
-            address,
+            stored_address,
             user_input,
             CONF_NAME,
             CONF_AREA,
@@ -658,35 +689,7 @@ class EntityConfigBuilder:
             CONF_STATE_CLASS,
         )
 
-        # Store display range + scale only when all 4 params are provided
-        min_v = self._normalize_numeric_value(user_input.get(CONF_MIN_VALUE))
-        max_v = self._normalize_numeric_value(user_input.get(CONF_MAX_VALUE))
-        raw_min_v = self._normalize_numeric_value(user_input.get(CONF_SCALE_RAW_MIN))
-        raw_max_v = self._normalize_numeric_value(user_input.get(CONF_SCALE_RAW_MAX))
-
-        scale_values = (min_v, max_v, raw_min_v, raw_max_v)
-        any_scale_set = any(v is not None for v in scale_values)
-        all_scale_set = all(v is not None for v in scale_values)
-
-        if any_scale_set and not all_scale_set:
-            return None, {"base": "scale_requires_all_four"}
-
-        if all_scale_set:
-            item[CONF_MIN_VALUE] = min_v
-            item[CONF_MAX_VALUE] = max_v
-            item[CONF_SCALE_RAW_MIN] = raw_min_v
-            item[CONF_SCALE_RAW_MAX] = raw_max_v
-        else:
-            for key in (
-                CONF_MIN_VALUE,
-                CONF_MAX_VALUE,
-                CONF_SCALE_RAW_MIN,
-                CONF_SCALE_RAW_MAX,
-            ):
-                item.pop(key, None)
-
         # Apply specific transformations
-        self._apply_value_multiplier(item, user_input.get(CONF_VALUE_MULTIPLIER))
         self._apply_real_precision(item, user_input.get(CONF_REAL_PRECISION))
         self._apply_scan_interval(item, user_input.get(CONF_SCAN_INTERVAL))
 
@@ -903,38 +906,46 @@ class EntityConfigBuilder:
         *,
         skip_idx: int | None = None,
     ) -> tuple[dict[str, Any] | None, dict[str, str]]:
-        # Validate required position state address
-        position_state, state_errors = self._validate_address_field(
-            user_input.get(CONF_POSITION_STATE_ADDRESS)
+        # Validate required position state address (may carry an inline
+        # Scale(...))
+        position_state, _position_state_scale, state_errors = (
+            self._validate_scaled_address_field(
+                user_input.get(CONF_POSITION_STATE_ADDRESS)
+            )
         )
         if state_errors:
             return None, state_errors
 
-        # Get optional position command address
-        position_command = self._sanitize_address(
-            user_input.get(CONF_POSITION_COMMAND_ADDRESS)
-        )
-
-        # Validate optional command address if present
-        if position_command:
-            _, cmd_errors = self._validate_address_field(position_command)
+        # Get optional position command address (may carry its own,
+        # independent Scale(...))
+        position_command = None
+        if self._sanitize_address(user_input.get(CONF_POSITION_COMMAND_ADDRESS)):
+            position_command, _position_command_scale, cmd_errors = (
+                self._validate_scaled_address_field(
+                    user_input.get(CONF_POSITION_COMMAND_ADDRESS)
+                )
+            )
             if cmd_errors:
                 return None, cmd_errors
 
-        # Get optional tilt state/command addresses; symmetric to position
-        # above.
+        # Get optional tilt state/command addresses (may each carry their
+        # own, independent Scale(...)); symmetric to position above.
         tilt_state_addr = None
         tilt_command_addr = None
         if user_input.get(CONF_TILT_STATE_ADDRESS):
-            tilt_state_addr, tilt_state_errors = self._validate_address_field(
-                user_input.get(CONF_TILT_STATE_ADDRESS)
+            tilt_state_addr, _tilt_state_scale, tilt_state_errors = (
+                self._validate_scaled_address_field(
+                    user_input.get(CONF_TILT_STATE_ADDRESS)
+                )
             )
             if tilt_state_errors:
                 return None, tilt_state_errors
 
             if self._sanitize_address(user_input.get(CONF_TILT_COMMAND_ADDRESS)):
-                tilt_command_addr, tilt_cmd_errors = self._validate_address_field(
-                    user_input.get(CONF_TILT_COMMAND_ADDRESS)
+                tilt_command_addr, _tilt_command_scale, tilt_cmd_errors = (
+                    self._validate_scaled_address_field(
+                        user_input.get(CONF_TILT_COMMAND_ADDRESS)
+                    )
                 )
                 if tilt_cmd_errors:
                     return None, tilt_cmd_errors
@@ -1082,11 +1093,13 @@ class EntityConfigBuilder:
             if pulse_duration is not None:
                 item[CONF_PULSE_DURATION] = pulse_duration
 
-        # Brightness / dimmer fields (optional)
+        # Brightness / dimmer fields (optional). Scaling (raw PLC range ->
+        # HA's 0-255) is expressed inline via Scale(...) on either address;
+        # absent means the raw value is already 0-255.
         bri_state_addr = user_input.get(CONF_BRIGHTNESS_STATE_ADDRESS)
         if bri_state_addr:
-            bri_state_addr_val, bri_errors = self._validate_address_field(
-                bri_state_addr
+            bri_state_addr_val, _bri_state_scale, bri_errors = (
+                self._validate_scaled_address_field(bri_state_addr)
             )
             if bri_errors:
                 return None, bri_errors
@@ -1095,23 +1108,12 @@ class EntityConfigBuilder:
             # Brightness command address (defaults to state address)
             bri_cmd_addr = user_input.get(CONF_BRIGHTNESS_COMMAND_ADDRESS)
             if bri_cmd_addr:
-                bri_cmd_val, bri_cmd_errors = self._validate_address_field(bri_cmd_addr)
+                bri_cmd_val, _bri_cmd_scale, bri_cmd_errors = (
+                    self._validate_scaled_address_field(bri_cmd_addr)
+                )
                 if bri_cmd_errors:
                     return None, bri_cmd_errors
                 item[CONF_BRIGHTNESS_COMMAND_ADDRESS] = bri_cmd_val
-
-            # Brightness scale
-            raw_brightness = user_input.get(CONF_BRIGHTNESS_SCALE)
-            if raw_brightness is not None:
-                try:
-                    brightness_scale = int(raw_brightness)
-                except (TypeError, ValueError):
-                    brightness_scale = DEFAULT_BRIGHTNESS_SCALE
-                if brightness_scale < 1 or brightness_scale > 65535:
-                    brightness_scale = DEFAULT_BRIGHTNESS_SCALE
-                item[CONF_BRIGHTNESS_SCALE] = brightness_scale
-            else:
-                item[CONF_BRIGHTNESS_SCALE] = DEFAULT_BRIGHTNESS_SCALE
 
         # Apply scan interval
         self._apply_scan_interval(item, user_input.get(CONF_SCAN_INTERVAL))
@@ -1129,6 +1131,29 @@ class EntityConfigBuilder:
         Returns (item, errors). If there is an error,
         item is None and errors["base"] is set.
         """
+        # Split off an optional inline "Scale(raw_min,raw_max,scale_min,
+        # scale_max)" suffix from the address field. When present, it takes
+        # priority over the separate min/max fields, since it already fully
+        # specifies the scaling — inject its engineering range into
+        # user_input as if it had been typed into those fields, so the rest
+        # of this function (dtype clamping, validation) is unaffected. The
+        # scale itself is embedded back into the stored address at the end.
+        try:
+            stripped_address, inline_scale = parse_address_and_scale(
+                user_input.get(CONF_ADDRESS)
+            )
+        except ValueError:
+            return None, {"base": "invalid_scale_syntax"}
+
+        if inline_scale is not None:
+            raw_min_v, raw_max_v, min_v, max_v = inline_scale
+            user_input = {
+                **user_input,
+                CONF_ADDRESS: stripped_address,
+                CONF_MIN_VALUE: min_v,
+                CONF_MAX_VALUE: max_v,
+            }
+
         # Validate address
         address, errors = self._validate_address_field(user_input.get(CONF_ADDRESS))
         if errors:
@@ -1141,11 +1166,14 @@ class EntityConfigBuilder:
         if self._has_duplicate(CONF_NUMBERS, address, skip_idx=skip_idx):
             return None, {"base": "duplicate_entry"}
 
-        # Validate optional command address
+        # Validate optional command address (may carry its own, independent
+        # Scale(...) if its raw PLC range differs from the state address)
         command_address = None
         if user_input.get(CONF_COMMAND_ADDRESS):
-            command_address, cmd_errors = self._validate_address_field(
-                user_input.get(CONF_COMMAND_ADDRESS)
+            command_address, _command_scale, cmd_errors = (
+                self._validate_scaled_address_field(
+                    user_input.get(CONF_COMMAND_ADDRESS)
+                )
             )
             if cmd_errors:
                 return None, cmd_errors
@@ -1163,18 +1191,6 @@ class EntityConfigBuilder:
                 return None, {"base": "invalid_number"}
         except ValueError:
             return None, {"base": "invalid_number"}
-
-        # If either raw-range scale param is set, both min and max are required
-        raw_min_set = (
-            self._normalize_numeric_value(user_input.get(CONF_SCALE_RAW_MIN))
-            is not None
-        )
-        raw_max_set = (
-            self._normalize_numeric_value(user_input.get(CONF_SCALE_RAW_MAX))
-            is not None
-        )
-        if (raw_min_set or raw_max_set) and (min_value is None or max_value is None):
-            return None, {"base": "scale_raw_requires_min_max"}
 
         # Check if REAL or LREAL type requires min/max
         from .address import DataType
@@ -1199,9 +1215,22 @@ class EntityConfigBuilder:
         if min_value is not None and max_value is not None and min_value > max_value:
             return None, {"base": "invalid_range"}
 
+        # Scaling is expressed inline in the stored address itself (e.g.
+        # "DB1,REAL0 Scale(0,1,0,10)") rather than as separate item keys.
+        # The engineering range embedded is the (possibly dtype-clamped)
+        # min_value/max_value computed above; the raw PLC range is
+        # unclamped, exactly as parsed from the inline syntax.
+        stored_address = (
+            format_address_with_scale(
+                address, (raw_min_v, raw_max_v, min_value, max_value)
+            )
+            if inline_scale is not None
+            else address
+        )
+
         # Build item
         item = self._build_base_item(
-            address,
+            stored_address,
             user_input,
             CONF_NAME,
             CONF_AREA,
@@ -1213,21 +1242,17 @@ class EntityConfigBuilder:
         if command_address:
             item[CONF_COMMAND_ADDRESS] = command_address
 
-        # Add numeric constraints
-        if min_value is not None:
-            item[CONF_MIN_VALUE] = min_value
-        if max_value is not None:
-            item[CONF_MAX_VALUE] = max_value
+        # Add numeric constraints (plain bounds; not written when scaling is
+        # active, since the engineering range is already embedded above)
+        if inline_scale is None:
+            if min_value is not None:
+                item[CONF_MIN_VALUE] = min_value
+            if max_value is not None:
+                item[CONF_MAX_VALUE] = max_value
         if step_value is not None:
             item[CONF_STEP] = step_value
 
         # Apply transformations
-        self._apply_value_multiplier(item, user_input.get(CONF_VALUE_MULTIPLIER))
-        self._apply_value_scale(
-            item,
-            user_input.get(CONF_SCALE_RAW_MIN),
-            user_input.get(CONF_SCALE_RAW_MAX),
-        )
         self._apply_real_precision(item, user_input.get(CONF_REAL_PRECISION))
         self._apply_scan_interval(item, user_input.get(CONF_SCAN_INTERVAL))
 
@@ -1295,8 +1320,12 @@ class EntityConfigBuilder:
         if not source_entity:
             return None, {"base": "invalid_source_entity"}
 
-        # Validate address
-        address, errors = self._validate_address_field(user_input.get(CONF_ADDRESS))
+        # Validate address (may carry an inline Scale(...), applied when
+        # writing a numeric source entity's value; ignored for binary/BIT
+        # addresses)
+        address, _scale, errors = self._validate_scaled_address_field(
+            user_input.get(CONF_ADDRESS)
+        )
         if errors:
             return None, errors
 
@@ -1324,9 +1353,11 @@ class EntityConfigBuilder:
         skip_idx: int | None = None,
     ) -> tuple[dict[str, Any] | None, dict[str, str]]:
         """Build a 'climate_direct' item from user input."""
-        # Validate current temperature address
-        current_temp_addr, errors = self._validate_address_field(
-            user_input.get(CONF_CURRENT_TEMPERATURE_ADDRESS)
+        # Validate current temperature address (may carry an inline Scale(...))
+        current_temp_addr, _current_temp_scale, errors = (
+            self._validate_scaled_address_field(
+                user_input.get(CONF_CURRENT_TEMPERATURE_ADDRESS)
+            )
         )
         if errors:
             return None, errors
@@ -1410,25 +1441,34 @@ class EntityConfigBuilder:
         skip_idx: int | None = None,
     ) -> tuple[dict[str, Any] | None, dict[str, str]]:
         """Build a 'climate_setpoint' item from user input."""
-        # Validate current temperature address
-        current_temp_addr, errors = self._validate_address_field(
-            user_input.get(CONF_CURRENT_TEMPERATURE_ADDRESS)
+        # Validate current temperature address (may carry an inline Scale(...))
+        current_temp_addr, _current_temp_scale, errors = (
+            self._validate_scaled_address_field(
+                user_input.get(CONF_CURRENT_TEMPERATURE_ADDRESS)
+            )
         )
         if errors:
             return None, errors
 
-        # Validate target temperature address
-        target_temp_addr, errors = self._validate_address_field(
-            user_input.get(CONF_TARGET_TEMPERATURE_ADDRESS)
+        # Validate target temperature address (may carry an inline Scale(...))
+        target_temp_addr, _target_temp_scale, errors = (
+            self._validate_scaled_address_field(
+                user_input.get(CONF_TARGET_TEMPERATURE_ADDRESS)
+            )
         )
         if errors:
             return None, errors
 
-        # Validate optional preset mode address
+        # Validate optional preset mode address (may carry an inline
+        # Scale(...); the configured mode values below are then interpreted
+        # as the engineering-side codes, inverse-scaled/scaled at the
+        # raw PLC boundary)
         preset_mode_addr = None
         if user_input.get(CONF_PRESET_MODE_ADDRESS):
-            preset_mode_addr, errors = self._validate_address_field(
-                user_input.get(CONF_PRESET_MODE_ADDRESS)
+            preset_mode_addr, _preset_mode_scale, errors = (
+                self._validate_scaled_address_field(
+                    user_input.get(CONF_PRESET_MODE_ADDRESS)
+                )
             )
             if errors:
                 return None, errors
@@ -1442,11 +1482,13 @@ class EntityConfigBuilder:
             if errors:
                 return None, errors
 
-        # Validate optional HVAC status address
+        # Validate optional HVAC status address (may carry an inline Scale(...))
         hvac_status_addr = None
         if user_input.get(CONF_HVAC_STATUS_ADDRESS):
-            hvac_status_addr, errors = self._validate_address_field(
-                user_input.get(CONF_HVAC_STATUS_ADDRESS)
+            hvac_status_addr, _hvac_status_scale, errors = (
+                self._validate_scaled_address_field(
+                    user_input.get(CONF_HVAC_STATUS_ADDRESS)
+                )
             )
             if errors:
                 return None, errors
@@ -1590,8 +1632,9 @@ class EntityConfigBuilder:
         # has one - OFF/HEATING/COOLING default to "0"/"1"/"2") when the
         # user explicitly cleared the field. Falling back to the non-empty
         # default here would silently re-enable status matching for a
-        # value the user just tried to disable - same bug class fixed
-        # above for preset_mode_*_value.
+        # value the user just tried to disable - the DEFAULT_* constants
+        # were already applied above, at validation time, only when the
+        # field was absent from user_input entirely.
         item[CONF_HVAC_STATUS_OFF_VALUES] = hvac_status_off_values or ""
         item[CONF_HVAC_STATUS_HEATING_VALUES] = hvac_status_heating_values or ""
         item[CONF_HVAC_STATUS_COOLING_VALUES] = hvac_status_cooling_values or ""

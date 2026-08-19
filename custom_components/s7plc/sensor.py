@@ -18,7 +18,7 @@ from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .address import DataType, parse_tag
+from .address import DataType, parse_address_and_scale, parse_tag
 from .const import (
     CONF_ADDRESS,
     CONF_AREA,
@@ -36,13 +36,13 @@ from .const import (
     CONF_STATE_CLASS,
     CONF_UID,
     CONF_UNIT_OF_MEASUREMENT,
-    CONF_VALUE_MULTIPLIER,
 )
 from .entity import S7BaseEntity
 from .helpers import (
     DEVICE_CLASS_DEFAULT_UNITS,
     default_entity_name,
     get_coordinator_and_device_info,
+    inverse_scale_value,
     scale_value,
 )
 
@@ -287,23 +287,33 @@ async def async_setup_entry(
 
     entities = []
     for item in entry.options.get(CONF_SENSORS, []):
-        address = item.get(CONF_ADDRESS)
-        if not address:
+        raw_address = item.get(CONF_ADDRESS)
+        if not raw_address:
+            continue
+        try:
+            address, inline_scale = parse_address_and_scale(raw_address)
+        except ValueError:
+            _LOGGER.warning(
+                "Invalid Scale(...) syntax for sensor address '%s', skipping",
+                raw_address,
+            )
             continue
         name = item.get(CONF_NAME) or default_entity_name(address)
         area = item.get(CONF_AREA)
         topic = f"sensor:{address}"
         unique_id = item[CONF_UID]
         device_class = item.get(CONF_DEVICE_CLASS)
-        value_multiplier = item.get(CONF_VALUE_MULTIPLIER)
         unit_of_measurement = item.get(CONF_UNIT_OF_MEASUREMENT)
         state_class = item.get(CONF_STATE_CLASS)
         real_precision = item.get(CONF_REAL_PRECISION)
         scan_interval = item.get(CONF_SCAN_INTERVAL)
-        scale_raw_min = item.get(CONF_SCALE_RAW_MIN)
-        scale_raw_max = item.get(CONF_SCALE_RAW_MAX)
-        min_value = item.get(CONF_MIN_VALUE)
-        max_value = item.get(CONF_MAX_VALUE)
+        if inline_scale is not None:
+            scale_raw_min, scale_raw_max, min_value, max_value = inline_scale
+        else:
+            scale_raw_min = item.get(CONF_SCALE_RAW_MIN)
+            scale_raw_max = item.get(CONF_SCALE_RAW_MAX)
+            min_value = item.get(CONF_MIN_VALUE)
+            max_value = item.get(CONF_MAX_VALUE)
         await coord.add_item(topic, address, scan_interval, real_precision)
         entities.append(
             S7Sensor(
@@ -314,7 +324,6 @@ async def async_setup_entry(
                 topic,
                 address,
                 device_class,
-                value_multiplier,
                 unit_of_measurement,
                 state_class,
                 area,
@@ -347,16 +356,25 @@ async def async_setup_entry(
     # Setup Entity Syncs
     sync_entities = []
     for item in entry.options.get(CONF_ENTITY_SYNC, []):
-        address = item.get(CONF_ADDRESS)
+        raw_address = item.get(CONF_ADDRESS)
         source_entity = item.get(CONF_SOURCE_ENTITY)
         invert_state = item.get(CONF_INVERT_STATE, False)
 
-        if not address or not source_entity:
+        if not raw_address or not source_entity:
             _LOGGER.debug(
                 "Skipping entity sync with missing address or source entity: "
                 "address=%s, source=%s",
-                address,
+                raw_address,
                 source_entity,
+            )
+            continue
+
+        try:
+            address, scale = parse_address_and_scale(raw_address)
+        except ValueError:
+            _LOGGER.warning(
+                "Invalid Scale(...) syntax for entity sync address '%s', skipping",
+                raw_address,
             )
             continue
 
@@ -373,7 +391,8 @@ async def async_setup_entry(
                 address,
                 source_entity,
                 area,
-                invert_state,
+                invert_state=invert_state,
+                scale=scale,
             )
         )
 
@@ -394,7 +413,6 @@ class S7Sensor(S7BaseEntity, SensorEntity):
         topic: str,
         address: str,
         device_class: str | None,
-        value_multiplier: float | None,
         unit_of_measurement: str | None = None,
         state_class: str | None = None,
         suggested_area_id: str | None = None,
@@ -412,19 +430,6 @@ class S7Sensor(S7BaseEntity, SensorEntity):
             address=address,
             suggested_area_id=suggested_area_id,
         )
-
-        # Parse value_multiplier with defensive validation
-        self._value_multiplier = None
-        if value_multiplier not in (None, ""):
-            try:
-                self._value_multiplier = float(value_multiplier)
-            except (TypeError, ValueError) as err:
-                _LOGGER.warning(
-                    "Invalid value_multiplier '%s' for sensor %s: %s. Ignoring.",
-                    value_multiplier,
-                    name,
-                    err,
-                )
 
         # Parse linear-scale parameters (all four must be present to activate)
         self._scale_params: tuple[float, float, float, float] | None = None
@@ -518,12 +523,9 @@ class S7Sensor(S7BaseEntity, SensorEntity):
                     value,
                 )
                 return value
-        # Linear scaling takes precedence over multiplier
         if self._scale_params is not None:
             rn, rx, sn, sx = self._scale_params
             return scale_value(numeric_value, rn, rx, sn, sx)
-        if self._value_multiplier is not None:
-            return numeric_value * self._value_multiplier
         return value
 
     @property
@@ -535,8 +537,6 @@ class S7Sensor(S7BaseEntity, SensorEntity):
             attrs["scale_raw_max"] = rx
             attrs["min_value"] = sn
             attrs["max_value"] = sx
-        elif self._value_multiplier is not None:
-            attrs["value_multiplier"] = self._value_multiplier
         return attrs
 
 
@@ -555,6 +555,7 @@ class S7EntitySync(S7BaseEntity, SensorEntity):
         source_entity: str,
         suggested_area_id: str | None = None,
         invert_state: bool = False,
+        scale: tuple[float, float, float, float] | None = None,
     ) -> None:
         """Initialize the entity sync."""
         super().__init__(
@@ -568,6 +569,7 @@ class S7EntitySync(S7BaseEntity, SensorEntity):
         self._address = address
         self._source_entity = source_entity
         self._invert_state = invert_state
+        self._scale = scale
         self._last_written_value: float | None = None
         self._initial_write_pending: bool = False
         self._write_count = 0
@@ -728,10 +730,12 @@ class S7EntitySync(S7BaseEntity, SensorEntity):
     def _parse_numeric_value(self, source_state: State) -> float | None:
         """Parse a HA state to float for non-BIT addresses.
 
-        Returns None when the state cannot be converted.
+        Returns None when the state cannot be converted. When the address
+        carries an inline Scale(...), the source entity's own (engineering)
+        value is inverse-scaled to the raw PLC value before writing.
         """
         try:
-            return float(source_state.state)
+            value = float(source_state.state)
         except (ValueError, TypeError):
             _LOGGER.warning(
                 "Cannot convert source entity %s state '%s' to numeric value",
@@ -739,6 +743,11 @@ class S7EntitySync(S7BaseEntity, SensorEntity):
                 source_state.state,
             )
             return None
+
+        if self._scale is not None:
+            rn, rx, sn, sx = self._scale
+            return inverse_scale_value(value, rn, rx, sn, sx)
+        return value
 
     @property
     def native_value(self) -> str | float | None:

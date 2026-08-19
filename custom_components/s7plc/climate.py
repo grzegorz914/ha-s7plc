@@ -18,6 +18,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import restore_state
 from homeassistant.helpers.entity import DeviceInfo
 
+from .address import parse_address_and_scale
 from .const import (
     CONF_AREA,
     CONF_CLIMATE_CONTROL_MODE,
@@ -78,8 +79,10 @@ from .entity import S7BaseEntity
 from .helpers import (
     default_entity_name,
     get_coordinator_and_device_info,
+    inverse_scale_value,
     make_unique_topic,
     parse_mode_values,
+    scale_value,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -96,12 +99,24 @@ async def async_setup_entry(
     entities = []
     seen_topics: set[str] = set()
     for item in entry.options.get(CONF_CLIMATES, []):
-        current_temp_address = item.get(CONF_CURRENT_TEMPERATURE_ADDRESS)
-        if not current_temp_address:
+        raw_current_temp_address = item.get(CONF_CURRENT_TEMPERATURE_ADDRESS)
+        if not raw_current_temp_address:
             _LOGGER.warning(
                 "Climate entity requires current_temperature_address, "
                 "skipping item: %s",
                 item,
+            )
+            continue
+
+        try:
+            current_temp_address, current_temp_scale = parse_address_and_scale(
+                raw_current_temp_address
+            )
+        except ValueError:
+            _LOGGER.warning(
+                "Invalid Scale(...) syntax for climate current_temperature_address"
+                " '%s', skipping",
+                raw_current_temp_address,
             )
             continue
 
@@ -168,16 +183,29 @@ async def async_setup_entry(
                     max_temp,
                     temp_step,
                     area,
+                    current_temp_scale=current_temp_scale,
                 )
             )
 
         elif control_mode == CONTROL_MODE_SETPOINT:
             # Mode 2: Setpoint control - PLC manages heating/cooling autonomously
-            target_temp_address = item.get(CONF_TARGET_TEMPERATURE_ADDRESS)
-            if not target_temp_address:
+            raw_target_temp_address = item.get(CONF_TARGET_TEMPERATURE_ADDRESS)
+            if not raw_target_temp_address:
                 _LOGGER.debug(
                     "Skipping setpoint control climate "
                     "without target_temperature_address"
+                )
+                continue
+
+            try:
+                target_temp_address, target_temp_scale = parse_address_and_scale(
+                    raw_target_temp_address
+                )
+            except ValueError:
+                _LOGGER.warning(
+                    "Invalid Scale(...) syntax for climate"
+                    " target_temperature_address '%s', skipping",
+                    raw_target_temp_address,
                 )
                 continue
 
@@ -194,10 +222,27 @@ async def async_setup_entry(
                 f"{topic}:target_temp", target_temp_address, scan_interval
             )
 
-            # Optional: preset mode address. Bidirectional readback (polling
-            # it back into hvac_mode) is opt-in -- see preset_mode_bidirectional
-            # below -- so only poll it when actually needed.
-            preset_mode_address = item.get(CONF_PRESET_MODE_ADDRESS)
+            # Optional: preset mode address (may carry an inline Scale(...);
+            # the configured mode values below are then interpreted as the
+            # engineering-side codes, inverse-scaled/scaled at the raw PLC
+            # boundary). Bidirectional readback (polling it back into
+            # hvac_mode) is opt-in -- see preset_mode_bidirectional below --
+            # so only poll it when actually needed.
+            raw_preset_mode_address = item.get(CONF_PRESET_MODE_ADDRESS)
+            preset_mode_address = None
+            preset_mode_scale = None
+            if raw_preset_mode_address:
+                try:
+                    preset_mode_address, preset_mode_scale = parse_address_and_scale(
+                        raw_preset_mode_address
+                    )
+                except ValueError:
+                    _LOGGER.warning(
+                        "Invalid Scale(...) syntax for climate preset_mode_address"
+                        " '%s', skipping",
+                        raw_preset_mode_address,
+                    )
+                    continue
             preset_mode_bidirectional = bool(
                 item.get(
                     CONF_PRESET_MODE_BIDIRECTIONAL, DEFAULT_PRESET_MODE_BIDIRECTIONAL
@@ -215,9 +260,23 @@ async def async_setup_entry(
             if on_off_address:
                 await coord.add_item(f"{topic}:on_off", on_off_address, scan_interval)
 
-            # Optional: HVAC status address (mapping configured below)
-            hvac_status_address = item.get(CONF_HVAC_STATUS_ADDRESS)
-            if hvac_status_address:
+            # Optional: HVAC status address (may carry an inline Scale(...);
+            # mapping configured below)
+            raw_hvac_status_address = item.get(CONF_HVAC_STATUS_ADDRESS)
+            hvac_status_address = None
+            hvac_status_scale = None
+            if raw_hvac_status_address:
+                try:
+                    hvac_status_address, hvac_status_scale = parse_address_and_scale(
+                        raw_hvac_status_address
+                    )
+                except ValueError:
+                    _LOGGER.warning(
+                        "Invalid Scale(...) syntax for climate hvac_status_address"
+                        " '%s', skipping",
+                        raw_hvac_status_address,
+                    )
+                    continue
                 await coord.add_item(
                     f"{topic}:hvac_status", hvac_status_address, scan_interval
                 )
@@ -310,6 +369,10 @@ async def async_setup_entry(
                     preset_mode_fan_only_value=preset_mode_fan_only_value,
                     preset_mode_bidirectional=preset_mode_bidirectional,
                     on_off_address=on_off_address,
+                    current_temp_scale=current_temp_scale,
+                    target_temp_scale=target_temp_scale,
+                    preset_mode_scale=preset_mode_scale,
+                    hvac_status_scale=hvac_status_scale,
                 )
             )
 
@@ -347,6 +410,7 @@ class S7ClimateDirectControl(S7BaseEntity, restore_state.RestoreEntity, ClimateE
         max_temp: float,
         temp_step: float,
         suggested_area_id: str | None = None,
+        current_temp_scale: tuple[float, float, float, float] | None = None,
     ):
         """Initialize direct control climate entity."""
         super().__init__(
@@ -359,6 +423,7 @@ class S7ClimateDirectControl(S7BaseEntity, restore_state.RestoreEntity, ClimateE
             suggested_area_id=suggested_area_id,
         )
         self._current_temp_address = current_temp_address
+        self._current_temp_scale = current_temp_scale
         self._heating_output_address = heating_output_address
         self._cooling_output_address = cooling_output_address
         self._heating_action_address = heating_action_address
@@ -427,6 +492,9 @@ class S7ClimateDirectControl(S7BaseEntity, restore_state.RestoreEntity, ClimateE
         temp_topic = f"{self._topic}:current_temp"
         value = data.get(temp_topic)
         if value is not None and isinstance(value, (int, float)):
+            if self._current_temp_scale is not None:
+                rn, rx, sn, sx = self._current_temp_scale
+                return scale_value(float(value), rn, rx, sn, sx)
             return float(value)
         return None
 
@@ -622,6 +690,10 @@ class S7ClimateSetpointControl(
         preset_mode_fan_only_value: int | None = DEFAULT_PRESET_MODE_FAN_ONLY_VALUE,
         preset_mode_bidirectional: bool = DEFAULT_PRESET_MODE_BIDIRECTIONAL,
         on_off_address: str | None = None,
+        current_temp_scale: tuple[float, float, float, float] | None = None,
+        target_temp_scale: tuple[float, float, float, float] | None = None,
+        preset_mode_scale: tuple[float, float, float, float] | None = None,
+        hvac_status_scale: tuple[float, float, float, float] | None = None,
     ):
         """Initialize setpoint control climate entity."""
         super().__init__(
@@ -639,6 +711,10 @@ class S7ClimateSetpointControl(
         self._preset_mode_bidirectional = preset_mode_bidirectional
         self._hvac_status_address = hvac_status_address
         self._on_off_address = on_off_address
+        self._current_temp_scale = current_temp_scale
+        self._target_temp_scale = target_temp_scale
+        self._preset_mode_scale = preset_mode_scale
+        self._hvac_status_scale = hvac_status_scale
 
         self._attr_min_temp = float(min_temp)
         self._attr_max_temp = float(max_temp)
@@ -789,6 +865,9 @@ class S7ClimateSetpointControl(
         temp_topic = f"{self._topic}:current_temp"
         value = data.get(temp_topic)
         if value is not None and isinstance(value, (int, float)):
+            if self._current_temp_scale is not None:
+                rn, rx, sn, sx = self._current_temp_scale
+                return scale_value(float(value), rn, rx, sn, sx)
             return float(value)
         return None
 
@@ -799,6 +878,9 @@ class S7ClimateSetpointControl(
         temp_topic = f"{self._topic}:target_temp"
         value = data.get(temp_topic)
         if value is not None and isinstance(value, (int, float)):
+            if self._target_temp_scale is not None:
+                rn, rx, sn, sx = self._target_temp_scale
+                return scale_value(float(value), rn, rx, sn, sx)
             return float(value)
         return None
 
@@ -828,7 +910,14 @@ class S7ClimateSetpointControl(
             preset_value = data.get(f"{self._topic}:preset_mode")
             if preset_value is not None:
                 try:
-                    mode = self._preset_value_to_mode.get(int(preset_value))
+                    if self._preset_mode_scale is not None:
+                        rn, rx, sn, sx = self._preset_mode_scale
+                        preset_code = round(
+                            scale_value(float(preset_value), rn, rx, sn, sx)
+                        )
+                    else:
+                        preset_code = int(preset_value)
+                    mode = self._preset_value_to_mode.get(preset_code)
                 except (TypeError, ValueError):
                     mode = None
                 if mode is not None:
@@ -858,7 +947,11 @@ class S7ClimateSetpointControl(
             status = data.get(status_topic)
             if status is not None:
                 try:
-                    status_value = int(status)
+                    if self._hvac_status_scale is not None:
+                        rn, rx, sn, sx = self._hvac_status_scale
+                        status_value = round(scale_value(float(status), rn, rx, sn, sx))
+                    else:
+                        status_value = int(status)
                 except (TypeError, ValueError):
                     # A transient malformed coordinator value must not make
                     # Home Assistant fail while evaluating the entity state.
@@ -911,9 +1004,11 @@ class S7ClimateSetpointControl(
         temperature = max(self._attr_min_temp, min(self._attr_max_temp, temperature))
 
         # Write target temperature to PLC
-        await self.coordinator.write_batched(
-            self._target_temp_address, float(temperature)
-        )
+        plc_value = float(temperature)
+        if self._target_temp_scale is not None:
+            rn, rx, sn, sx = self._target_temp_scale
+            plc_value = inverse_scale_value(plc_value, rn, rx, sn, sx)
+        await self.coordinator.write_batched(self._target_temp_address, plc_value)
 
         # If a mode is specified, set it first
         if (hvac_mode := kwargs.get(ATTR_HVAC_MODE)) is not None:
@@ -940,8 +1035,12 @@ class S7ClimateSetpointControl(
         if self._preset_mode_address:
             mode_value = self._preset_mode_values.get(hvac_mode)
             if mode_value is not None:
+                plc_value = mode_value
+                if self._preset_mode_scale is not None:
+                    rn, rx, sn, sx = self._preset_mode_scale
+                    plc_value = inverse_scale_value(float(mode_value), rn, rx, sn, sx)
                 await self.coordinator.write_batched(
-                    self._preset_mode_address, mode_value
+                    self._preset_mode_address, plc_value
                 )
 
         # Optionally write a simple on/off signal, for thermostats that have

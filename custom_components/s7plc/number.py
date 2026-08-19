@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity import DeviceInfo
 
-from .address import get_numeric_limits, parse_tag
+from .address import get_numeric_limits, parse_address_and_scale, parse_tag
 from .const import (
     CONF_ADDRESS,
     CONF_AREA,
@@ -25,7 +25,6 @@ from .const import (
     CONF_STEP,
     CONF_UID,
     CONF_UNIT_OF_MEASUREMENT,
-    CONF_VALUE_MULTIPLIER,
 )
 from .entity import S7BaseEntity
 from .helpers import (
@@ -50,23 +49,50 @@ async def async_setup_entry(
 
     entities: list[S7Number] = []
     for item in entry.options.get(CONF_NUMBERS, []):
-        address = item.get(CONF_ADDRESS)
-        if not address:
+        raw_address = item.get(CONF_ADDRESS)
+        if not raw_address:
+            continue
+        try:
+            address, inline_scale = parse_address_and_scale(raw_address)
+        except ValueError:
+            _LOGGER.warning(
+                "Invalid Scale(...) syntax for number address '%s', skipping",
+                raw_address,
+            )
             continue
         name = item.get(CONF_NAME) or default_entity_name(address)
         area = item.get(CONF_AREA)
         topic = f"number:{address}"
         unique_id = item[CONF_UID]
-        command_address = item.get(CONF_COMMAND_ADDRESS) or address
-        min_value = item.get(CONF_MIN_VALUE)
-        max_value = item.get(CONF_MAX_VALUE)
+
+        raw_command_address = item.get(CONF_COMMAND_ADDRESS)
+        if raw_command_address:
+            try:
+                command_address, command_scale = parse_address_and_scale(
+                    raw_command_address
+                )
+            except ValueError:
+                _LOGGER.warning(
+                    "Invalid Scale(...) syntax for number command_address"
+                    " '%s', skipping",
+                    raw_command_address,
+                )
+                continue
+        else:
+            command_address = address
+            command_scale = inline_scale
+
+        if inline_scale is not None:
+            scale_raw_min, scale_raw_max, min_value, max_value = inline_scale
+        else:
+            scale_raw_min = item.get(CONF_SCALE_RAW_MIN)
+            scale_raw_max = item.get(CONF_SCALE_RAW_MAX)
+            min_value = item.get(CONF_MIN_VALUE)
+            max_value = item.get(CONF_MAX_VALUE)
         step = item.get(CONF_STEP)
         device_class = item.get(CONF_DEVICE_CLASS)
         unit_of_measurement = item.get(CONF_UNIT_OF_MEASUREMENT)
         real_precision = item.get(CONF_REAL_PRECISION)
-        value_multiplier = item.get(CONF_VALUE_MULTIPLIER)
-        scale_raw_min = item.get(CONF_SCALE_RAW_MIN)
-        scale_raw_max = item.get(CONF_SCALE_RAW_MAX)
 
         scan_interval = item.get(CONF_SCAN_INTERVAL)
         await coord.add_item(topic, address, scan_interval, real_precision)
@@ -85,9 +111,9 @@ async def async_setup_entry(
                 device_class,
                 unit_of_measurement,
                 area,
-                value_multiplier=value_multiplier,
                 scale_raw_min=scale_raw_min,
                 scale_raw_max=scale_raw_max,
+                command_scale=command_scale,
             )
         )
 
@@ -116,9 +142,9 @@ class S7Number(S7BaseEntity, NumberEntity):
         device_class: str | None = None,
         unit_of_measurement: str | None = None,
         suggested_area_id: str | None = None,
-        value_multiplier: float | None = None,
         scale_raw_min: float | None = None,
         scale_raw_max: float | None = None,
+        command_scale: tuple[float, float, float, float] | None = None,
     ):
         super().__init__(
             coordinator,
@@ -131,21 +157,7 @@ class S7Number(S7BaseEntity, NumberEntity):
         )
         self._command_address = command_address
 
-        # Parse value_multiplier with defensive validation
-        self._value_multiplier: float | None = None
-        if value_multiplier not in (None, ""):
-            try:
-                self._value_multiplier = float(value_multiplier)
-            except (TypeError, ValueError) as err:
-                _LOGGER.warning(
-                    "Invalid value_multiplier '%s' for number %s: %s. Ignoring.",
-                    value_multiplier,
-                    name,
-                    err,
-                )
-
-        # Parse linear-scale parameters (all four must be present to activate).
-        # When active, scale takes precedence over value_multiplier.
+        # Parse linear-scale parameters (all four must be present to activate)
         self._scale_params: tuple[float, float, float, float] | None = None
         _sp = (scale_raw_min, scale_raw_max, min_value, max_value)
         if all(v not in (None, "") for v in _sp):
@@ -158,6 +170,13 @@ class S7Number(S7BaseEntity, NumberEntity):
                     name,
                     err,
                 )
+
+        # The command address may carry its own, independent Scale(...) when
+        # its raw PLC range differs from the state address; otherwise writes
+        # use the same scale as reads.
+        self._write_scale_params = (
+            command_scale if command_scale is not None else self._scale_params
+        )
 
         # Set device_class if provided
         if device_class:
@@ -215,42 +234,24 @@ class S7Number(S7BaseEntity, NumberEntity):
         if step is not None:
             self._attr_native_step = float(step)
 
-        # Scale min/max/step by multiplier so the UI works in display units.
-        # The PLC raw value is always divided back when writing.
         # If scale_params are active, the UI range is simply [scale_min, scale_max].
         if self._scale_params is not None:
             rn, rx, sn, sx = self._scale_params
             self._attr_native_min_value = min(sn, sx)
             self._attr_native_max_value = max(sn, sx)
-        elif self._value_multiplier is not None:
-            if self._attr_native_min_value is not None:
-                self._attr_native_min_value = (
-                    self._attr_native_min_value * self._value_multiplier
-                )
-            if self._attr_native_max_value is not None:
-                self._attr_native_max_value = (
-                    self._attr_native_max_value * self._value_multiplier
-                )
-            self._attr_native_step = self._attr_native_step * self._value_multiplier
 
     @property
     def native_value(self):
         value = (self.coordinator.data or {}).get(self._topic)
         if value is None:
             return value
-        # Linear scaling takes precedence over multiplier
         if self._scale_params is not None:
             try:
                 rn, rx, sn, sx = self._scale_params
                 return scale_value(float(value), rn, rx, sn, sx)
             except (TypeError, ValueError):
                 return value
-        if self._value_multiplier is None:
-            return value
-        try:
-            return float(value) * self._value_multiplier
-        except (TypeError, ValueError):
-            return value
+        return value
 
     async def async_set_native_value(self, value: float) -> None:
         await self._ensure_connected()
@@ -258,11 +259,9 @@ class S7Number(S7BaseEntity, NumberEntity):
             raise HomeAssistantError("No command address configured for this entity.")
 
         # Convert display-unit value back to PLC raw value
-        if self._scale_params is not None:
-            rn, rx, sn, sx = self._scale_params
+        if self._write_scale_params is not None:
+            rn, rx, sn, sx = self._write_scale_params
             plc_value = inverse_scale_value(float(value), rn, rx, sn, sx)
-        elif self._value_multiplier is not None and self._value_multiplier != 0:
-            plc_value = float(value) / self._value_multiplier
         else:
             plc_value = float(value)
 
@@ -280,7 +279,5 @@ class S7Number(S7BaseEntity, NumberEntity):
             rn, rx, sn, sx = self._scale_params
             attrs["scale_raw_min"] = rn
             attrs["scale_raw_max"] = rx
-        elif self._value_multiplier is not None:
-            attrs["value_multiplier"] = self._value_multiplier
 
         return attrs

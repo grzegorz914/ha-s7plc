@@ -1049,7 +1049,10 @@ async def test_async_setup_entry_with_covers(fake_hass, mock_coordinator, device
 async def test_async_setup_entry_skip_missing_command_addresses(
     fake_hass, mock_coordinator, device_info
 ):
-    """Test setup skips traditional covers missing open or close command addresses."""
+    """Test setup skips traditional covers missing open or close command
+    addresses when toggle_mode is off (the default) - open_command_address
+    is unconditionally required, close_command_address only when toggle_mode
+    isn't enabled (see test_config_flow's toggle_mode tests for that path)."""
     config_entry = MagicMock()
     config_entry.options = {
         CONF_COVERS: [
@@ -2454,3 +2457,99 @@ async def test_position_cover_setup_with_tilt(fake_hass, mock_coordinator, devic
     assert cover._tilt_command_address == "db1,b3"
     assert cover._invert_tilt is True
     assert cover._attr_supported_features & CoverEntityFeature.SET_TILT_POSITION
+
+
+# ============================================================================
+# Inline Scale(...) support
+# ============================================================================
+
+
+def test_position_cover_status_honors_scale(fake_hass, mock_coordinator, device_info):
+    """cover_status_address supports the same inline Scale(...) as every
+    other address; matching happens on the scaled (engineering) value."""
+    from custom_components.s7plc.cover import S7PositionCover
+
+    cover = S7PositionCover(
+        mock_coordinator,
+        "Test Cover",
+        "test_id",
+        device_info,
+        "db1,b0",
+        "db1,b1",
+        cover_status_topic="cover:status:db1,w10",
+        cover_status_address="db1,w10",
+        cover_status_scale=(0.0, 1000.0, 0.0, 10.0),
+        cover_status_opening_values="1",
+    )
+    # raw 100 in [0,1000] -> engineering 1 -> matches opening_values="1"
+    mock_coordinator.data = {"cover:status:db1,w10": 100}
+    assert cover.is_opening is True
+
+
+@pytest.mark.asyncio
+async def test_position_cover_set_tilt_position_scaled(
+    fake_hass, mock_coordinator, device_info
+):
+    """set_cover_tilt_position clamps, inverts, then scales before writing —
+    same order as async_set_cover_position."""
+    from custom_components.s7plc.cover import S7PositionCover
+
+    cover = S7PositionCover(
+        mock_coordinator,
+        "Test Cover",
+        "test_id",
+        device_info,
+        "db1,b0",
+        "db1,b1",
+        tilt_state_address="db1,w2",
+        tilt_command_address="db1,w3",
+        invert_tilt=True,
+        tilt_command_scale=(0.0, 1000.0, 0.0, 100.0),
+    )
+    cover.hass = fake_hass
+    mock_coordinator.data = {}
+
+    # 80 inverted -> 20, then inverse-scaled [0,100]->[0,1000] -> 200
+    await cover.async_set_cover_tilt_position(tilt_position=80)
+    mock_coordinator.write_batched.assert_called_with("db1,w3", 200.0)
+
+
+@pytest.mark.asyncio
+async def test_position_cover_set_position_scaled(
+    fake_hass, mock_coordinator, device_info
+):
+    """async_set_cover_position inverse-scales before writing."""
+    from custom_components.s7plc.cover import S7PositionCover
+
+    cover = S7PositionCover(
+        mock_coordinator,
+        "Test Cover",
+        "test_id",
+        device_info,
+        "db1,w0",
+        "db1,w1",
+        position_command_scale=(0.0, 1000.0, 0.0, 100.0),
+    )
+    cover.hass = fake_hass
+    mock_coordinator.data = {}
+
+    # 30 -> inverse-scaled [0,100]->[0,1000] -> 300
+    await cover.async_set_cover_position(position=30)
+    mock_coordinator.write_batched.assert_called_with("db1,w1", 300.0)
+
+
+def test_position_cover_position_value_scaled(fake_hass, mock_coordinator, device_info):
+    """_get_position_value scales the raw PLC value before clamping."""
+    from custom_components.s7plc.cover import S7PositionCover
+
+    cover = S7PositionCover(
+        mock_coordinator,
+        "Test Cover",
+        "test_id",
+        device_info,
+        "db1,w0",
+        "db1,w1",
+        position_state_scale=(0.0, 1000.0, 0.0, 100.0),
+    )
+    mock_coordinator.data = {"cover:position:db1,w0": 450}
+    assert cover.current_cover_position == 45

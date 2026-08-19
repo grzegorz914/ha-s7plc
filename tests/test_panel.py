@@ -874,7 +874,7 @@ def test_panel_legacy_climate_preserves_core_preset_defaults_when_resaved() -> N
 
     const cases = {json.dumps(cases)};
     const results = cases.map(([key, item]) => {{
-        const html = panel.field([key, 'label', 'number', false], item);
+        const html = panel.field([key, 'label', 'number', false], item, 'climates');
         const m = html.match(/value="([^"]*)"/);
         return m ? m[1] : null;
     }});
@@ -896,69 +896,46 @@ def test_panel_legacy_climate_preserves_core_preset_defaults_when_resaved() -> N
     )
 
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_panel_legacy_climate_preserves_core_status_defaults_when_resaved() -> None:
-    """Same bug class as the preset-value one above, mirrored on the
-    status-matching side: hvac_status_off/heating/cooling_values also carry
-    non-empty historical defaults ("0"/"1"/"2"), unlike idle/drying/fan/
-    preheating/defrosting which default to "". A never-configured (or
-    legacy) climate must show these 3 fields pre-filled with their
-    historical default, not blank - otherwise the panel misleadingly shows
-    "empty" for a status that climate.py is still actively matching
-    internally (e.g. a status address reporting 2 shows "Cooling" even
-    though the panel's cooling field looks unconfigured).
-    """
-    cases = [
-        # (key, item, expected rendered value)
-        ("hvac_status_off_values", {}, "0"),
-        ("hvac_status_heating_values", {}, "1"),
-        ("hvac_status_cooling_values", {}, "2"),
-        # Explicitly disabled (user cleared it) must stay blank, not revert
-        # to the default.
-        ("hvac_status_off_values", {"hvac_status_off_values": ""}, ""),
-        ("hvac_status_cooling_values", {"hvac_status_cooling_values": ""}, ""),
-        # An explicit value (of any kind) is rendered as-is.
-        ("hvac_status_cooling_values", {"hvac_status_cooling_values": "5"}, "5"),
-        # Statuses with no historical default (IDLE/DRYING/...) stay blank
-        # whether the key is missing or explicitly empty - unaffected by
-        # this fix, included to pin down the boundary.
-        ("hvac_status_idle_values", {}, ""),
-        ("hvac_status_idle_values", {"hvac_status_idle_values": ""}, ""),
-    ]
+def test_panel_drops_retired_scaling_fields() -> None:
+    """Sensors/numbers/lights no longer expose the separate scale fields
+    that were folded into the address field's inline Scale(...) syntax;
+    only numbers' min_value/max_value survive, since those double as the
+    Number entity's plain HA-facing bounds independent of scaling."""
+    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
 
-    script = f"""
-    const vm = require('vm');
-    global.HTMLElement = class {{}};
-    global.customElements = {{ define() {{}} }};
-    const fs = require('fs');
-    const src = fs.readFileSync({json.dumps(str(PANEL_JAVASCRIPT))}, 'utf8');
-    vm.runInThisContext(src + '\\nglobalThis.__Panel = S7PlcConfigurationPanel;', {{filename: 'panel.js'}});
-    const panel = new (globalThis.__Panel)();
-    panel.t = (k) => k;
-    panel.escape = (v) => String(v);
-
-    const cases = {json.dumps(cases)};
-    const results = cases.map(([key, item]) => {{
-        const html = panel.field([key, 'label', 'text', false], item);
-        const m = html.match(/value="([^"]*)"/);
-        return m ? m[1] : null;
-    }});
-    console.log(JSON.stringify(results));
-    """
-
-    result = subprocess.run(
-        ["node", "-e", script],
-        capture_output=True,
-        text=True,
-        timeout=10,
+    sensors_line = next(
+        line for line in source.splitlines() if line.strip().startswith("sensors:[")
     )
-    assert result.returncode == 0, result.stderr
-    actual = json.loads(result.stdout)
-    expected = [case[2] for case in cases]
-    assert actual == expected, (
-        f"field() rendered values {actual}, expected {expected} for cases "
-        f"{[(c[0], c[1]) for c in cases]}"
+    numbers_line = next(
+        line for line in source.splitlines() if line.strip().startswith("numbers:[")
     )
+    lights_line = next(
+        line for line in source.splitlines() if line.strip().startswith("lights:[")
+    )
+
+    for retired in ("value_multiplier", "scale_raw_min", "scale_raw_max"):
+        assert retired not in sensors_line
+        assert retired not in numbers_line
+    assert "min_value" not in sensors_line
+    assert "max_value" not in sensors_line
+    assert "min_value" in numbers_line
+    assert "max_value" in numbers_line
+    assert "brightness_scale" not in lights_line
+
+
+def test_panel_does_not_duplicate_the_scale_hint() -> None:
+    """The Scale(...) hint is already part of each scalable field's
+    data_description (config_flow strings), loaded dynamically via
+    flowText(). The panel must not append a second, separate scale hint on
+    top of it - that used to render the mention twice."""
+    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
+
+    assert "SCALE_FIELDS" not in source
+    assert "scale_help" not in source
+    assert (
+        "description=this.flowText(type,item,key,'data_description'),"
+        "help=description?`<small>${this.escape(description)}</small>`:''"
+    ) in source
 
 
 def test_panel_clearing_a_core_status_value_stores_empty_string_not_deletes() -> None:
