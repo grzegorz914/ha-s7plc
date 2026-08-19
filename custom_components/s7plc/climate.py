@@ -214,20 +214,35 @@ async def async_setup_entry(
             )
             unique_id = item[CONF_UID]
 
-            # Register current and target temperature for reading
+            # Bidirectional readback toggle for this setpoint climate: governs
+            # both target_temperature (below) and hvac_mode (via
+            # preset_mode_address, below) - see const.py's
+            # DEFAULT_PRESET_MODE_BIDIRECTIONAL for the rationale.
+            preset_mode_bidirectional = bool(
+                item.get(
+                    CONF_PRESET_MODE_BIDIRECTIONAL, DEFAULT_PRESET_MODE_BIDIRECTIONAL
+                )
+            )
+
+            # Register current temperature for reading. Target temperature is
+            # only polled back when preset_mode_bidirectional is enabled -
+            # otherwise it's assumed to only ever be commanded from HA, and
+            # the internally tracked value is used instead (see
+            # S7ClimateSetpointControl.__init__/async_set_temperature).
             await coord.add_item(
                 f"{topic}:current_temp", current_temp_address, scan_interval
             )
-            await coord.add_item(
-                f"{topic}:target_temp", target_temp_address, scan_interval
-            )
+            if preset_mode_bidirectional:
+                await coord.add_item(
+                    f"{topic}:target_temp", target_temp_address, scan_interval
+                )
 
             # Optional: preset mode address (may carry an inline Scale(...);
             # the configured mode values below are then interpreted as the
             # engineering-side codes, inverse-scaled/scaled at the raw PLC
             # boundary). Bidirectional readback (polling it back into
-            # hvac_mode) is opt-in -- see preset_mode_bidirectional below --
-            # so only poll it when actually needed.
+            # hvac_mode) follows preset_mode_bidirectional above, so only
+            # poll it when actually needed.
             raw_preset_mode_address = item.get(CONF_PRESET_MODE_ADDRESS)
             preset_mode_address = None
             preset_mode_scale = None
@@ -243,11 +258,6 @@ async def async_setup_entry(
                         raw_preset_mode_address,
                     )
                     continue
-            preset_mode_bidirectional = bool(
-                item.get(
-                    CONF_PRESET_MODE_BIDIRECTIONAL, DEFAULT_PRESET_MODE_BIDIRECTIONAL
-                )
-            )
             if preset_mode_address and preset_mode_bidirectional:
                 await coord.add_item(
                     f"{topic}:preset_mode", preset_mode_address, scan_interval
@@ -720,6 +730,13 @@ class S7ClimateSetpointControl(
         self._attr_max_temp = float(max_temp)
         self._attr_target_temperature_step = float(temp_step)
 
+        # Internal state: used as target_temperature's fallback whenever
+        # preset_mode_bidirectional is disabled (assumed only ever commanded
+        # from HA then, like _hvac_mode below), updated by
+        # async_set_temperature and restored on startup by RestoreEntity.
+        default_target = (self._attr_min_temp + self._attr_max_temp) / 2
+        self._target_temperature: float = default_target
+
         # Current status mapping: PLC value(s) read from hvac_status_address
         # that are recognized as each HVAC action. Independent from the
         # target mapping below since the PLC may report status using
@@ -848,6 +865,14 @@ class S7ClimateSetpointControl(
                 # Invalid mode, keep default
                 pass
 
+            # Restore target temperature (used as target_temperature's
+            # fallback when preset_mode_bidirectional is disabled)
+            if (target_temp := last_state.attributes.get("temperature")) is not None:
+                try:
+                    self._target_temperature = float(target_temp)
+                except (ValueError, TypeError):
+                    pass
+
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
@@ -873,7 +898,16 @@ class S7ClimateSetpointControl(
 
     @property
     def target_temperature(self) -> float | None:
-        """Return target temperature read from PLC."""
+        """Return target temperature.
+
+        Read from PLC (target_temp_address) whenever preset_mode_bidirectional
+        is enabled. Otherwise the setpoint is assumed to only ever be
+        commanded from HA, like hvac_mode in that case, so the internally
+        tracked value (updated by async_set_temperature, restored on
+        startup) is returned directly instead.
+        """
+        if not self._preset_mode_bidirectional:
+            return self._target_temperature
         data = self.coordinator.data or {}
         temp_topic = f"{self._topic}:target_temp"
         value = data.get(temp_topic)
@@ -1007,6 +1041,7 @@ class S7ClimateSetpointControl(
 
         # Clamp temperature to valid range
         temperature = max(self._attr_min_temp, min(self._attr_max_temp, temperature))
+        self._target_temperature = temperature
 
         # Write target temperature to PLC
         plc_value = float(temperature)

@@ -21,6 +21,7 @@ from custom_components.s7plc.const import (
     CONF_HEATING_OUTPUT_ADDRESS,
     CONF_MAX_TEMP,
     CONF_MIN_TEMP,
+    CONF_PRESET_MODE_BIDIRECTIONAL,
     CONF_TARGET_TEMPERATURE_ADDRESS,
     CONF_TEMP_STEP,
     CONF_UID,
@@ -387,7 +388,11 @@ async def test_climate_setpoint_hvac_action_fallback_without_status_address(
     """Test hvac_action infers from temperature when no status address configured."""
     from homeassistant.components.climate import HVACAction
 
-    climate = climate_setpoint_factory()  # No hvac_status_address
+    # preset_mode_bidirectional=True so target_temperature reflects the PLC
+    # data set directly below, instead of the internally tracked fallback.
+    climate = climate_setpoint_factory(
+        preset_mode_bidirectional=True
+    )  # No hvac_status_address
 
     # Target > current → HEATING
     mock_coordinator.data = {
@@ -574,6 +579,126 @@ async def test_climate_setpoint_restore_state(climate_setpoint_factory, fake_has
     
     # Verify mode was restored
     assert climate.hvac_mode == HVACMode.OFF
+
+
+@pytest.mark.asyncio
+async def test_climate_setpoint_restore_target_temperature(
+    climate_setpoint_factory, fake_hass
+):
+    """Restoring last state also restores target_temperature, used as its
+    fallback value whenever preset_mode_bidirectional is disabled."""
+    climate = climate_setpoint_factory()  # preset_mode_bidirectional=False
+
+    class MockState:
+        state = "heat"
+        attributes = {"temperature": 21.5}
+
+    async def mock_get_last_state():
+        return MockState()
+
+    climate.async_get_last_state = mock_get_last_state
+    climate.hass = fake_hass
+
+    await climate.async_added_to_hass()
+
+    assert climate.target_temperature == 21.5
+
+
+@pytest.mark.asyncio
+async def test_climate_setpoint_target_temperature_local_when_not_bidirectional(
+    climate_setpoint_factory, mock_coordinator
+):
+    """With preset_mode_bidirectional disabled, target_temperature reflects
+    the internally tracked value (updated by async_set_temperature) instead
+    of whatever the PLC's target_temp_address currently reports."""
+    climate = climate_setpoint_factory()  # preset_mode_bidirectional=False
+
+    await climate.async_set_temperature(temperature=23.0)
+
+    # PLC reports something else entirely - must not affect the result.
+    mock_coordinator.data = {f"{climate._topic}:target_temp": 10.0}
+
+    assert climate.target_temperature == 23.0
+
+
+@pytest.mark.asyncio
+async def test_climate_setpoint_target_temperature_from_plc_when_bidirectional(
+    climate_setpoint_factory, mock_coordinator
+):
+    """With preset_mode_bidirectional enabled, target_temperature follows
+    the polled target_temp_address value instead of the internally tracked
+    one."""
+    climate = climate_setpoint_factory(preset_mode_bidirectional=True)
+
+    await climate.async_set_temperature(temperature=23.0)
+    mock_coordinator.data = {f"{climate._topic}:target_temp": 19.5}
+
+    assert climate.target_temperature == 19.5
+
+
+@pytest.mark.asyncio
+async def test_climate_setpoint_setup_registers_target_temp_topic_only_when_bidirectional(
+    fake_hass, mock_coordinator
+):
+    """target_temp_address is only polled back as a coordinator topic when
+    preset_mode_bidirectional is enabled."""
+    config_entry = MagicMock()
+    config_entry.options = {
+        CONF_CLIMATES: [
+            {
+                CONF_CLIMATE_CONTROL_MODE: CONTROL_MODE_SETPOINT,
+                CONF_CURRENT_TEMPERATURE_ADDRESS: TEST_CURRENT_TEMP_ADDRESS,
+                CONF_TARGET_TEMPERATURE_ADDRESS: TEST_TARGET_TEMP_ADDRESS,
+                CONF_PRESET_MODE_BIDIRECTIONAL: False,
+                CONF_NAME: "Zone 1",
+                CONF_UID: "uid-1",
+            }
+        ]
+    }
+    async_add_entities = MagicMock()
+
+    with patch(
+        "custom_components.s7plc.climate.get_coordinator_and_device_info",
+        return_value=(mock_coordinator, {"name": "Test PLC"}, "test_device"),
+    ):
+        await async_setup_entry(fake_hass, config_entry, async_add_entities)
+
+    climate = async_add_entities.call_args[0][0][0]
+    registered_topics = [call[0][0] for call in mock_coordinator.add_item_calls]
+    assert f"{climate._topic}:current_temp" in registered_topics
+    assert f"{climate._topic}:target_temp" not in registered_topics
+
+
+@pytest.mark.asyncio
+async def test_climate_setpoint_setup_registers_target_temp_topic_when_bidirectional(
+    fake_hass, mock_coordinator
+):
+    """Explicitly enabling preset_mode_bidirectional does register the
+    target_temp_address topic (mirrors the disabled case above)."""
+    config_entry = MagicMock()
+    config_entry.options = {
+        CONF_CLIMATES: [
+            {
+                CONF_CLIMATE_CONTROL_MODE: CONTROL_MODE_SETPOINT,
+                CONF_CURRENT_TEMPERATURE_ADDRESS: TEST_CURRENT_TEMP_ADDRESS,
+                CONF_TARGET_TEMPERATURE_ADDRESS: TEST_TARGET_TEMP_ADDRESS,
+                CONF_PRESET_MODE_BIDIRECTIONAL: True,
+                CONF_NAME: "Zone 1",
+                CONF_UID: "uid-1",
+            }
+        ]
+    }
+    async_add_entities = MagicMock()
+
+    with patch(
+        "custom_components.s7plc.climate.get_coordinator_and_device_info",
+        return_value=(mock_coordinator, {"name": "Test PLC"}, "test_device"),
+    ):
+        await async_setup_entry(fake_hass, config_entry, async_add_entities)
+
+    climate = async_add_entities.call_args[0][0][0]
+    registered_topics = [call[0][0] for call in mock_coordinator.add_item_calls]
+    assert f"{climate._topic}:target_temp" in registered_topics
 
 
 @pytest.mark.asyncio
