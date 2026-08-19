@@ -13,3 +13,4 @@ config.json
 node_modules/
 
 patch.patch
+.DS_Store
