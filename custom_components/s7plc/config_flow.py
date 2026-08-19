@@ -127,6 +127,7 @@ from .const import (
     CONF_TEXTS,
     CONF_TILT_COMMAND_ADDRESS,
     CONF_TILT_STATE_ADDRESS,
+    CONF_TOGGLE_MODE,
     CONF_UID,
     CONF_UNIT_OF_MEASUREMENT,
     CONF_USE_STATE_TOPICS,
@@ -172,6 +173,7 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SLOT,
     DEFAULT_TEMP_STEP,
+    DEFAULT_TOGGLE_MODE,
     DEFAULT_USE_STATE_TOPICS,
     DOMAIN,
     OPTION_KEYS,
@@ -360,7 +362,7 @@ def _add_schema_cover(flow) -> vol.Schema:
     return vol.Schema(
         {
             vol.Required(CONF_OPEN_COMMAND_ADDRESS): selector.TextSelector(),
-            vol.Required(CONF_CLOSE_COMMAND_ADDRESS): selector.TextSelector(),
+            vol.Optional(CONF_CLOSE_COMMAND_ADDRESS): selector.TextSelector(),
             vol.Optional(CONF_OPENING_STATE_ADDRESS): selector.TextSelector(),
             vol.Optional(CONF_CLOSING_STATE_ADDRESS): selector.TextSelector(),
             vol.Optional(CONF_COVER_OPENING_ADDRESS): selector.TextSelector(),
@@ -395,6 +397,9 @@ def _add_schema_cover(flow) -> vol.Schema:
             ): operate_time_selector,
             vol.Optional(
                 CONF_USE_STATE_TOPICS, default=False
+            ): selector.BooleanSelector(),
+            vol.Optional(
+                CONF_TOGGLE_MODE, default=DEFAULT_TOGGLE_MODE
             ): selector.BooleanSelector(),
             vol.Optional(CONF_SCAN_INTERVAL): scan_interval_selector,
             vol.Optional("add_another", default=False): selector.BooleanSelector(),
@@ -729,7 +734,7 @@ def _edit_schema_cover(flow, item: dict[str, Any]) -> vol.Schema:
             CONF_OPEN_COMMAND_ADDRESS,
             default=item.get(CONF_OPEN_COMMAND_ADDRESS, ""),
         ): selector.TextSelector(),
-        vol.Required(
+        vol.Optional(
             CONF_CLOSE_COMMAND_ADDRESS,
             default=item.get(CONF_CLOSE_COMMAND_ADDRESS, ""),
         ): selector.TextSelector(),
@@ -805,6 +810,12 @@ def _edit_schema_cover(flow, item: dict[str, Any]) -> vol.Schema:
         vol.Optional(
             CONF_USE_STATE_TOPICS,
             default=item.get(CONF_USE_STATE_TOPICS, DEFAULT_USE_STATE_TOPICS),
+        )
+    ] = selector.BooleanSelector()
+    d[
+        vol.Optional(
+            CONF_TOGGLE_MODE,
+            default=item.get(CONF_TOGGLE_MODE, DEFAULT_TOGGLE_MODE),
         )
     ] = selector.BooleanSelector()
     for key, sel in [

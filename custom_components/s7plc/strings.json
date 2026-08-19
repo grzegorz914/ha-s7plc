@@ -296,10 +296,11 @@
           "area": "Area",
           "device_class": "Device class",
           "scan_interval": "Scan interval (s)",
-          "add_another": "Add another after saving"
+          "add_another": "Add another after saving",
+          "toggle_mode": "Toggle mode (single button)"
         },
         "data_description": {
-          "open_command_address": "PLC address to trigger opening (e.g., Q0.0, DB1,X0.0).",
+          "open_command_address": "PLC address to trigger opening (e.g., Q0.0, DB1,X0.0). In toggle mode, used sequentially (opening/stop/closing/stop).",
           "close_command_address": "PLC address to trigger closing (e.g., Q0.1, DB1,X0.1).",
           "opening_state_address": "Optional PLC address that indicates the cover is opened.",
           "closing_state_address": "Optional PLC address that indicates the cover is closed.",
@@ -312,13 +313,14 @@
           "cover_status_opening_values": "PLC value(s) meaning the cover is opening, read from the status address above. One or more integers separated by commas (e.g. 1 or 2,3). Leave empty to skip this status.",
           "cover_status_closing_values": "PLC value(s) meaning the cover is closing, read from the status address above. One or more integers separated by commas. Leave empty to skip this status.",
           "cover_status_stopped_values": "PLC value(s) meaning the cover is stopped (not moving), read from the status address above. One or more integers separated by commas. Leave empty to skip this status.",
-          "operate_time": "Seconds to keep the command active before resetting the outputs and clearing the movement state.",
+          "operate_time": "Maximum time to keep the command output active. Real movement feedback (status address, or the boolean opening/closing/stopped addresses) stops the cover as soon as it confirms movement is over; this timer only takes effect if no such feedback is configured, or it never confirms.",
           "use_state_topics": "Enable to use state feedback addresses for determining cover position. When disabled, position is inferred from operate time.",
           "name": "Optional friendly name for the cover.",
           "area": "Home Assistant area to assign this entity to.",
           "device_class": "Home Assistant device class to refine the UI/behavior (e.g., shutter, blind, garage).",
           "scan_interval": "Override the poll interval for these tags in seconds. Leave blank to inherit the PLC default.",
-          "add_another": "Stay on this step to add more covers."
+          "add_another": "Stay on this step to add more covers.",
+          "toggle_mode": "Pulse button instead of separate opening/closing addresses: each press triggers the next action - opening/stopped/closing/stopped. The closing address is not used. Requires movement detection: a status address with all 4 status values, or an opening address and a closing address."
         }
       },
       "covers_position": {
@@ -528,7 +530,7 @@
           "current_temperature_address": "Current temperature address",
           "target_temperature_address": "Target temperature address",
           "preset_mode_address": "Preset mode address",
-          "preset_mode_bidirectional": "Bidirectional preset mode",
+          "preset_mode_bidirectional": "Bidirectional communication",
           "on_off_address": "On/off address",
           "preset_mode_off_value": "Off mode value",
           "preset_mode_heat_value": "Heat mode value",
@@ -622,7 +624,7 @@
           "current_temperature_address": "Current temperature address",
           "target_temperature_address": "Target temperature address",
           "preset_mode_address": "Preset mode address",
-          "preset_mode_bidirectional": "Bidirectional preset mode",
+          "preset_mode_bidirectional": "Bidirectional communication",
           "on_off_address": "On/off address",
           "preset_mode_off_value": "Off mode value",
           "preset_mode_heat_value": "Heat mode value",
@@ -799,10 +801,11 @@
           "name": "Name",
           "area": "Area",
           "device_class": "Device class",
-          "scan_interval": "Scan interval (s)"
+          "scan_interval": "Scan interval (s)",
+          "toggle_mode": "Toggle mode (single button)"
         },
         "data_description": {
-          "open_command_address": "PLC address that triggers the opening action.",
+          "open_command_address": "PLC address that triggers the opening action. In toggle mode, used sequentially (opening/stop/closing/stop).",
           "close_command_address": "PLC address that triggers the closing action.",
           "opening_state_address": "Optional PLC address that signals the cover is opened.",
           "closing_state_address": "Optional PLC address that signals the cover is closed.",
@@ -815,12 +818,13 @@
           "cover_status_opening_values": "PLC value(s) meaning the cover is opening, read from the status address above. One or more integers separated by commas (e.g. 1 or 2,3). Leave empty to skip this status.",
           "cover_status_closing_values": "PLC value(s) meaning the cover is closing, read from the status address above. One or more integers separated by commas. Leave empty to skip this status.",
           "cover_status_stopped_values": "PLC value(s) meaning the cover is stopped (not moving), read from the status address above. One or more integers separated by commas. Leave empty to skip this status.",
-          "operate_time": "Seconds the cover should operate before the integration resets the command outputs and clears the state flags.",
+          "operate_time": "Maximum time to keep the command output active. Real movement feedback (status address, or the boolean opening/closing/stopped addresses) stops the cover as soon as it confirms movement is over; this timer only takes effect if no such feedback is configured, or it never confirms.",
           "use_state_topics": "Enable to use state feedback addresses for determining cover position. When disabled, position is inferred from operate time.",
           "name": "Optional friendly name for the cover.",
           "area": "Home Assistant area to assign this entity to.",
           "device_class": "Home Assistant device class to refine the UI/behavior (e.g., shutter, blind, garage).",
-          "scan_interval": "Override the poll interval for these tags in seconds. Leave blank to inherit the PLC default."
+          "scan_interval": "Override the poll interval for these tags in seconds. Leave blank to inherit the PLC default.",
+          "toggle_mode": "Pulse button instead of separate opening/closing addresses: each press triggers the next action - opening/stopped/closing/stopped. The closing address is not used. Requires movement detection: a status address with all 4 status values, or an opening address and a closing address."
         }
       },
       "edit_cover_position": {
@@ -1001,7 +1005,8 @@
       "min_max_required_for_real": "Minimum and maximum values are required for REAL and LREAL data types.",
       "text_requires_string_type": "Text entities require STRING or WSTRING data type addresses.",
       "sync_pulse_conflict": "Sync state and pulse command cannot be enabled at the same time.",
-      "sync_same_address": "Sync state requires a command address different from the state address."
+      "sync_same_address": "Sync state requires a command address different from the state address.",
+      "toggle_mode_requires_feedback": "Toggle mode needs real feedback to work correctly: either a status address configured with all 4 status values, or an opening address plus a closing address for movement together with both position/end-stop addresses for the settled state."
     }
   },
   "issues": {

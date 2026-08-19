@@ -296,10 +296,11 @@
           "area": "Obszar",
           "device_class": "Klasa urządzenia",
           "scan_interval": "Interwał skanowania (s)",
-          "add_another": "Dodaj kolejną encje po zapisaniu"
+          "add_another": "Dodaj kolejną encje po zapisaniu",
+          "toggle_mode": "Tryb jednego przycisku"
         },
         "data_description": {
-          "open_command_address": "Adres wyzwalający otwieranie (np. Q0.0, DB1,X0.0).",
+          "open_command_address": "Adres wyzwalający otwieranie (np. Q0.0, DB1,X0.0). W trybie jednego przycisku sekwencyjnie (otwórz/zatrzymaj/zamknij/zatrzymaj).",
           "close_command_address": "Adres wyzwalający zamykanie (np. Q0.1, DB1,X0.1).",
           "opening_state_address": "Opcjonalny adres odczytu aktualnego stanu (otwarta).",
           "closing_state_address": "Opcjonalny adres odczytu aktualnego stanu (zamknięta).",
@@ -312,13 +313,14 @@
           "cover_status_opening_values": "Wartość(-i) oznaczające, że roleta się otwiera, odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 1 lub 2,3). Pozostaw puste, aby pominąć ten stan.",
           "cover_status_closing_values": "Wartość(-i) oznaczające, że roleta się zamyka, odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami. Pozostaw puste, aby pominąć ten stan.",
           "cover_status_stopped_values": "Wartość(-i) oznaczające, że roleta jest zatrzymana (bez ruchu), odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami. Pozostaw puste, aby pominąć ten stan.",
-          "operate_time": "Maksymalny czas, przez jaki adres zapisu pozostaje aktywny, zanim integracja zresetuje wyjścia i stan ruchu. Skonfigurowane sprzężenie zwrotne może zakończyć ruch wcześniej.",
+          "operate_time": "Maksymalny czas, przez jaki wyjście sterujące pozostaje aktywne. Rzeczywisty stan ruchu z (adresu stanów, lub z adresów stanu otwarta/zamknięta/otwieranie/zamykanie/zatrzymania) zatrzymuje roletę od razu, gdy potwierdzi zakończenie ruchu, ten czas działa tylko wtedy, gdy adres stanów lub adresy stanu nie są skonfigurowane, albo nigdy nie potwierdzone.",
           "use_state_topics": "Włącz, aby używać adresów stanu (otwarta/zamknięta) dla określenia położenia. Gdy wyłączone, położenie będzie wynikać z czasu otwarcia/zamknięcia.",
           "name": "Opcjonalna własna nazwa.",
           "area": "Obszar przypisania encji.",
           "device_class": "Klasa urządzenia dla lepszego doprecyzowania interfejsu, zachowania lub statystyk.",
           "scan_interval": "Interwał skanowania w (s). Pozostaw puste, aby dziedziczyć domyślne ustawienie PLC.",
-          "add_another": "Nie zamykaj okna konfiguracji po zapisie, aby dodać kolejną encje."
+          "add_another": "Nie zamykaj okna konfiguracji po zapisie, aby dodać kolejną encje.",
+          "toggle_mode": "Jeden przycisk impulsowy dla adresu zapisu (otwórz) zamiast dwóch dla (adresu zapisu otwórz i adresu zapisu zamknij), każde naciśnięcie przycisku uruchamia akcje (otwórz/zatrzymaj/zamknij/zatrzymaj). W tym trybie adres zamykania nie jest używany, ale wymagana jest identyfikacja ruchu i adres stanów ze wszystkimi 4 wartościami stanu, lub adres stanu otwierania i adres stanu zamykania."
         }
       },
       "covers_position": {
@@ -799,10 +801,11 @@
           "name": "Nazwa",
           "area": "Obszar",
           "device_class": "Klasa urządzenia",
-          "scan_interval": "Interwał skanowania (s)"
+          "scan_interval": "Interwał skanowania (s)",
+          "toggle_mode": "Tryb jednego przycisku"
         },
         "data_description": {
-          "open_command_address": "Adres wyzwalający otwieranie.",
+          "open_command_address": "Adres wyzwalający otwieranie. W trybie jednego przycisku sekwencyjnie (otwórz/zatrzymaj/zamknij/zatrzymaj).",
           "close_command_address": "Adres wyzwalający zamykanie.",
           "opening_state_address": "Opcjonalny adres odczytu aktualnego stanu (otwarta).",
           "closing_state_address": "Opcjonalny adres odczytu aktualnego stanu (zamknięta).",
@@ -815,12 +818,13 @@
           "cover_status_opening_values": "Wartość(-i) oznaczające, że roleta się otwiera, odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 1 lub 2,3). Pozostaw puste, aby pominąć ten stan.",
           "cover_status_closing_values": "Wartość(-i) oznaczające, że roleta się zamyka, odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami. Pozostaw puste, aby pominąć ten stan.",
           "cover_status_stopped_values": "Wartość(-i) oznaczające, że roleta jest zatrzymana (bez ruchu), odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami. Pozostaw puste, aby pominąć ten stan.",
-          "operate_time": "Maksymalny czas, przez jaki adres zapisu pozostaje aktywny, zanim integracja zresetuje wyjścia i stan ruchu. Skonfigurowane sprzężenie zwrotne może zakończyć ruch wcześniej.",
+          "operate_time": "Maksymalny czas, przez jaki wyjście sterujące pozostaje aktywne. Rzeczywisty stan ruchu z (adresu stanów, lub z adresów stanu otwarta/zamknięta/otwieranie/zamykanie/zatrzymania) zatrzymuje roletę od razu, gdy potwierdzi zakończenie ruchu, ten czas działa tylko wtedy, gdy adres stanów lub adresy stanu nie są skonfigurowane, albo nigdy nie potwierdzone.",
           "use_state_topics": "Włącz, aby używać adresów stanu (otwarta/zamknięta) dla określenia położenia. Gdy wyłączone, położenie będzie wynikać z czasu otwarcia/zamknięcia.",
           "name": "Opcjonalna własna nazwa.",
           "area": "Obszar przypisania encji.",
           "device_class": "Klasa urządzenia dla lepszego doprecyzowania interfejsu, zachowania lub statystyk.",
-          "scan_interval": "Interwał skanowania w (s). Pozostaw puste, aby dziedziczyć domyślne ustawienie PLC."
+          "scan_interval": "Interwał skanowania w (s). Pozostaw puste, aby dziedziczyć domyślne ustawienie PLC.",
+          "toggle_mode": "Jeden przycisk impulsowy dla adresu zapisu (otwórz) zamiast dwóch dla (adresu zapisu otwórz i adresu zapisu zamknij), każde naciśnięcie przycisku uruchamia akcje (otwórz/zatrzymaj/zamknij/zatrzymaj). W tym trybie adres zamykania nie jest używany, ale wymagana jest identyfikacja ruchu i adres stanów ze wszystkimi 4 wartościami stanu, lub adres stanu otwierania i adres stanu zamykania."
         }
       },
       "edit_cover_position": {
@@ -1001,7 +1005,8 @@
       "sync_same_address": "Synchronizacja stanu wymaga adresu zapisu innego niż adres odczytu.",
       "invalid_integer": "Wprowadź liczbę całkowitą (wartości dziesiętne nie są dozwolone).",
       "duplicate_preset_value": "Ta sama wartość nie może być przypisana do dwóch różnych trybów HVAC.",
-      "duplicate_status_value": "Ta sama wartość nie może być przypisana do dwóch różnych stanów HVAC."
+      "duplicate_status_value": "Ta sama wartość nie może być przypisana do dwóch różnych stanów HVAC.",
+      "toggle_mode_requires_feedback": "Tryb jednego przycisku wymaga realnego sprzężenia zwrotnego, aby działać poprawnie: adresu stanu ze wszystkimi 4 wartościami stanu, albo adresu otwierania i adresu zamykania dla ruchu razem z obydwoma adresami krańcówek/pozycji dla stanu ustalonego."
     }
   },
   "issues": {
