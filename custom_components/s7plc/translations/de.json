@@ -146,8 +146,8 @@
         }
       },
       "climates": {
-        "title": "Add Climate",
-        "description": "Select the type of climate control to add.",
+        "title": "Klimagerät hinzufügen",
+        "description": "Wählen Sie den Typ der hinzuzufügenden Klimasteuerung aus.",
         "menu_options": {
           "climates_direct": "Klima (Direkte Steuerung)",
           "climates_setpoint": "Klima (Sollwertsteuerung)"
@@ -209,7 +209,7 @@
           "device_class": "Geräteklasse",
           "unit_of_measurement": "Maßeinheit",
           "state_class": "Zustandsklasse",
-          "real_precision": "REAL-Nachkommastellen",
+          "real_precision": "REAL-Dezimalstellen",
           "scan_interval": "Scan-Intervall (s)",
           "add_another": "Nach dem Speichern weitere hinzufügen ?"
         },
@@ -220,7 +220,7 @@
           "device_class": "Home Assistant Geräteklasse(z.B. battery, power).",
           "unit_of_measurement": "Benutzerdefinierte Maßeinheit (z.B. °C, RPM, bar). Leerlassen, um die Standardeinheit basierend auf der Geräteklasse zu verwenden.",
           "state_class": "Zustandsklasse für Statistiken: 'measurement' für Momentanwerte, 'total' für kumulative Werte, die aufsummiert werden, 'total_increasing' für Zähler (z.B. Energie, Wasserverbrauch). Leerlassen für automatisch.",
-          "real_precision": "Anzahl der Dezimalstellen zum Runden von REAL-Werten. Leerlassen, um die ursprüngliche Genauigkeit zu behalten (1).",
+          "real_precision": "Anzahl der Dezimalstellen für REAL-Werte. Leer lassen, um den Standardwert (1) zu verwenden.",
           "scan_interval": "Abfragezyklus für diese Variable in Sekunden. Leerlassen, um den SPS-Standard zu übernehmen.",
           "add_another": "Weitere Sensoren hinzuzufügen ?"
         }
@@ -255,7 +255,7 @@
           "command_address": "Befehlsvariable",
           "name": "Name",
           "area": "Bereich",
-          "sync_state": "Zustand mit Befehlsvariable synchronisieren",
+          "sync_state": "Externe Zustandsänderungen an Befehlsadresse schreiben",
           "scan_interval": "Scan-Intervall (s)",
           "add_another": "Nach dem Speichern weitere hinzufügen ?",
           "pulse_command": "Impulsbefehls-Modus",
@@ -266,7 +266,7 @@
           "command_address": "SPS-Adresse zum Schreiben von Befehlen (optional). Wenn es weggelassen wird, wird nur der Zustand gelesen.",
           "name": "Name für den Schalter (optional).",
           "area": "Home Assistant Bereich, dem diese Entität zugeordnet werden soll.",
-          "sync_state": "Wenn aktiviert, wird die Befehlsvariable automatisch mit dem aktuellen Zustand aktualisiert.",
+          "sync_state": "Wenn sich die Zustandsadresse extern ändert, wird der neue Zustand an die Befehlsadresse geschrieben.",
           "scan_interval": "Abfragezyklus für diese Variable in Sekunden. Leerlassen, um den SPS-Standard zu übernehmen.",
           "add_another": "Weitere Schalter hinzuzufügen ?",
           "pulse_command": "Wenn aktiviert, sendet einen Impuls (EIN dann AUS) anstelle eines kontinuierlichen Zustands. Nützlich für bistabile Relais oder Flip-Flop-Schaltungen.",
@@ -378,7 +378,6 @@
           "address": "Adresse",
           "name": "Name",
           "area": "Bereich",
-          "scan_interval": "Scan-Intervall (s)",
           "add_another": "Nach dem Speichern weitere hinzufügen ?",
           "button_pulse": "Pulsdauer"
         },
@@ -386,7 +385,6 @@
           "address": "Zu pulsierende SPS-Bool-Adresse (z.B. Q0.0, DB1,X0.1).",
           "name": "Name für die Taste (optional).",
           "area": "Home Assistant Bereich, dem diese Entität zugeordnet werden soll.",
-          "scan_interval": "Abfragezyklus für diese Variable in Sekunden. Leerlassen, um den SPS-Standard zu übernehmen.",
           "add_another": "Weitere Tasten hinzuzufügen ?",
           "button_pulse": "Dauer des Pulses in Sekunden (unterstützt Dezimalzahlen, z.B. 0.1 für 100ms)."
         }
@@ -399,7 +397,7 @@
           "command_address": "Befehlsadresse (ein/aus)",
           "name": "Name",
           "area": "Bereich",
-          "sync_state": "Status mit Befehlsadresse synchronisieren",
+          "sync_state": "Externe Zustandsänderungen an Befehlsadresse schreiben",
           "pulse_command": "Impuls-Befehlsmodus",
           "pulse_duration": "Impulsdauer (s)",
           "brightness_state_address": "Helligkeits-Statusadresse",
@@ -412,7 +410,7 @@
           "command_address": "Boolesche PLC-Adresse zum Schreiben von Ein/Aus-Befehlen (optional). Wenn leer, wird die Statusadresse verwendet.",
           "name": "Optionaler Anzeigename für das Licht.",
           "area": "Home Assistant Bereich, dem diese Entität zugewiesen wird.",
-          "sync_state": "Wenn aktiviert, wird die Befehlsadresse automatisch mit dem aktuellen Ein/Aus-Status aktualisiert.",
+          "sync_state": "Wenn sich die Zustandsadresse extern ändert, wird der neue Ein/Aus-Zustand an die Befehlsadresse geschrieben.",
           "pulse_command": "Impulse anstelle von Ein/Aus-Befehlen senden.",
           "pulse_duration": "Dauer des Impulses in Sekunden (0,1-60s, Dezimalwerte möglich). Standard: 0,5s.",
           "brightness_state_address": "Numerische PLC-Adresse zum Lesen der Helligkeit (z.B. DB1,B2). Leer lassen für nur Ein/Aus. Optionale Skalierung: 'Scale(0,1,0,10)', Dezimaltrennzeichen (.).",
@@ -723,7 +721,7 @@
           "device_class": "Geräteklasse",
           "unit_of_measurement": "Maßeinheit",
           "state_class": "Zustandsklasse",
-          "real_precision": "REAL-Nachkommastellen",
+          "real_precision": "REAL-Dezimalstellen",
           "scan_interval": "Scan-Intervall (s)"
         },
         "data_description": {
@@ -733,7 +731,7 @@
           "device_class": "Home Assistant Geräteklasse (z.B. battery, power).",
           "unit_of_measurement": "Benutzerdefinierte Maßeinheit (z.B. °C, RPM, bar). Leerlassen, um die Standardeinheit basierend auf der Geräteklasse zu verwenden.",
           "state_class": "Zustandsklasse für Statistiken: 'measurement' für Momentanwerte, 'total' für kumulative Werte, die aufsummiert werden, 'total_increasing' für Zähler (z.B. Energie, Wasserverbrauch). Leerlassen für automatisch.",
-          "real_precision": "Anzahl der Dezimalstellen zum Runden von REAL-Werten. Leerlassen, um die ursprüngliche Genauigkeit zu behalten (1).",
+          "real_precision": "Anzahl der Dezimalstellen für REAL-Werte. Leer lassen, um den Standardwert (1) zu verwenden.",
           "scan_interval": "Abfragezyklus für diese Variable in Sekunden. Leerlassen, um den SPS-Standard zu übernehmen."
         }
       },
@@ -765,7 +763,7 @@
           "command_address": "Befehlsvariable",
           "name": "Name",
           "area": "Bereich",
-          "sync_state": "Zustand mit SPS synchronisieren",
+          "sync_state": "Externe Zustandsänderungen an Befehlsadresse schreiben",
           "scan_interval": "Scan-Intervall (s)",
           "pulse_command": "Impulsbefehls-Modus",
           "pulse_duration": "Impulsdauer (s)"
@@ -775,7 +773,7 @@
           "command_address": "SPS-Adresse zum Schreiben von Befehlen (optional).",
           "name": "Name für den Schalter (optional).",
           "area": "Home Assistant Bereich, dem diese Entität zugeordnet werden soll.",
-          "sync_state": "Wenn aktiviert, wird der Entitätszustand automatisch von der SPS synchronisiert.",
+          "sync_state": "Wenn sich die Zustandsadresse extern ändert, wird der neue Zustand an die Befehlsadresse geschrieben.",
           "scan_interval": "Abfragezyklus für diese Variable in Sekunden. Leerlassen, um den SPS-Standard zu übernehmen.",
           "pulse_command": "Wenn aktiviert, sendet einen Impuls (EIN dann AUS) anstelle eines kontinuierlichen Zustands. Nützlich für bistabile Relais oder Flip-Flop-Schaltungen.",
           "pulse_duration": "Dauer des Impulses in Sekunden. Minimum: 0,1s, Maximum: 60s."
@@ -882,15 +880,13 @@
           "address": "Adresse",
           "name": "Name",
           "area": "Bereich",
-          "button_pulse": "Pulsdauer",
-          "scan_interval": "Scan-Intervall (s)"
+          "button_pulse": "Pulsdauer"
         },
         "data_description": {
           "address": "Zu pulsierende SPS-Bool-Adresse (z.B. Q0.0, DB1,X0.1).",
           "name": "Name für die Taste (optional).",
           "area": "Home Assistant Bereich, dem diese Entität zugeordnet werden soll.",
-          "button_pulse": "Dauer des Pulses in Sekunden (unterstützt Dezimalzahlen, z.B. 0.1 für 100ms).",
-          "scan_interval": "Abfragezyklus für diese Variable in Sekunden. Leerlassen, um den SPS-Standard zu übernehmen."
+          "button_pulse": "Dauer des Pulses in Sekunden (unterstützt Dezimalzahlen, z.B. 0.1 für 100ms)."
         }
       },
       "edit_light": {
@@ -901,7 +897,7 @@
           "command_address": "Befehlsadresse (ein/aus)",
           "name": "Name",
           "area": "Bereich",
-          "sync_state": "Status mit PLC synchronisieren",
+          "sync_state": "Externe Zustandsänderungen an Befehlsadresse schreiben",
           "pulse_command": "Impuls-Befehlsmodus",
           "pulse_duration": "Impulsdauer (s)",
           "brightness_state_address": "Helligkeits-Statusadresse",
@@ -913,7 +909,7 @@
           "command_address": "Boolesche PLC-Adresse zum Schreiben von Ein/Aus-Befehlen (optional). Wenn leer, wird die Statusadresse verwendet.",
           "name": "Optionaler Anzeigename für das Licht.",
           "area": "Home Assistant Bereich, dem diese Entität zugewiesen wird.",
-          "sync_state": "Wenn aktiviert, wird die Befehlsadresse automatisch mit dem aktuellen Ein/Aus-Status aktualisiert.",
+          "sync_state": "Wenn sich die Zustandsadresse extern ändert, wird der neue Ein/Aus-Zustand an die Befehlsadresse geschrieben.",
           "pulse_command": "Impulse anstelle von Ein/Aus-Befehlen senden.",
           "pulse_duration": "Dauer des Impulses in Sekunden (0,1-60s, Dezimalwerte möglich). Standard: 0,5s.",
           "brightness_state_address": "Numerische PLC-Adresse zum Lesen der Helligkeit. Leer lassen für nur Ein/Aus. Optionale Skalierung: 'Scale(0,1,0,10)', Dezimaltrennzeichen (.).",

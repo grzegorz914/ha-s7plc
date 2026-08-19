@@ -209,7 +209,7 @@
           "device_class": "Device class",
           "unit_of_measurement": "Unit of measurement",
           "state_class": "State class",
-          "real_precision": "REAL round precision",
+          "real_precision": "REAL decimal precision",
           "scan_interval": "Scan interval (s)",
           "add_another": "Add another after saving"
         },
@@ -220,7 +220,7 @@
           "device_class": "Home Assistant device class to refine the UI/behavior (e.g., battery, power).",
           "unit_of_measurement": "Custom unit of measurement (e.g., °C, RPM, bar). Leave blank to use the default unit based on device class.",
           "state_class": "State class for statistics: 'measurement' for instantaneous values, 'total' for cumulative values that can decrease, 'total_increasing' for counters (e.g., energy, water consumption). Leave blank for automatic.",
-          "real_precision": "Number of decimal places to round REAL values. Leave blank to keep the original precision (1).",
+          "real_precision": "Number of decimal places for REAL values. Leave blank to use the default (1).",
           "scan_interval": "Override the poll interval for this tag in seconds. Leave blank to inherit the PLC default.",
           "add_another": "Stay on this step to add more sensors."
         }
@@ -255,7 +255,7 @@
           "command_address": "Command address",
           "name": "Name",
           "area": "Area",
-          "sync_state": "Sync state to command anddress",
+          "sync_state": "Write external state changes to command address",
           "pulse_command": "Pulse command mode",
           "pulse_duration": "Pulse duration (s)",
           "scan_interval": "Scan interval (s)",
@@ -266,7 +266,7 @@
           "command_address": "PLC address to write commands (optional). If omitted, only state will be read.",
           "name": "Optional friendly name for the switch.",
           "area": "Home Assistant area to assign this entity to.",
-          "sync_state": "When enabled, the command address is automatically updated with the current state.",
+          "sync_state": "When the state address changes externally, write the new state to the command address.",
           "pulse_command": "When enabled, sends a pulse (ON then OFF) instead of a continuous state. Useful for bistable relays or flip-flop circuits.",
           "pulse_duration": "Duration of the pulse in seconds. Minimum: 0.1s, Maximum: 60s.",
           "scan_interval": "Override the poll interval for this tag in seconds. Leave blank to inherit the PLC default.",
@@ -378,7 +378,6 @@
           "address": "Address",
           "name": "Name",
           "area": "Area",
-          "scan_interval": "Scan interval (s)",
           "add_another": "Add another after saving",
           "button_pulse": "Pulse duration"
         },
@@ -386,20 +385,19 @@
           "address": "PLC boolean address to pulse (e.g., Q0.0, DB1,X0.1).",
           "name": "Optional friendly name for the button.",
           "area": "Home Assistant area to assign this entity to.",
-          "scan_interval": "Override the poll interval for this tag in seconds. Leave blank to inherit the PLC default.",
           "add_another": "Stay on this step to add more buttons.",
           "button_pulse": "Duration of the pulse in seconds."
         }
       },
       "lights": {
         "title": "Add Light",
-        "description": "Configure a light with a state address and an optional command address. Enable dimmer mode by setting a brightness scale. You can also enable state synchronization and pulse command mode.",
+        "description": "Configure a light with a boolean state/command address. Optionally add dimmer support by setting brightness addresses and scale.",
         "data": {
-          "state_address": "State address",
-          "command_address": "Command address",
+          "state_address": "State address (on/off)",
+          "command_address": "Command address (on/off)",
           "name": "Name",
           "area": "Area",
-          "sync_state": "Sync state to command address",
+          "sync_state": "Write external state changes to command address",
           "pulse_command": "Pulse command mode",
           "pulse_duration": "Pulse duration (s)",
           "scan_interval": "Scan interval (s)",
@@ -408,11 +406,11 @@
           "brightness_command_address": "Brightness command address"
         },
         "data_description": {
-          "state_address": "PLC address to read the current light state (boolean for ON/OFF, numeric for dimmer).",
-          "command_address": "PLC address to write light commands (optional). If omitted, the state address is used.",
+          "state_address": "PLC boolean address to read the on/off state (e.g., DB1,X0.0).",
+          "command_address": "PLC boolean address to write on/off commands (optional). If omitted, the state address is used.",
           "name": "Optional friendly name for the light.",
           "area": "Home Assistant area to assign this entity to.",
-          "sync_state": "When enabled, the command address is automatically updated with the current state (ON/OFF mode).",
+          "sync_state": "When the state address changes externally, write the new on/off state to the command address.",
           "pulse_command": "Send pulse instead of on/off commands.",
           "pulse_duration": "Duration of the pulse in seconds (0.1-60s, supports decimals). Default: 0.5s.",
           "scan_interval": "Override the poll interval for this tag in seconds. Leave blank to inherit the PLC default.",
@@ -557,7 +555,7 @@
           "hvac_status_off_values": "PLC value(s) meaning OFF, read from hvac_status_address. One or more integers separated by commas (e.g. 0 or 0,10). Leave empty to skip this status (it will never be matched).",
           "hvac_status_heating_values": "PLC value(s) meaning HEATING, read from hvac_status_address. One or more integers separated by commas (e.g. 1 or 2,3). Leave empty to skip this status (it will never be matched).",
           "hvac_status_cooling_values": "PLC value(s) meaning COOLING, read from hvac_status_address. One or more integers separated by commas (e.g. 2 or 4,5). Leave empty to skip this status (it will never be matched).",
-          "hvac_status_idle_values": "Optional PLC value(s) meaning IDLE (neither heating nor cooling), read from hvac_status_address. One or more integers separated by commas (e.g. 9). Leave blank to treat any unmatched status as IDLE (default behavior). Leave empty to skip this status (it will never be matched).",
+          "hvac_status_idle_values": "Optional PLC value(s) meaning IDLE (neither heating nor cooling), read from hvac_status_address. One or more integers separated by commas (e.g. 9). Leave blank to treat any unmatched status as IDLE (default behavior).",
           "hvac_status_drying_values": "Optional PLC value(s) meaning DRYING, read from hvac_status_address. One or more integers separated by commas. Leave empty to skip this status (it will never be matched).",
           "hvac_status_fan_values": "Optional PLC value(s) meaning FAN (circulating air only), read from hvac_status_address. One or more integers separated by commas. Leave empty to skip this status (it will never be matched).",
           "hvac_status_preheating_values": "Optional PLC value(s) meaning PREHEATING, read from hvac_status_address. One or more integers separated by commas. Leave empty to skip this status (it will never be matched).",
@@ -670,7 +668,7 @@
           "hvac_status_off_values": "PLC value(s) meaning OFF, read from hvac_status_address. One or more integers separated by commas (e.g. 0 or 0,10). Leave empty to skip this status (it will never be matched).",
           "hvac_status_heating_values": "PLC value(s) meaning HEATING, read from hvac_status_address. One or more integers separated by commas (e.g. 1 or 2,3). Leave empty to skip this status (it will never be matched).",
           "hvac_status_cooling_values": "PLC value(s) meaning COOLING, read from hvac_status_address. One or more integers separated by commas (e.g. 2 or 4,5). Leave empty to skip this status (it will never be matched).",
-          "hvac_status_idle_values": "Optional PLC value(s) meaning IDLE (neither heating nor cooling), read from hvac_status_address. One or more integers separated by commas (e.g. 9). Leave blank to treat any unmatched status as IDLE (default behavior). Leave empty to skip this status (it will never be matched).",
+          "hvac_status_idle_values": "Optional PLC value(s) meaning IDLE (neither heating nor cooling), read from hvac_status_address. One or more integers separated by commas (e.g. 9). Leave blank to treat any unmatched status as IDLE (default behavior).",
           "hvac_status_drying_values": "Optional PLC value(s) meaning DRYING, read from hvac_status_address. One or more integers separated by commas. Leave empty to skip this status (it will never be matched).",
           "hvac_status_fan_values": "Optional PLC value(s) meaning FAN (circulating air only), read from hvac_status_address. One or more integers separated by commas. Leave empty to skip this status (it will never be matched).",
           "hvac_status_preheating_values": "Optional PLC value(s) meaning PREHEATING, read from hvac_status_address. One or more integers separated by commas. Leave empty to skip this status (it will never be matched).",
@@ -723,7 +721,7 @@
           "device_class": "Device class",
           "unit_of_measurement": "Unit of measurement",
           "state_class": "State class",
-          "real_precision": "REAL round precision",
+          "real_precision": "REAL decimal precision",
           "scan_interval": "Scan interval (s)"
         },
         "data_description": {
@@ -733,7 +731,7 @@
           "device_class": "Home Assistant device class to refine the UI/behavior (e.g., battery, power).",
           "unit_of_measurement": "Custom unit of measurement (e.g., °C, RPM, bar). Leave blank to use the default unit based on device class.",
           "state_class": "State class for statistics: 'measurement' for instantaneous values, 'total' for cumulative values that can decrease, 'total_increasing' for counters (e.g., energy, water consumption). Leave blank for automatic.",
-          "real_precision": "Number of decimal places to round REAL values. Leave blank to keep the original precision (1).",
+          "real_precision": "Number of decimal places for REAL values. Leave blank to use the default (1).",
           "scan_interval": "Override the poll interval for this tag in seconds. Leave blank to inherit the PLC default."
         }
       },
@@ -765,7 +763,7 @@
           "command_address": "Command address",
           "name": "Name",
           "area": "Area",
-          "sync_state": "Sync state with PLC",
+          "sync_state": "Write external state changes to command address",
           "pulse_command": "Pulse command mode",
           "pulse_duration": "Pulse duration (s)",
           "scan_interval": "Scan interval (s)"
@@ -775,7 +773,7 @@
           "command_address": "PLC address to write commands (optional).",
           "name": "Optional friendly name for the switch.",
           "area": "Home Assistant area to assign this entity to.",
-          "sync_state": "When enabled, the entity state is periodically synchronized from the PLC.",
+          "sync_state": "When the state address changes externally, write the new state to the command address.",
           "pulse_command": "When enabled, sends a pulse (ON then OFF) instead of a continuous state. Useful for bistable relays or flip-flop circuits.",
           "pulse_duration": "Duration of the pulse in seconds. Minimum: 0.1s, Maximum: 60s.",
           "scan_interval": "Override the poll interval for this tag in seconds. Leave blank to inherit the PLC default."
@@ -882,26 +880,24 @@
           "address": "Address",
           "name": "Name",
           "area": "Area",
-          "button_pulse": "Pulse duration",
-          "scan_interval": "Scan interval (s)"
+          "button_pulse": "Pulse duration"
         },
         "data_description": {
           "address": "PLC boolean address to pulse (e.g., Q0.0, DB1,X0.1).",
           "name": "Optional friendly name for the button.",
           "area": "Home Assistant area to assign this entity to.",
-          "button_pulse": "Duration of the pulse in seconds.",
-          "scan_interval": "Override the poll interval for this tag in seconds. Leave blank to inherit the PLC default."
+          "button_pulse": "Duration of the pulse in seconds."
         }
       },
       "edit_light": {
         "title": "Edit Light",
         "description": "Update the state address, command address, name, dimmer options, or sync option for this light.",
         "data": {
-          "state_address": "State address",
-          "command_address": "Command address",
+          "state_address": "State address (on/off)",
+          "command_address": "Command address (on/off)",
           "name": "Name",
           "area": "Area",
-          "sync_state": "Sync state with PLC",
+          "sync_state": "Write external state changes to command address",
           "pulse_command": "Pulse command mode",
           "pulse_duration": "Pulse duration (s)",
           "scan_interval": "Scan interval (s)",
@@ -909,11 +905,11 @@
           "brightness_command_address": "Brightness command address"
         },
         "data_description": {
-          "state_address": "PLC address to read the current light state (boolean for ON/OFF, numeric for dimmer).",
-          "command_address": "PLC address to write light commands (optional). If omitted, the state address is used.",
+          "state_address": "PLC boolean address to read the on/off state (e.g., DB1,X0.0).",
+          "command_address": "PLC boolean address to write on/off commands (optional). If omitted, the state address is used.",
           "name": "Optional friendly name for the light.",
           "area": "Home Assistant area to assign this entity to.",
-          "sync_state": "When enabled, the command address is automatically updated with the current state (ON/OFF mode).",
+          "sync_state": "When the state address changes externally, write the new on/off state to the command address.",
           "pulse_command": "Send pulse instead of on/off commands.",
           "pulse_duration": "Duration of the pulse in seconds (0.1-60s, supports decimals). Default: 0.5s.",
           "scan_interval": "Override the poll interval for this tag in seconds. Leave blank to inherit the PLC default.",
