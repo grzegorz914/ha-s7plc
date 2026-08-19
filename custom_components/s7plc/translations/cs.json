@@ -353,7 +353,8 @@
           "device_class": "Třída zařízení",
           "scan_interval": "Interval skenování (s)",
           "invert_position": "Invertovat pozici (0=otevřeno, 100=zavřeno)",
-          "add_another": "Přidat další po uložení"
+          "add_another": "Přidat další po uložení",
+          "command_bidirectional": "Obousměrná komunikace"
         },
         "data_description": {
           "position_state_address": "Adresa PLC pro čtení aktuální hodnoty pozice (0-100, např. DB1,B0, DB2,W4).",
@@ -374,7 +375,8 @@
           "device_class": "Třída zařízení Home Assistant pro upřesnění UI/chování (např. shutter, blind, garage).",
           "scan_interval": "Přepsat interval dotazování pro tyto značky v sekundách. Nechte prázdné pro převzetí výchozího nastavení PLC.",
           "invert_position": "Povolit, pokud vaše PLC používá 0 pro úplně otevřeno a 100 pro úplně zavřeno (obrátí normální logiku).",
-          "add_another": "Zůstat v tomto kroku pro přidání dalších krytů s pozicí."
+          "add_another": "Zůstat v tomto kroku pro přidání dalších krytů s pozicí.",
+          "command_bidirectional": "Zpětně načte požadovanou polohu/naklopení z adresy zápisu, pokud je nakonfigurována samostatná adresa. Ve výchozím nastavení vypnuto kvůli zpětné kompatibilitě."
         }
       },
       "buttons": {
@@ -872,7 +874,8 @@
           "area": "Oblast",
           "device_class": "Třída zařízení",
           "scan_interval": "Interval skenování (s)",
-          "invert_position": "Invertovat pozici (0=otevřeno, 100=zavřeno)"
+          "invert_position": "Invertovat pozici (0=otevřeno, 100=zavřeno)",
+          "command_bidirectional": "Obousměrná komunikace"
         },
         "data_description": {
           "position_state_address": "Adresa PLC pro čtení aktuální hodnoty pozice (0-100).",
@@ -892,7 +895,8 @@
           "area": "Oblast Home Assistantu, do které má být tato entita přiřazena.",
           "device_class": "Třída zařízení Home Assistant pro upřesnění UI/chování (např. shutter, blind, garage).",
           "scan_interval": "Přepsat interval dotazování pro tuto značku v sekundách. Nechte prázdné pro převzetí výchozího nastavení PLC.",
-          "invert_position": "Povolit, pokud vaše PLC používá 0 pro úplně otevřeno a 100 pro úplně zavřeno (obrátí normální logiku)."
+          "invert_position": "Povolit, pokud vaše PLC používá 0 pro úplně otevřeno a 100 pro úplně zavřeno (obrátí normální logiku).",
+          "command_bidirectional": "Zpětně načte požadovanou polohu/naklopení z adresy zápisu, pokud je nakonfigurována samostatná adresa. Ve výchozím nastavení vypnuto kvůli zpětné kompatibilitě."
         }
       },
       "edit_button": {

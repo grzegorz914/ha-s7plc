@@ -353,7 +353,8 @@
           "device_class": "Device class",
           "scan_interval": "Scan interval (s)",
           "invert_position": "Invert position (0=open, 100=closed)",
-          "add_another": "Add another after saving"
+          "add_another": "Add another after saving",
+          "command_bidirectional": "Bidirectional command"
         },
         "data_description": {
           "position_state_address": "PLC address to read the current position value (0-100, e.g., DB1,B0, DB2,W4).",
@@ -374,7 +375,8 @@
           "device_class": "Home Assistant device class to refine the UI/behavior (e.g., shutter, blind, garage).",
           "scan_interval": "Override the poll interval for these tags in seconds. Leave blank to inherit the PLC default.",
           "invert_position": "Enable if your PLC uses 0 for fully open and 100 for fully closed (reverses the normal logic).",
-          "add_another": "Stay on this step to add more position-based covers."
+          "add_another": "Stay on this step to add more position-based covers.",
+          "command_bidirectional": "Reads the commanded position/tilt back from the write address when a separate one is configured. Disabled by default for backward compatibility."
         }
       },
       "buttons": {
@@ -872,7 +874,8 @@
           "area": "Area",
           "device_class": "Device class",
           "scan_interval": "Scan interval (s)",
-          "invert_position": "Invert position (0=open, 100=closed)"
+          "invert_position": "Invert position (0=open, 100=closed)",
+          "command_bidirectional": "Bidirectional command"
         },
         "data_description": {
           "position_state_address": "PLC address to read the current position value (0-100).",
@@ -892,7 +895,8 @@
           "area": "Home Assistant area to assign this entity to.",
           "device_class": "Home Assistant device class to refine the UI/behavior (e.g., shutter, blind, garage).",
           "scan_interval": "Override the poll interval for this tag in seconds. Leave blank to inherit the PLC default.",
-          "invert_position": "Enable if your PLC uses 0 for fully open and 100 for fully closed (reverses the normal logic)."
+          "invert_position": "Enable if your PLC uses 0 for fully open and 100 for fully closed (reverses the normal logic).",
+          "command_bidirectional": "Reads the commanded position/tilt back from the write address when a separate one is configured. Disabled by default for backward compatibility."
         }
       },
       "edit_button": {

@@ -46,6 +46,7 @@ from .const import (
     CONF_CLOSE_COMMAND_ADDRESS,
     CONF_CLOSING_STATE_ADDRESS,
     CONF_COMMAND_ADDRESS,
+    CONF_COMMAND_BIDIRECTIONAL,
     CONF_CONNECTION_TYPE,
     CONF_COOLING_ACTION_ADDRESS,
     CONF_COOLING_OUTPUT_ADDRESS,
@@ -138,6 +139,7 @@ from .const import (
     CONTROL_MODE_SETPOINT,
     DEFAULT_BACKOFF_INITIAL,
     DEFAULT_BACKOFF_MAX,
+    DEFAULT_COMMAND_BIDIRECTIONAL,
     DEFAULT_COVER_STATUS_CLOSED_VALUES,
     DEFAULT_COVER_STATUS_CLOSING_VALUES,
     DEFAULT_COVER_STATUS_OPEN_VALUES,
@@ -451,6 +453,9 @@ def _add_schema_cover_position(flow) -> vol.Schema:
             vol.Optional(CONF_SCAN_INTERVAL): scan_interval_selector,
             vol.Optional(
                 CONF_INVERT_POSITION, default=False
+            ): selector.BooleanSelector(),
+            vol.Optional(
+                CONF_COMMAND_BIDIRECTIONAL, default=DEFAULT_COMMAND_BIDIRECTIONAL
             ): selector.BooleanSelector(),
             vol.Optional("add_another", default=False): selector.BooleanSelector(),
         }
@@ -916,6 +921,12 @@ def _edit_schema_cover_position(flow, item: dict[str, Any]) -> vol.Schema:
     d[
         vol.Optional(
             CONF_INVERT_POSITION, default=item.get(CONF_INVERT_POSITION, False)
+        )
+    ] = selector.BooleanSelector()
+    d[
+        vol.Optional(
+            CONF_COMMAND_BIDIRECTIONAL,
+            default=item.get(CONF_COMMAND_BIDIRECTIONAL, DEFAULT_COMMAND_BIDIRECTIONAL),
         )
     ] = selector.BooleanSelector()
     k, v = flow._optional_field(CONF_AREA, item, flow._get_area_selector())

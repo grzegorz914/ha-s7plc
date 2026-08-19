@@ -353,7 +353,8 @@
           "device_class": "Classe dispositivo",
           "scan_interval": "Intervallo di scansione (s)",
           "invert_position": "Inverti posizione (0=aperto, 100=chiuso)",
-          "add_another": "Aggiungi un altro dopo il salvataggio"
+          "add_another": "Aggiungi un altro dopo il salvataggio",
+          "command_bidirectional": "Comunicazione bidirezionale"
         },
         "data_description": {
           "position_state_address": "Indirizzo PLC per leggere il valore di posizione corrente (0-100, es. DB1,B0, DB2,W4).",
@@ -374,7 +375,8 @@
           "device_class": "Classe dispositivo di Home Assistant per affinare l'interfaccia/il comportamento (es. shutter, blind, garage).",
           "scan_interval": "Frequenza di polling specifica per questi tag in secondi. Usa valori decimali per precisione al millisecondo. Se omesso, viene usato l'intervallo di scansione predefinito del PLC.",
           "invert_position": "Abilita se il tuo PLC usa 0 per completamente aperto e 100 per completamente chiuso (inverte la logica normale).",
-          "add_another": "Rimani in questo step per aggiungere altre cover con posizione."
+          "add_another": "Rimani in questo step per aggiungere altre cover con posizione.",
+          "command_bidirectional": "Rilegge la posizione/inclinazione comandata dall'indirizzo di scrittura quando è configurato un indirizzo separato. Disabilitato per impostazione predefinita per compatibilità con le versioni precedenti."
         }
       },
       "buttons": {
@@ -760,7 +762,8 @@
           "area": "Area",
           "device_class": "Classe dispositivo",
           "scan_interval": "Intervallo di scansione (s)",
-          "invert_position": "Inverti posizione (0=aperto, 100=chiuso)"
+          "invert_position": "Inverti posizione (0=aperto, 100=chiuso)",
+          "command_bidirectional": "Comunicazione bidirezionale"
         },
         "data_description": {
           "position_state_address": "Indirizzo PLC per leggere il valore di posizione corrente (0-100).",
@@ -780,7 +783,8 @@
           "area": "Area di Home Assistant a cui assegnare questa entità.",
           "device_class": "Classe dispositivo di Home Assistant per affinare l'interfaccia/il comportamento (es. shutter, blind, garage).",
           "scan_interval": "Frequenza di polling specifica per questo tag in secondi. Usa valori decimali per precisione al millisecondo. Se omesso, viene usato l'intervallo di scansione predefinito del PLC.",
-          "invert_position": "Abilita se il tuo PLC usa 0 per completamente aperto e 100 per completamente chiuso (inverte la logica normale)."
+          "invert_position": "Abilita se il tuo PLC usa 0 per completamente aperto e 100 per completamente chiuso (inverte la logica normale).",
+          "command_bidirectional": "Rilegge la posizione/inclinazione comandata dall'indirizzo di scrittura quando è configurato un indirizzo separato. Disabilitato per impostazione predefinita per compatibilità con le versioni precedenti."
         }
       },
       "edit_button": {
