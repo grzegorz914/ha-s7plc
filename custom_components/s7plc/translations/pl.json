@@ -345,7 +345,8 @@
           "device_class": "Klasa urządzenia",
           "scan_interval": "Interwał skanowania (s)",
           "invert_position": "Odwróć pozycję",
-          "add_another": "Dodaj kolejną encje po zapisaniu"
+          "add_another": "Dodaj kolejną encje po zapisaniu",
+          "command_bidirectional": "Dwukierunkowa komunikacja"
         },
         "data_description": {
           "position_state_address": "Adres odczytu pozycji osłony/rolety (0-100, np. DB1,B0, DB2,W4). Opcjonalne skalowanie: 'Scale(0,1,0,10)', separator dziesiętny (.).",
@@ -366,7 +367,8 @@
           "device_class": "Klasa urządzenia dla lepszego doprecyzowania interfejsu, zachowania lub statystyk.",
           "scan_interval": "Interwał skanowania w (s). Pozostaw puste, aby dziedziczyć domyślne ustawienie PLC.",
           "invert_position": "Załączenie odwraca pozycje krańcowe (0 = Otwarta, 100 = Zamknięta).",
-          "add_another": "Nie zamykaj okna konfiguracji po zapisie, aby dodać kolejną encje."
+          "add_another": "Nie zamykaj okna konfiguracji po zapisie, aby dodać kolejną encje.",
+          "command_bidirectional": "Odczytuje zadaną pozycję/przechylenie z adresu zapisu, jeśli skonfigurowano osobny adres różny od adresu odczytu. Domyślnie wyłączone dla zachowania kompatybilności wstecznej."
         }
       },
       "buttons": {
@@ -848,7 +850,8 @@
           "area": "Obszar",
           "device_class": "Klasa urządzenia",
           "scan_interval": "Interwał skanowania (s)",
-          "invert_position": "Odwróć pozycję"
+          "invert_position": "Odwróć pozycję",
+          "command_bidirectional": "Dwukierunkowa komunikacja"
         },
         "data_description": {
           "position_state_address": "Adres odczytu pozycji osłony/rolety (0-100, np. DB1,B0, DB2,W4). Opcjonalne skalowanie: 'Scale(0,1,0,10)', separator dziesiętny (.).",
@@ -868,7 +871,8 @@
           "area": "Obszar przypisania encji.",
           "device_class": "Klasa urządzenia dla lepszego doprecyzowania interfejsu, zachowania lub statystyk.",
           "scan_interval": "Interwał skanowania w (s). Pozostaw puste, aby dziedziczyć domyślne ustawienie PLC.",
-          "invert_position": "Załączenie odwraca pozycje krańcowe (0 = Otwarta, 100 = Zamknięta)."
+          "invert_position": "Załączenie odwraca pozycje krańcowe (0 = Otwarta, 100 = Zamknięta).",
+          "command_bidirectional": "Odczytuje zadaną pozycję/przechylenie z adresu zapisu, jeśli skonfigurowano osobny adres różny od adresu odczytu. Domyślnie wyłączone dla zachowania kompatybilności wstecznej."
         }
       },
       "edit_button": {

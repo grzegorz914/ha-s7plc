@@ -22,6 +22,7 @@ from .const import (
     CONF_AREA,
     CONF_CLOSE_COMMAND_ADDRESS,
     CONF_CLOSING_STATE_ADDRESS,
+    CONF_COMMAND_BIDIRECTIONAL,
     CONF_COVER_CLOSING_ADDRESS,
     CONF_COVER_OPENING_ADDRESS,
     CONF_COVER_STATUS_ADDRESS,
@@ -48,6 +49,7 @@ from .const import (
     CONF_TOGGLE_MODE,
     CONF_UID,
     CONF_USE_STATE_TOPICS,
+    DEFAULT_COMMAND_BIDIRECTIONAL,
     DEFAULT_COVER_STATUS_CLOSED_VALUES,
     DEFAULT_COVER_STATUS_CLOSING_VALUES,
     DEFAULT_COVER_STATUS_OPEN_VALUES,
@@ -118,9 +120,25 @@ async def async_setup_entry(
             invert_position = item.get(CONF_INVERT_POSITION, False)
             stop_command = item.get(CONF_STOP_COMMAND_ADDRESS)
             stop_pulse = item.get(CONF_STOP_PULSE_DURATION, DEFAULT_PULSE_DURATION)
+            command_bidirectional = bool(
+                item.get(CONF_COMMAND_BIDIRECTIONAL, DEFAULT_COMMAND_BIDIRECTIONAL)
+            )
 
             position_topic = f"cover:position:{position_state}"
             await coord.add_item(position_topic, position_state, scan_interval)
+
+            # Optional: when command_bidirectional is enabled and this address
+            # is genuinely separate from position_state_address, also read it
+            # back so it can be exposed as a target-position attribute.
+            if (
+                command_bidirectional
+                and position_command
+                and position_command != position_state
+            ):
+                position_command_topic = f"cover:position_command:{position_command}"
+                await coord.add_item(
+                    position_command_topic, position_command, scan_interval
+                )
 
             # Optional: tilt control, symmetric to position above.
             raw_tilt_state = item.get(CONF_TILT_STATE_ADDRESS)
@@ -158,6 +176,16 @@ async def async_setup_entry(
 
                 tilt_topic = f"cover:tilt:{tilt_state}"
                 await coord.add_item(tilt_topic, tilt_state, scan_interval)
+
+                if (
+                    command_bidirectional
+                    and tilt_command
+                    and tilt_command != tilt_state
+                ):
+                    tilt_command_topic = f"cover:tilt_command:{tilt_command}"
+                    await coord.add_item(
+                        tilt_command_topic, tilt_command, scan_interval
+                    )
 
             invert_tilt = item.get(CONF_INVERT_TILT, False)
 
@@ -235,6 +263,7 @@ async def async_setup_entry(
                     cover_status_opening_values=cover_status_opening_values,
                     cover_status_closing_values=cover_status_closing_values,
                     cover_status_stopped_values=cover_status_stopped_values,
+                    command_bidirectional=command_bidirectional,
                 )
             )
             continue
@@ -960,6 +989,7 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
         cover_status_opening_values: str = DEFAULT_COVER_STATUS_OPENING_VALUES,
         cover_status_closing_values: str = DEFAULT_COVER_STATUS_CLOSING_VALUES,
         cover_status_stopped_values: str = DEFAULT_COVER_STATUS_STOPPED_VALUES,
+        command_bidirectional: bool = DEFAULT_COMMAND_BIDIRECTIONAL,
     ) -> None:
         super().__init__(
             coordinator,
@@ -986,6 +1016,28 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
         self._invert_tilt = invert_tilt
         self._tilt_state_scale = tilt_state_scale
         self._tilt_command_scale = tilt_command_scale
+
+        # Optional: when command_bidirectional is enabled and the command
+        # address is genuinely separate from the state address, read it back
+        # too and expose it as a target-position/target-tilt attribute (see
+        # _get_target_position_value/_get_target_tilt_value and
+        # extra_state_attributes below). Topic naming mirrors the matching
+        # coord.add_item(...) call in async_setup_entry.
+        self._command_bidirectional = command_bidirectional
+        self._position_command_topic = (
+            f"cover:position_command:{position_command}"
+            if command_bidirectional
+            and position_command
+            and position_command != position_state
+            else None
+        )
+        self._tilt_command_topic = (
+            f"cover:tilt_command:{tilt_command_address}"
+            if command_bidirectional
+            and tilt_command_address
+            and tilt_command_address != tilt_state_address
+            else None
+        )
 
         # Optional real-time movement status: a raw position alone can't
         # tell HA whether the cover is actively moving, so is_opening/
@@ -1071,6 +1123,36 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
             return None
         return self._clamp_scaled_percent(
             value, self._tilt_state_scale, self._invert_tilt
+        )
+
+    def _get_target_position_value(self) -> int | None:
+        """Get the position last sent to position_command_address, if
+        command_bidirectional is enabled and it's a separate address."""
+        if self._position_command_topic is None:
+            return None
+        data = self.coordinator.data or {}
+        if self._position_command_topic not in data:
+            return None
+        value = data.get(self._position_command_topic)
+        if value is None:
+            return None
+        return self._clamp_scaled_percent(
+            value, self._position_command_scale, self._invert_position
+        )
+
+    def _get_target_tilt_value(self) -> int | None:
+        """Get the tilt last sent to tilt_command_address, if
+        command_bidirectional is enabled and it's a separate address."""
+        if self._tilt_command_topic is None:
+            return None
+        data = self.coordinator.data or {}
+        if self._tilt_command_topic not in data:
+            return None
+        value = data.get(self._tilt_command_topic)
+        if value is None:
+            return None
+        return self._clamp_scaled_percent(
+            value, self._tilt_command_scale, self._invert_tilt
         )
 
     @property
@@ -1303,6 +1385,15 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
         if self._cover_status_address:
             attrs["s7_cover_status_address"] = self._cover_status_address.upper()
             attrs["s7_cover_status_values"] = self._cover_status_values
+        attrs["command_bidirectional"] = self._command_bidirectional
+        if self._position_command_topic:
+            target_position = self._get_target_position_value()
+            if target_position is not None:
+                attrs["s7_target_position"] = target_position
+        if self._tilt_command_topic:
+            target_tilt = self._get_target_tilt_value()
+            if target_tilt is not None:
+                attrs["s7_target_tilt"] = target_tilt
         interval = self.coordinator.get_scan_interval(self._position_topic)
         attrs["closed_scan_interval"] = f"{interval} s"
         attrs["cover_type"] = "position"

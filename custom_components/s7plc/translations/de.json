@@ -345,7 +345,8 @@
           "device_class": "Geräteklasse",
           "scan_interval": "Scan-Intervall (s)",
           "invert_position": "Position umkehren (0=offen, 100=geschlossen)",
-          "add_another": "Nach dem Speichern weitere hinzufügen ?"
+          "add_another": "Nach dem Speichern weitere hinzufügen ?",
+          "command_bidirectional": "Bidirektionale Kommunikation"
         },
         "data_description": {
           "position_state_address": "SPS-Adresse zum Lesen des aktuellen Positionswerts (0-100, z.B. DB1,B0, DB2,W4). Optionale Skalierung: 'Scale(0,1,0,10)', Dezimaltrennzeichen (.).",
@@ -366,7 +367,8 @@
           "device_class": "Home Assistant Geräteklasse zur Verfeinerung der UI/des Verhaltens (z. B. shutter, blind, garage).",
           "scan_interval": "Abfragezyklus für diese Tags in Sekunden. Leerlassen, um den SPS-Standard zu übernehmen.",
           "invert_position": "Aktivieren, wenn Ihre SPS 0 für vollständig geöffnet und 100 für vollständig geschlossen verwendet (kehrt die normale Logik um).",
-          "add_another": "Weitere positionsbasierte Jalousie/Raffstores hinzuzufügen ?"
+          "add_another": "Weitere positionsbasierte Jalousie/Raffstores hinzuzufügen ?",
+          "command_bidirectional": "Liest die befohlene Position/Neigung von der Schreibadresse zurück, wenn eine separate Adresse konfiguriert ist. Standardmäßig deaktiviert für Abwärtskompatibilität."
         }
       },
       "buttons": {
@@ -848,7 +850,8 @@
           "area": "Bereich",
           "device_class": "Geräteklasse",
           "scan_interval": "Scan-Intervall (s)",
-          "invert_position": "Position umkehren (0=offen, 100=geschlossen)"
+          "invert_position": "Position umkehren (0=offen, 100=geschlossen)",
+          "command_bidirectional": "Bidirektionale Kommunikation"
         },
         "data_description": {
           "position_state_address": "SPS-Adresse zum Lesen des aktuellen Positionswerts (0-100). Optionale Skalierung: 'Scale(0,1,0,10)', Dezimaltrennzeichen (.).",
@@ -868,7 +871,8 @@
           "area": "Home Assistant Bereich, dem diese Entität zugeordnet werden soll.",
           "device_class": "Home Assistant Geräteklasse zur Verfeinerung der UI/des Verhaltens (z. B. shutter, blind, garage).",
           "scan_interval": "Abfragezyklus für diese Tags in Sekunden. Leerlassen, um den SPS-Standard zu übernehmen.",
-          "invert_position": "Aktivieren, wenn Ihre SPS 0 für vollständig geöffnet und 100 für vollständig geschlossen verwendet (kehrt die normale Logik um)."
+          "invert_position": "Aktivieren, wenn Ihre SPS 0 für vollständig geöffnet und 100 für vollständig geschlossen verwendet (kehrt die normale Logik um).",
+          "command_bidirectional": "Liest die befohlene Position/Neigung von der Schreibadresse zurück, wenn eine separate Adresse konfiguriert ist. Standardmäßig deaktiviert für Abwärtskompatibilität."
         }
       },
       "edit_button": {
