@@ -209,7 +209,7 @@
           "device_class": "Klasa urządzenia",
           "unit_of_measurement": "Jednostka miary",
           "state_class": "Klasa stanu",
-          "real_precision": "Precyzja zaokrąglania",
+          "real_precision": "Miejsca dziesiętne REAL",
           "scan_interval": "Interwał skanowania (s)",
           "add_another": "Dodaj kolejną encje po zapisaniu"
         },
@@ -220,7 +220,7 @@
           "device_class": "Klasa urządzenia dla lepszego doprecyzowania interfejsu, zachowania lub statystyk.",
           "unit_of_measurement": "Jednostka miary (np. °C, RPM, bar). Pozostaw puste, aby użyć domyślnej jednostki wg. klasy urządzenia.",
           "state_class": "Klasa stanu dla lepszego doprecyzowania interfejsu, zachowania lub statystyk.",
-          "real_precision": "Liczba miejsc po przecinku, puste (precyzja oryginalna).",
+          "real_precision": "Liczba miejsc po przecinku dla wartości REAL. Pozostaw puste, aby użyć wartości domyślnej (1).",
           "scan_interval": "Interwał skanowania w (s). Pozostaw puste, aby dziedziczyć domyślne ustawienie PLC.",
           "add_another": "Nie zamykaj okna konfiguracji po zapisie, aby dodać kolejną encje."
         }
@@ -255,7 +255,7 @@
           "command_address": "Adres zapisu",
           "name": "Nazwa",
           "area": "Obszar",
-          "sync_state": "Synchronizacja stanu",
+          "sync_state": "Zapisuj zewnętrzne zmiany stanu na adres polecenia",
           "pulse_command": "Tryb impulsu",
           "pulse_duration": "Długość impulsu (s)",
           "scan_interval": "Interwał skanowania (s)",
@@ -266,7 +266,7 @@
           "command_address": "Opcjonalny adres zapisu. Jeśli pusty, użyty zostanie adres odczytu.",
           "name": "Opcjonalna własna nazwa.",
           "area": "Obszar przypisania encji.",
-          "sync_state": "Synchronizacja stanu aktualizuje adres zapisu z adresu stanu.",
+          "sync_state": "Gdy adres stanu zmieni się zewnętrznie, nowy stan jest zapisywany na adres polecenia.",
           "pulse_command": "Tryb impulsu działa jak przycisk i wysyła (zał./wył.) zamiast zmiany stanu.",
           "pulse_duration": "Długość impulsu (0.1-60s), domyślnie (0.5s).",
           "scan_interval": "Interwał skanowania w (s). Pozostaw puste, aby dziedziczyć domyślne ustawienie PLC.",
@@ -374,7 +374,6 @@
           "address": "Adres zapisu",
           "name": "Nazwa",
           "area": "Obszar",
-          "scan_interval": "Interwał skanowania (s)",
           "add_another": "Dodaj kolejną encje po zapisaniu",
           "button_pulse": "Długość impulsu (s)"
         },
@@ -382,7 +381,6 @@
           "address": "Adres zapisu (np. Q0.0, DB1,X0.1).",
           "name": "Opcjonalna własna nazwa.",
           "area": "Obszar przypisania encji.",
-          "scan_interval": "Interwał skanowania w (s). Pozostaw puste, aby dziedziczyć domyślne ustawienie PLC.",
           "add_another": "Nie zamykaj okna konfiguracji po zapisie, aby dodać kolejną encje.",
           "button_pulse": "Długość impulsu (0.1-60s), domyślnie (0.5s)."
         }
@@ -395,7 +393,7 @@
           "command_address": "Adres zapisu",
           "name": "Nazwa",
           "area": "Obszar",
-          "sync_state": "Synchronizacja stanu",
+          "sync_state": "Zapisuj zewnętrzne zmiany stanu na adres polecenia",
           "pulse_command": "Tryb impulsu",
           "pulse_duration": "Długość impulsu (s)",
           "brightness_state_address": "Adres odczytu jasności",
@@ -408,7 +406,7 @@
           "command_address": "Opcjonalny adres zapisu. Jeśli brak, użyty zostanie adres odczytu.",
           "name": "Opcjonalna własna nazwa.",
           "area": "Obszar przypisania encji.",
-          "sync_state": "Synchronizacja stanu aktualizuje adres zapisu z adresu stanu.",
+          "sync_state": "Gdy adres stanu zmieni się zewnętrznie, nowy stan włączenia/wyłączenia jest zapisywany na adres polecenia.",
           "pulse_command": "Tryb impulsu działa jak przycisk i wysyła (zał./wył.) zamiast zmiany stanu.",
           "pulse_duration": "Długość impulsu (0.1-60s), domyślnie (0.5s).",
           "brightness_state_address": "Opcjonalny adres odczytu poziomu jasności (np. DB1,B2). Opcjonalne skalowanie: 'Scale(0,1,0,10)', separator dziesiętny (.).",
@@ -430,7 +428,7 @@
           "step": "Krok",
           "min_value": "Limit dolny",
           "max_value": "Limit górny",
-          "real_precision": "Precyzja zaokrąglania",
+          "real_precision": "Miejsca dziesiętne REAL",
           "scan_interval": "Interwał skanowania (s)",
           "add_another": "Dodaj kolejną encje po zapisaniu"
         },
@@ -444,7 +442,7 @@
           "step": "Krok przy zmianie wartości w interfejsie.",
           "min_value": "Minimalna wartość wyjściowa skalowania liniowego. Jeśli zostaną wypełnione tylko wartości wyjsciowe to zamiast skalowania będzie wykonane limitowanie.",
           "max_value": "Maksymalna wartość wyjściowa skalowania liniowego.",
-          "real_precision": "Liczba miejsc po przecinku, puste (precyzja oryginalna).",
+          "real_precision": "Liczba miejsc po przecinku dla wartości REAL. Pozostaw puste, aby użyć wartości domyślnej (1).",
           "scan_interval": "Interwał skanowania w (s). Pozostaw puste, aby dziedziczyć domyślne ustawienie PLC.",
           "add_another": "Nie zamykaj okna konfiguracji po zapisie, aby dodać kolejną encje."
         }
@@ -509,8 +507,8 @@
         "data": {
           "current_temperature_address": "Adres odczytu temperatury",
           "target_temperature_address": "Adres zapisu temperatury zadanej",
-          "preset_mode_address": "Adres zapisu trybu pracy",
-          "preset_mode_bidirectional": "Dwukierunkowa komunikacja",
+          "preset_mode_address": "Adres trybu HVAC",
+          "preset_mode_bidirectional": "Odczytuj tryb HVAC ze sterownika PLC",
           "on_off_address": "Adres wł./wył.",
           "preset_mode_off_value": "Wartość trybu (wył.)",
           "preset_mode_heat_value": "Wartość trybu (grzanie)",
@@ -623,8 +621,8 @@
         "data": {
           "current_temperature_address": "Adres temperatury aktualnej",
           "target_temperature_address": "Adres temperatury zadanej",
-          "preset_mode_address": "Adres zapisu trybu pracy",
-          "preset_mode_bidirectional": "Dwukierunkowa komunikacja",
+          "preset_mode_address": "Adres trybu HVAC",
+          "preset_mode_bidirectional": "Odczytuj tryb HVAC ze sterownika PLC",
           "on_off_address": "Adres wł./wył.",
           "preset_mode_off_value": "Wartość trybu (wył.)",
           "preset_mode_heat_value": "Wartość trybu (grzanie)",
@@ -719,7 +717,7 @@
           "device_class": "Klasa urządzenia",
           "unit_of_measurement": "Jednostka miary",
           "state_class": "Klasa stanu",
-          "real_precision": "Precyzja zaokrąglania",
+          "real_precision": "Miejsca dziesiętne REAL",
           "scan_interval": "Interwał skanowania (s)"
         },
         "data_description": {
@@ -729,7 +727,7 @@
           "device_class": "Klasa urządzenia dla lepszego doprecyzowania interfejsu, zachowania lub statystyk.",
           "unit_of_measurement": "Jednostka miary (np. °C, RPM, bar). Pozostaw puste, aby użyć domyślnej jednostki wg. klasy urządzenia.",
           "state_class": "Klasa stanu dla lepszego doprecyzowania interfejsu, zachowania lub statystyk.",
-          "real_precision": "Liczba miejsc po przecinku, puste (precyzja oryginalna).",
+          "real_precision": "Liczba miejsc po przecinku dla wartości REAL. Pozostaw puste, aby użyć wartości domyślnej (1).",
           "scan_interval": "Interwał skanowania w (s). Pozostaw puste, aby dziedziczyć domyślne ustawienie PLC."
         }
       },
@@ -761,7 +759,7 @@
           "command_address": "Adres zapisu",
           "name": "Nazwa",
           "area": "Obszar",
-          "sync_state": "Synchronizacja stanu",
+          "sync_state": "Zapisuj zewnętrzne zmiany stanu na adres polecenia",
           "pulse_command": "Tryb impulsu",
           "pulse_duration": "Długość impulsu (s)",
           "scan_interval": "Interwał skanowania (s)"
@@ -771,7 +769,7 @@
           "command_address": "Opcjonalny adres zapisu. Jeśli pusty, użyty zostanie adres odczytu.",
           "name": "Opcjonalna własna nazwa.",
           "area": "Obszar przypisania encji.",
-          "sync_state": "Synchronizacja stanu aktualizuje adres zapisu z adresu stanu.",
+          "sync_state": "Gdy adres stanu zmieni się zewnętrznie, nowy stan jest zapisywany na adres polecenia.",
           "pulse_command": "Tryb impulsu działa jak przycisk i wysyła (zał./wył.) zamiast zmiany stanu.",
           "pulse_duration": "Długość impulsu (0.1-60s), domyślnie (0.5s).",
           "scan_interval": "Interwał skanowania w (s). Pozostaw puste, aby dziedziczyć domyślne ustawienie PLC."
@@ -874,14 +872,12 @@
           "address": "Adres zapisu",
           "name": "Nazwa",
           "area": "Obszar",
-          "button_pulse": "Długość impulsu (s)",
-          "scan_interval": "Interwał skanowania (s)"
+          "button_pulse": "Długość impulsu (s)"
         },
         "data_description": {
           "address": "Adres zapisu (np. Q0.0, DB1,X0.1).",
           "name": "Opcjonalna własna nazwa.",
           "area": "Obszar przypisania encji.",
-          "scan_interval": "Interwał skanowania w (s). Pozostaw puste, aby dziedziczyć domyślne ustawienie PLC.",
           "button_pulse": "Długość impulsu (0.1-60s), domyślnie (0.5s)."
         }
       },
@@ -893,7 +889,7 @@
           "command_address": "Adres zapisu",
           "name": "Nazwa",
           "area": "Obszar",
-          "sync_state": "Synchronizacja stanu",
+          "sync_state": "Zapisuj zewnętrzne zmiany stanu na adres polecenia",
           "pulse_command": "Tryb impulsu",
           "pulse_duration": "Długość impulsu (s)",
           "brightness_state_address": "Adres odczytu jasności",
@@ -905,7 +901,7 @@
           "command_address": "Opcjonalny adres zapisu. Jeśli brak, użyty zostanie adres odczytu.",
           "name": "Opcjonalna własna nazwa.",
           "area": "Obszar przypisania encji.",
-          "sync_state": "Synchronizacja stanu aktualizuje adres zapisu z adresu stanu.",
+          "sync_state": "Gdy adres stanu zmieni się zewnętrznie, nowy stan włączenia/wyłączenia jest zapisywany na adres polecenia.",
           "pulse_command": "Tryb impulsu działa jak przycisk i wysyła (zał./wył.) zamiast zmiany stanu.",
           "pulse_duration": "Długość impulsu (0.1-60s), domyślnie (0.5s).",
           "brightness_state_address": "Opcjonalny adres odczytu poziomu jasności (np. DB1,B2). Opcjonalne skalowanie: 'Scale(0,1,0,10)', separator dziesiętny (.).",
@@ -926,7 +922,7 @@
           "step": "Krok",
           "min_value": "Limit dolny",
           "max_value": "Limit górny",
-          "real_precision": "Precyzja zaokrąglania",
+          "real_precision": "Miejsca dziesiętne REAL",
           "scan_interval": "Interwał skanowania (s)"
         },
         "data_description": {
@@ -939,7 +935,7 @@
           "step": "Opcjonalny krok używany przy regulacji wartości w interfejsie.",
           "min_value": "Minimalna wartość wyjściowa skalowania liniowego. Jeśli zostaną wypełnione tylko wartości wyjsciowe to zamiast skalowania będzie wykonane limitowanie.",
           "max_value": "Maksymalna wartość wyjściowa skalowania liniowego.",
-          "real_precision": "Liczba miejsc po przecinku, puste (precyzja oryginalna).",
+          "real_precision": "Liczba miejsc po przecinku dla wartości REAL. Pozostaw puste, aby użyć wartości domyślnej (1).",
           "scan_interval": "Interwał skanowania w (s). Pozostaw puste, aby dziedziczyć domyślne ustawienie PLC."
         }
       },
