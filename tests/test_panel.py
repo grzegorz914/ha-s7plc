@@ -14,6 +14,8 @@ from custom_components.s7plc.config_validation import build_entity_item
 from custom_components.s7plc.panel import (
     async_setup_panel,
     _entity_from_message,
+    _configuration_from_yaml,
+    _configuration_yaml,
     _entry_payload,
     _versioned_asset_url,
 )
@@ -159,6 +161,48 @@ def test_yaml_editor_parser_does_not_validate_entity() -> None:
     assert _entity_from_message(
         {"entity_type": "sensors", "entity_yaml": "address: invalid\nunknown: true"}
     ) == {"address": "invalid", "unknown": True}
+
+
+def test_complete_configuration_yaml_round_trip() -> None:
+    options = {
+        "sensors": [{"address": "DB1,REAL0", "name": "Temperature", "uid": "one"}],
+        "switches": [{"state_address": "DB1,X4.0", "uid": "two"}],
+        "unrelated_option": True,
+    }
+
+    saved = _configuration_from_yaml(_configuration_yaml(options), options)
+
+    assert saved["sensors"][0]["uid"] == "one"
+    assert saved["switches"][0]["uid"] == "two"
+    assert saved["unrelated_option"] is True
+    assert saved["covers"] == []
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "- not-a-mapping",
+        "unknown: []",
+        "sensors: not-a-list",
+        "sensors:\n  - invalid-item",
+        "sensors:\n  - address: invalid",
+        "sensors: []\nsensors: []",
+    ],
+)
+def test_complete_configuration_yaml_rejects_invalid_input(source) -> None:
+    with pytest.raises(ValueError):
+        _configuration_from_yaml(source, {})
+
+
+def test_complete_configuration_yaml_replaces_duplicate_uids() -> None:
+    saved = _configuration_from_yaml(
+        "sensors:\n  - address: DB1,REAL0\n    uid: repeated\n"
+        "binary_sensors:\n  - address: DB1,X4.0\n    uid: repeated\n",
+        {},
+    )
+
+    assert saved["sensors"][0]["uid"] == "repeated"
+    assert saved["binary_sensors"][0]["uid"] != "repeated"
 
 
 async def _save_entity_handler(monkeypatch, options):
@@ -676,6 +720,115 @@ def test_panel_uses_config_flow_field_descriptions() -> None:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
+@pytest.mark.parametrize(
+    ("locale", "responses", "expected_urls", "expected_title", "expected_field"),
+    [
+        (
+            "it-IT",
+            ["it"],
+            ["/s7plc_translations/it.json"],
+            "Configurazione S7 PLC",
+            "Nome",
+        ),
+        (
+            "fr-FR",
+            ["en"],
+            ["/s7plc_translations/en.json"],
+            "S7 PLC configuration",
+            "Name",
+        ),
+        (
+            "de-DE",
+            [],
+            [
+                "/s7plc_translations/de.json",
+                "/s7plc_translations/en.json",
+            ],
+            "S7 PLC configuration",
+            None,
+        ),
+    ],
+)
+def test_panel_translation_loading_and_fallbacks(
+    locale: str,
+    responses: list[str],
+    expected_urls: list[str],
+    expected_title: str,
+    expected_field: str | None,
+) -> None:
+    """External JSON is canonical, with locale and fetch failures kept safe."""
+    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
+    payloads = {
+        language: json.loads(
+            Path(f"custom_components/s7plc/translations/{language}.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        for language in responses
+    }
+    script = r"""
+const vm=require('vm'); let Panel; const urls=[];
+const payloads=JSON.parse(process.argv[2]);
+const context={HTMLElement:class{},customElements:{define:(_,cls)=>Panel=cls},console,
+  fetch:async url=>{urls.push(url);const language=url.match(/\/([^/]+)\.json$/)[1];
+    if(!(language in payloads))return {ok:false,status:503};
+    return {ok:true,json:async()=>payloads[language]};}};
+vm.createContext(context);vm.runInContext(process.argv[1],context);
+(async()=>{const panel=new Panel();panel._hass={locale:{language:process.argv[3]}};
+  await panel.loadFlowTranslations();
+  process.stdout.write(JSON.stringify({urls,title:panel.t('title'),
+    field:panel.flowText('sensors',{},'name','data')??null}));})();
+"""
+
+    result = subprocess.run(
+        ["node", "-e", script, source, json.dumps(payloads), locale],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert json.loads(result.stdout) == {
+        "urls": expected_urls,
+        "title": expected_title,
+        "field": expected_field,
+    }
+
+
+def test_panel_translations_use_supported_config_panel_namespace() -> None:
+    """Panel strings use HA's validated namespace, never a custom top-level key."""
+    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
+    assert "const TRANSLATIONS" not in source
+    assert "const BATCH_TRANSLATIONS" not in source
+    entity_types = {
+        "sensors",
+        "binary_sensors",
+        "switches",
+        "covers",
+        "lights",
+        "buttons",
+        "numbers",
+        "texts",
+        "climates",
+        "entity_sync",
+    }
+
+    panel_fields = {
+        "cover_mode",
+        "control_mode",
+    }
+
+    for language in ("en", "it", "cs", "de", "pl"):
+        translations = json.loads(
+            Path(f"custom_components/s7plc/translations/{language}.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        assert "panel" not in translations
+        assert translations["config_panel"]["types"].keys() == entity_types
+        assert translations["config_panel"]["fields"].keys() == panel_fields
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
 def test_panel_translates_backend_validation_errors() -> None:
     """Known flow errors are translated while unknown messages remain readable."""
     source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
@@ -1185,19 +1338,48 @@ def test_panel_hides_invert_tilt_when_tilt_state_address_unused() -> None:
     ) in source
 
 
-def test_panel_covers_bool_addresses_use_bool_placeholder() -> None:
-    """Cover open/close command and end-stop/status addresses are all
-    single PLC bits, not REAL values — they must not show the generic
-    REAL-flavored address example/help used by numeric address fields."""
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
+def test_panel_bool_addresses_use_bool_placeholder() -> None:
+    """Boolean PLC address fields use the BOOL-specific placeholder."""
     source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
+    prefix = source.split("class S7PlcConfigurationPanel", 1)[0]
 
-    assert "const BOOL_FIELDS" in source
-    bool_fields_line = next(
-        line
-        for line in source.splitlines()
-        if line.strip().startswith("covers: [") and "open_command_address" in line
+    script = (
+        "const vm=require('vm');"
+        "const context={};vm.createContext(context);"
+        "vm.runInContext(process.argv[1] + "
+        "'\\nglobalThis.result=BOOL_FIELDS;',context);"
+        "process.stdout.write(JSON.stringify(context.result));"
     )
-    for key in (
+
+    result = subprocess.run(
+        ["node", "-e", script, prefix],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    bool_fields = json.loads(result.stdout)
+
+    assert set(bool_fields["binary_sensors"]) == {
+        "address",
+    }
+
+    assert set(bool_fields["switches"]) == {
+        "state_address",
+        "command_address",
+    }
+
+    assert set(bool_fields["lights"]) == {
+        "state_address",
+        "command_address",
+    }
+
+    assert set(bool_fields["buttons"]) == {
+        "address",
+    }
+
+    assert set(bool_fields["covers"]) == {
         "open_command_address",
         "close_command_address",
         "opening_state_address",
@@ -1206,16 +1388,131 @@ def test_panel_covers_bool_addresses_use_bool_placeholder() -> None:
         "cover_closing_address",
         "cover_stopped_address",
         "stop_command_address",
-    ):
-        assert key in bool_fields_line, f"{key} missing from covers BOOL_FIELDS"
+    }
 
-    # Fields not on that list (e.g. numeric position) stay untouched.
-    assert "position_state_address" not in bool_fields_line
-    assert "position_command_address" not in bool_fields_line
+    assert set(bool_fields["climates"]) == {
+        "heating_output_address",
+        "cooling_output_address",
+        "heating_action_address",
+        "cooling_action_address",
+        "on_off_address",
+    }
+
+    # Numeric cover addresses must not accidentally become BOOL.
+    assert "position_state_address" not in bool_fields["covers"]
+    assert "position_command_address" not in bool_fields["covers"]
 
     assert "boolAddress=BOOL_FIELDS[type]?.includes(key)" in source
     assert "address_example_bool" in source
-    assert "address_help_bool" in source
+
+    english = json.loads(
+        Path("custom_components/s7plc/translations/en.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert english["config_panel"]["address_example_bool"]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
+def test_panel_text_addresses_use_string_placeholder() -> None:
+    """Text entity PLC addresses use a STRING-specific placeholder."""
+    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
+    prefix = source.split("class S7PlcConfigurationPanel", 1)[0]
+
+    script = (
+        "const vm=require('vm');"
+        "const context={};vm.createContext(context);"
+        "vm.runInContext(process.argv[1] + "
+        "'\\nglobalThis.result=STRING_FIELDS;',context);"
+        "process.stdout.write(JSON.stringify(context.result));"
+    )
+
+    result = subprocess.run(
+        ["node", "-e", script, prefix],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    string_fields = json.loads(result.stdout)
+
+    assert set(string_fields["texts"]) == {
+        "address",
+        "command_address",
+    }
+
+    assert "stringAddress=STRING_FIELDS[type]?.includes(key)" in source
+    assert "address_example_string" in source
+
+    for language in ("en", "it", "cs", "de", "pl"):
+        translations = json.loads(
+            Path(
+                f"custom_components/s7plc/translations/{language}.json"
+            ).read_text(encoding="utf-8")
+        )
+
+        assert translations["config_panel"]["address_example_string"]
+
+        
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
+def test_panel_address_placeholders_match_plc_data_type() -> None:
+    """Text addresses use STRING examples while BOOL and REAL stay unchanged."""
+    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
+    script = """
+const vm = require('vm');
+let Panel;
+const context = {HTMLElement: class {}, customElements: {define: (_, cls) => Panel = cls}};
+vm.createContext(context);
+vm.runInContext(process.argv[1], context);
+const panel = new Panel();
+panel.flowText = () => null;
+panel.escape = value => String(value);
+panel.t = key => ({
+  address_example: 'REAL',
+  address_example_bool: 'BOOL',
+  address_example_string: 'STRING'
+}[key] || key);
+const placeholder = (type, key) => panel.field([key, 'label'], {}, type)
+  .match(/placeholder="([^"]*)"/)[1];
+process.stdout.write(JSON.stringify({
+  textAddress: placeholder('texts', 'address'),
+  textCommandAddress: placeholder('texts', 'command_address'),
+  boolAddress: placeholder('covers', 'open_command_address'),
+  genericAddress: placeholder('sensors', 'address')
+}));
+"""
+    result = subprocess.run(
+        ["node", "-e", script, source],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert json.loads(result.stdout) == {
+        "textAddress": "STRING",
+        "textCommandAddress": "STRING",
+        "boolAddress": "BOOL",
+        "genericAddress": "REAL",
+    }
+
+    expected = {
+        "en": "e.g. DB1,S0.254",
+        "it": "es. DB1,S0.254",
+        "de": "z. B. DB1,S0.254",
+        "pl": "np. DB1,S0.254",
+        "cs": "např. DB1,S0.254",
+    }
+    strings = json.loads(
+        Path("custom_components/s7plc/strings.json").read_text(encoding="utf-8")
+    )
+    assert strings["config_panel"]["address_example_string"] == expected["en"]
+    for language, example in expected.items():
+        translations = json.loads(
+            Path(f"custom_components/s7plc/translations/{language}.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        assert translations["config_panel"]["address_example_string"] == example
 
 
 def test_panel_climates_bool_addresses_use_bool_placeholder() -> None:
