@@ -1135,7 +1135,7 @@
       "sensors": "Sensory",
       "binary_sensors": "Sensory binarne",
       "switches": "Przełączniki",
-      "covers": "Rolety/Osłony",
+      "covers": "Osłony",
       "lights": "Światła",
       "buttons": "Przyciski",
       "numbers": "Liczby",
