@@ -10,8 +10,8 @@
         }
       },
       "rack_slot": {
-        "title": "Połączenie PLC S7 (Rack/Slot)",
-        "description": "Wprowadź parametry połączenia z PLC używając Rack/Slot. Test połączenia zostanie wykonany przed zapisaniem.",
+        "title": "Połączenie PLC S7 (Kaseta/Gniazdo)",
+        "description": "Wprowadź parametry połączenia z PLC używając Kaseta/Gniazdo. Test połączenia zostanie wykonany przed zapisaniem.",
         "data": {
           "name": "Nazwa",
           "host": "Host",
