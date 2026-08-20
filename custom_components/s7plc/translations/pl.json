@@ -21,12 +21,12 @@
           "pys7_connection_type": "Typ połączenia",
           "scan_interval": "Interwał odpytywania (s)",
           "operation_timeout": "Limit czasu operacji (s)",
-          "max_retries": "Liczba prób",
+          "max_retries": "Liczba prób komunikacji",
           "retry_backoff_initial": "Opóźnienie przy pierwszej próbie (s)",
           "retry_backoff_max": "Maksymalne opóźnienie przy kolejnych próbach (s)",
-          "optimize_read": "Optymalizuj odczyty wsadowe",
-          "enable_write_batching": "Włącz grupowanie zapisów",
-          "enable_metrics": "Włącz metryki wydajności"
+          "optimize_read": "Optymalizacja odczytów wsadowych",
+          "enable_write_batching": "Grupowanie zapisów",
+          "enable_metrics": "Metryki wydajności"
         },
         "data_description": {
           "name": "Przyjazna nazwa PLC używana w nazwach encji.",
@@ -57,12 +57,12 @@
           "pys7_connection_type": "Typ połączenia",
           "scan_interval": "Interwał odpytywania (s)",
           "operation_timeout": "Limit czasu operacji (s)",
-          "max_retries": "Liczba prób",
+          "max_retries": "Liczba prób komunikacji",
           "retry_backoff_initial": "Opóźnienie przy pierwszej próbie (s)",
           "retry_backoff_max": "Maksymalne opóźnienie przy kolejnych próbach (s)",
-          "optimize_read": "Optymalizuj odczyty wsadowe",
-          "enable_write_batching": "Włącz grupowanie zapisów",
-          "enable_metrics": "Włącz metryki wydajności"
+          "optimize_read": "Optymalizacja odczytów wsadowych",
+          "enable_write_batching": "Grupowanie zapisów",
+          "enable_metrics": "Metryki wydajności"
         },
         "data_description": {
           "name": "Przyjazna nazwa PLC używana w nazwach encji.",
@@ -175,12 +175,12 @@
           "pys7_connection_type": "Typ połączenia",
           "scan_interval": "Interwał skanowania (s)",
           "operation_timeout": "Limit czasu operacji (s)",
-          "max_retries": "Liczba prób",
+          "max_retries": "Liczba prób komunikacji",
           "retry_backoff_initial": "Opóźnienie przy pierwszej próbie (s)",
           "retry_backoff_max": "Maksymalne opóźnienie przy kolejnych próbach (s)",
-          "optimize_read": "Optymalizuj odczyty wsadowe",
-          "enable_write_batching": "Włącz grupowanie zapisów",
-          "enable_metrics": "Włącz metryki wydajności"
+          "optimize_read": "Optymalizacja odczytów wsadowych",
+          "enable_write_batching": "Grupowanie zapisów",
+          "enable_metrics": "Metryki wydajności"
         },
         "data_description": {
           "name": "Przyjazna nazwa PLC używana w nazwach encji.",
