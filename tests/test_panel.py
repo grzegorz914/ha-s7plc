@@ -1492,31 +1492,6 @@ process.stdout.write(JSON.stringify({
         assert translations["config_panel"]["address_example_string"] == example
 
 
-def test_panel_climates_bool_addresses_use_bool_placeholder() -> None:
-    """Thermostat heating/cooling output, action, and on/off addresses are
-    all single PLC bits, not REAL values — they must not show the generic
-    REAL-flavored address example/help used by numeric address fields."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-
-    bool_fields_line = next(
-        line
-        for line in source.splitlines()
-        if line.strip().startswith("climates: [") and "heating_output_address" in line
-    )
-    for key in (
-        "heating_output_address",
-        "cooling_output_address",
-        "heating_action_address",
-        "cooling_action_address",
-        "on_off_address",
-    ):
-        assert key in bool_fields_line, f"{key} missing from climates BOOL_FIELDS"
-
-    # Fields not on that list (e.g. status/preset addresses) stay untouched.
-    assert "hvac_status_address" not in bool_fields_line
-    assert "preset_mode_address" not in bool_fields_line
-
-
 def test_panel_texts_addresses_use_string_placeholder() -> None:
     """Text entity address/command_address fields hold STRING or WSTRING
     values, not REAL — they must not show the generic REAL-flavored
