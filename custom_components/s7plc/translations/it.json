@@ -1160,6 +1160,8 @@
     "import_yaml": "Importa YAML",
     "export_current_yaml": "Esporta YAML corrente",
     "download_backup": "Scarica copia di sicurezza",
+    "configuration_load_error": "Impossibile caricare la configurazione YAML.",
+    "configuration_download_error": "Impossibile scaricare la copia di sicurezza.",
     "connection_details_title": "Dettagli connessione",
     "connection_details_help": "Mostra i dettagli della connessione",
     "connection_details_description": "Parametri di connessione in sola lettura per questo PLC.",
@@ -1172,6 +1174,27 @@
       "pg": "PG (dispositivo di programmazione)",
       "op": "OP (pannello operatore)",
       "s7basic": "S7 Basic"
+    },
+    "availability": {
+      "title": "Disponibilità connessione",
+      "last_24_hours": "Ultime 24 ore",
+      "loading": "Caricamento cronologia connessione…",
+      "timeline_label": "Stati della connessione PLC nelle ultime 24 ore",
+      "hours_ago": "24 ore fa",
+      "now": "Ora",
+      "connected": "Connesso",
+      "disconnected": "Disconnesso",
+      "unknown": "Sconosciuto",
+      "percentage": "Disponibilità",
+      "current_uptime": "Connessione attuale",
+      "disconnections": "Disconnessioni",
+      "unknown_time": "Tempo sconosciuto",
+      "last_disconnection": "Ultima disconnessione",
+      "percentage_note": "La disponibilità esclude i periodi sconosciuti.",
+      "history_unavailable": "I dati storici non sono disponibili; lo stato corrente è comunque mostrato sopra.",
+      "day_short": "g",
+      "hour_short": "h",
+      "minute_short": "min"
     }
   }
 }
