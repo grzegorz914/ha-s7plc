@@ -59,6 +59,67 @@ def test_connection_badge_opens_read_only_connection_details() -> None:
     assert "input name=" not in details_source
 
 
+def test_connection_availability_calculations_cover_unknown_and_transitions() -> None:
+    """Timeline excludes unknown time and counts only on-to-off transitions."""
+    if shutil.which("node") is None:
+        pytest.skip("node is required to evaluate the panel helpers")
+    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
+    script = f"""
+global.HTMLElement = class {{}};
+global.customElements = {{define() {{}}}};
+{source}
+const hour = 3600000, now = Date.parse("2026-08-21T12:00:00Z");
+const history = [
+  {{state:"on",last_changed:"2026-08-20T14:00:00Z"}},
+  {{state:"off",last_changed:"2026-08-20T18:00:00Z"}},
+  {{state:"unavailable",last_changed:"2026-08-20T20:00:00Z"}},
+  {{state:"on",last_changed:"2026-08-20T21:00:00Z"}},
+  {{state:"off",last_changed:"2026-08-21T02:00:00Z"}},
+  {{state:"on",last_changed:"2026-08-21T03:00:00Z"}}
+];
+const result=BUILD_CONNECTION_AVAILABILITY(history,now,24*hour);
+console.log(JSON.stringify({{durations:result.durations,availability:result.availability,disconnects:result.disconnects,currentUptime:result.currentUptime,last:result.lastDisconnection}}));
+"""
+    result = json.loads(
+        subprocess.run(
+            ["node", "-e", script], check=True, capture_output=True, text=True
+        ).stdout
+    )
+    assert result["durations"] == {
+        "connected": 18 * 3_600_000,
+        "disconnected": 3 * 3_600_000,
+        "unknown": 3 * 3_600_000,
+    }
+    assert result["availability"] == pytest.approx(18 / 21 * 100)
+    assert result["disconnects"] == 2
+    assert result["currentUptime"] == 9 * 3_600_000
+    assert result["last"]["end"] - result["last"]["start"] == 3_600_000
+
+
+def test_connection_availability_does_not_invent_initial_state() -> None:
+    """Incomplete recorder data stays unknown until the first actual event."""
+    if shutil.which("node") is None:
+        pytest.skip("node is required to evaluate the panel helpers")
+    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
+    script = f"""
+global.HTMLElement = class {{}};
+global.customElements = {{define() {{}}}};
+{source}
+const now=Date.parse("2026-08-21T12:00:00Z"),hour=3600000;
+const result=BUILD_CONNECTION_AVAILABILITY([{{state:"on",last_changed:"2026-08-21T10:00:00Z"}}],now,24*hour);
+console.log(JSON.stringify(result));
+"""
+    result = json.loads(
+        subprocess.run(
+            ["node", "-e", script], check=True, capture_output=True, text=True
+        ).stdout
+    )
+    assert result["durations"]["unknown"] == 22 * 3_600_000
+    assert result["durations"]["connected"] == 2 * 3_600_000
+    assert result["availability"] == 100
+    assert result["disconnects"] == 0
+
+
 def test_panel_supports_batch_entity_deletion() -> None:
     source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
 
@@ -249,6 +310,43 @@ def test_configuration_backup_metadata_and_uid_import_rules() -> None:
     ] != "original"
 
 
+@pytest.mark.parametrize("metadata", ["{}", "{source_entry_id: entry-1}"])
+def test_backup_metadata_without_format_version_is_accepted(metadata) -> None:
+    saved = _configuration_from_yaml(
+        f"s7plc: {metadata}\nsensors:\n  - address: DB1,REAL0\n",
+        {},
+        "entry-1",
+    )
+
+    assert saved["sensors"][0]["address"] == "DB1,REAL0"
+
+
+def test_supported_backup_format_version_is_accepted() -> None:
+    saved = _configuration_from_yaml(
+        "s7plc:\n  format_version: 1\nsensors:\n  - address: DB1,REAL0\n", {}
+    )
+
+    assert saved["sensors"][0]["address"] == "DB1,REAL0"
+
+
+@pytest.mark.parametrize("version", ["999", '"1"', "true", "null"])
+def test_unsupported_or_invalid_backup_format_version_is_rejected(version) -> None:
+    with pytest.raises(ValueError, match="Unsupported S7 PLC backup format version"):
+        _configuration_from_yaml(f"s7plc:\n  format_version: {version}\n", {})
+
+
+@pytest.mark.parametrize("metadata", ["[]", "null", '"invalid"'])
+def test_malformed_backup_metadata_is_rejected(metadata) -> None:
+    with pytest.raises(ValueError, match="s7plc must be a mapping"):
+        _configuration_from_yaml(f"s7plc: {metadata}\n", {})
+
+
+def test_metadata_less_legacy_configuration_is_accepted() -> None:
+    saved = _configuration_from_yaml("sensors:\n  - address: DB1,REAL0\n", {})
+
+    assert saved["sensors"][0]["address"] == "DB1,REAL0"
+
+
 def test_same_entry_duplicate_uids_are_replaced_safely() -> None:
     source = """s7plc:
   format_version: 1
@@ -395,6 +493,18 @@ def test_list_is_lightweight_and_frontend_has_three_yaml_actions() -> None:
     assert "export_current_yaml" in source
     assert "download_backup" in source
     assert "s7plc/config/get_configuration" in source
+
+
+def test_configuration_editor_handles_load_download_and_repeated_clicks() -> None:
+    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
+
+    assert "configuration_load_error" in source
+    assert "configuration_download_error" in source
+    assert "textarea.disabled=!!loadError" in source
+    assert "if(backupLoading)return" in source
+    assert "if(saveLoading)return" in source
+    assert "backupButton.disabled=true" in source
+    assert "saveButton.disabled=true" in source
 
 
 class _Connection:
@@ -745,9 +855,13 @@ def test_entry_payload_maps_entity_ids(monkeypatch) -> None:
     from homeassistant.helpers import entity_registry as er
 
     registry = SimpleNamespace(
-        async_get_entity_id=lambda domain, platform, uid: f"{domain}.demo"
-        if uid == "dev1:sensor:DB1,REAL0"
-        else None
+        async_get_entity_id=lambda domain, platform, uid: (
+            "binary_sensor.plc_connection"
+            if uid == "dev1:connection"
+            else f"{domain}.demo"
+            if uid == "dev1:sensor:DB1,REAL0"
+            else None
+        )
     )
     monkeypatch.setattr(er, "async_get", lambda hass: registry)
     entry = SimpleNamespace(
@@ -774,6 +888,7 @@ def test_entry_payload_maps_entity_ids(monkeypatch) -> None:
 
     assert payload["entity_ids"]["sensors"] == ["sensor.demo", None]
     assert payload["entity_ids"]["switches"] == []
+    assert payload["connection_entity_id"] == "binary_sensor.plc_connection"
 
 
 def test_panel_renders_current_state_badges() -> None:
