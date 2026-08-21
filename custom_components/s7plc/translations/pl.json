@@ -413,7 +413,7 @@
           "add_another": "Dodaj kolejną encje po zapisaniu"
         },
         "data_description": {
-          "state_address": "Adres odczytu stanu (np. Q0.0, DB1,X0.1)",
+          "state_address": "Adres odczytu stanu (np. Q0.0, DB1,X0.1).",
           "command_address": "Opcjonalny adres zapisu. Jeśli brak, użyty zostanie adres odczytu.",
           "name": "Opcjonalna własna nazwa.",
           "area": "Obszar przypisania encji.",
@@ -926,7 +926,7 @@
           "scan_interval": "Interwał skanowania (s)"
         },
         "data_description": {
-          "state_address": "Adres odczytu stanu (np. Q0.0, DB1,X0.1)",
+          "state_address": "Adres odczytu stanu (np. Q0.0, DB1,X0.1).",
           "command_address": "Opcjonalny adres zapisu. Jeśli brak, użyty zostanie adres odczytu.",
           "name": "Opcjonalna własna nazwa.",
           "area": "Obszar przypisania encji.",
@@ -1257,9 +1257,9 @@
       "section_title": "Typ światła",
       "section_help": "Sterowanie włącz/wyłącz lub włącz/wyłącz z jasnością.",
       "on_off_title": "Włącz/Wyłącz",
-      "on_off_description": "Tylko włączanie i wyłączanie",
+      "on_off_description": "Tylko włączanie i wyłączanie.",
       "dimmable_title": "Włącz/Wyłącz ze ściemnianiem",
-      "dimmable_description": "Włączanie, wyłączanie i regulacja jasności"
+      "dimmable_description": "Włączanie, wyłączanie i regulacja jasności."
     }
   }
 }
