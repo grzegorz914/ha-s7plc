@@ -1201,6 +1201,8 @@
     "import_yaml": "YAML importieren",
     "export_current_yaml": "Aktuelles YAML exportieren",
     "download_backup": "Sicherung herunterladen",
+    "configuration_load_error": "Die YAML-Konfiguration konnte nicht geladen werden.",
+    "configuration_download_error": "Die Sicherung konnte nicht heruntergeladen werden.",
     "connection_details_title": "Verbindungsdetails",
     "connection_details_help": "Verbindungsdetails anzeigen",
     "connection_details_description": "Schreibgeschützte Verbindungsparameter für diese SPS.",
@@ -1213,6 +1215,27 @@
       "pg": "PG (Programmiergerät)",
       "op": "OP (Bediengerät)",
       "s7basic": "S7 Basic"
+    },
+    "availability": {
+      "title": "Verbindungsverfügbarkeit",
+      "last_24_hours": "Letzte 24 Stunden",
+      "loading": "Verbindungsverlauf wird geladen…",
+      "timeline_label": "PLC-Verbindungszustände der letzten 24 Stunden",
+      "hours_ago": "Vor 24 Std.",
+      "now": "Jetzt",
+      "connected": "Verbunden",
+      "disconnected": "Getrennt",
+      "unknown": "Unbekannt",
+      "percentage": "Verfügbarkeit",
+      "current_uptime": "Aktuelle Laufzeit",
+      "disconnections": "Trennungen",
+      "unknown_time": "Unbekannte Zeit",
+      "last_disconnection": "Letzte Trennung",
+      "percentage_note": "Unbekannte Zeiträume werden nicht einberechnet.",
+      "history_unavailable": "Verlaufsdaten sind nicht verfügbar; der aktuelle Status wird oben weiterhin angezeigt.",
+      "day_short": "T",
+      "hour_short": "Std.",
+      "minute_short": "Min."
     }
   }
 }
