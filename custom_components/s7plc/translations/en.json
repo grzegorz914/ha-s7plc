@@ -1115,6 +1115,7 @@
     "entities": "entities",
     "connected": "Connected",
     "disconnected": "Disconnected",
+    "unknown": "Unknown",
     "reload_help": "Changes are applied by automatically reloading the integration.",
     "add": "Add",
     "empty": "No entities",
