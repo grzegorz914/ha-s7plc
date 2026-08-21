@@ -376,7 +376,7 @@
           "scan_interval": "Interwał skanowania w (s). Pozostaw puste, aby dziedziczyć domyślne ustawienie PLC.",
           "invert_position": "Załączenie odwraca pozycje krańcowe (0 = Otwarta, 100 = Zamknięta).",
           "add_another": "Nie zamykaj okna konfiguracji po zapisie, aby dodać kolejną encje.",
-          "command_bidirectional": "Odczytuje zadaną pozycję/przechylenie z adresu zapisu, jeśli skonfigurowano osobny adres różny od adresu odczytu. Domyślnie wyłączone dla zachowania kompatybilności wstecznej."
+          "command_bidirectional": "Dwukierunkowa komunikacja synchronizuje adres zapisu pozycji i przechylenia w obu kierunkach, domyślnie wyłączone."
         }
       },
       "buttons": {
@@ -894,7 +894,7 @@
           "device_class": "Klasa urządzenia dla lepszego doprecyzowania interfejsu, zachowania lub statystyk.",
           "scan_interval": "Interwał skanowania w (s). Pozostaw puste, aby dziedziczyć domyślne ustawienie PLC.",
           "invert_position": "Załączenie odwraca pozycje krańcowe (0 = Otwarta, 100 = Zamknięta).",
-          "command_bidirectional": "Odczytuje zadaną pozycję/przechylenie z adresu zapisu, jeśli skonfigurowano osobny adres różny od adresu odczytu. Domyślnie wyłączone dla zachowania kompatybilności wstecznej."
+          "command_bidirectional": "Dwukierunkowa komunikacja synchronizuje adres zapisu pozycji i przechylenia w obu kierunkach, domyślnie wyłączone."
         }
       },
       "edit_button": {
