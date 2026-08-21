@@ -1166,7 +1166,7 @@
     },
     "configuration_yaml": "Konfiguracja YAML",
     "configuration_yaml_title": "Zaawansowana konfiguracja YAML",
-    "configuration_yaml_warning": "Edytuj jednocześnie wszystkie encje tego PLC. Zapis zastępuje pełną konfigurację encji. Najpierw wyeksportuj kopię zapasową.",
+    "configuration_yaml_warning": "Jednoczesna edycja konfiguracji wszystkich encji tego PLC. Zapis zastąpi pełną konfigurację. Przed edycją najpierw wyeksportuj kopię zapasową obecnej konfiguracji.",
     "import_yaml": "Importuj YAML",
     "export_current_yaml": "Eksportuj YAML",
     "download_backup": "Pobierz kopię zapasową",
