@@ -1195,7 +1195,7 @@
       "day_short": "d",
       "hour_short": "g",
       "minute_short": "min",
-      "current_downtime": "Bieżący czas rozłączenia"
+      "current_downtime": "Czas rozłączenia"
     }
   }
 }
