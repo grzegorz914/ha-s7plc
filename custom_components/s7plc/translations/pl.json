@@ -1103,7 +1103,7 @@
     "address_help_bool": "Format Siemens S7, na przykład DB1,X0.0",
     "preset_value_help": "Pozostaw puste, aby ukryć ten tryb.",
     "status_values_help": "Jedna lub więcej wartości oddzielonych przecinkami (np. 2,3). Pozostaw puste, aby pominąć ten stan.",
-    "plc_connection": "Połączenie PLC",
+    "plc_connection": "Połączenie",
     "plc_connection_help": "Adresy i źródła danych",
     "behavior": "Zachowanie",
     "behavior_help": "Opcje właściwe dla tej encji",
@@ -1208,7 +1208,7 @@
       "current_downtime": "Czas rozłączenia"
     },
     "connection_detail_sections": {
-      "connection": "Połączenie PLC",
+      "connection": "Połączenie",
       "performance": "Komunikacja i wydajność",
       "retry": "Ponowne łączenie",
       "other": "Inne parametry"
