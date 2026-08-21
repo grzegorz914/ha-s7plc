@@ -138,7 +138,7 @@
         }
       },
       "covers": {
-        "title": "Dodaj roletę/osłonę",
+        "title": "Dodaj osłonę",
         "description": "Wybierz typ osłony.",
         "menu_options": {
           "covers_traditional": "Standardowa (otwórz/zamknij)",
@@ -284,8 +284,8 @@
         }
       },
       "covers_traditional": {
-        "title": "Dodaj standardową osłonę/roletę (otwórz/zamknij)",
-        "description": "Utwórz osłonę/roletę z dedykowanymi adresami zapisu położenia (otwórz/zamknij) i opcjonalnym odczytem stanu (otwarta/zamknięta).",
+        "title": "Dodaj standardową osłonę (otwórz/zamknij)",
+        "description": "Utwórz osłonę z dedykowanymi adresami zapisu położenia (otwórz/zamknij) i opcjonalnym odczytem stanu (otwarta/zamknięta).",
         "data": {
           "open_command_address": "Adres zapisu otwórz",
           "close_command_address": "Adres zapisu zamknij",
@@ -332,8 +332,8 @@
         }
       },
       "covers_position": {
-        "title": "Dodaj zaawansowaną osłonę/roletę z pozycją (0-100)",
-        "description": "Utwórz osłonę/roletę z pozycją (0-100). Pozycja (0-zamknięta, pozycja >= 1 - otwarta).",
+        "title": "Dodaj zaawansowaną osłonę z pozycją (0-100)",
+        "description": "Utwórz osłonę z pozycją (0-100). Pozycja (0-zamknięta, pozycja >= 1 - otwarta).",
         "data": {
           "position_state_address": "Adres odczytu pozycji",
           "position_command_address": "Adres zapisu pozycji",
@@ -356,9 +356,9 @@
           "add_another": "Dodaj kolejną encje po zapisaniu"
         },
         "data_description": {
-          "position_state_address": "Adres odczytu pozycji osłony/rolety (0-100, np. DB1,B0, DB2,W4).",
-          "position_command_address": "Adres zapisu nowej pozycji osłony/rolety (0-100). Jeśli brak, użyty zostanie adres odczytu.",
-          "stop_command_address": "Opcjonalny adres zapisu komendy (zatrzymaj). Jeśli brak, zostanie wykonany zapis aktualnego położenia aby zatrzymać osłonę/roletę.",
+          "position_state_address": "Adres odczytu pozycji osłony (0-100, np. DB1,B0, DB2,W4).",
+          "position_command_address": "Adres zapisu nowej pozycji osłony (0-100). Jeśli brak, użyty zostanie adres odczytu.",
+          "stop_command_address": "Opcjonalny adres zapisu komendy (zatrzymaj). Jeśli brak, zostanie wykonany zapis aktualnego położenia aby zatrzymać osłonę.",
           "stop_pulse_duration": "Długość impulsu dla adresu zapisu zatrzymaj (0.1-60s), domyślnie (0.5s).",
           "tilt_state_address": "Opcjonalny adres odczytu przechylenia (0-100). Włącza sterowanie przechyleniem (otwórz/zamknij/ustaw/zatrzymaj).",
           "tilt_command_address": "Opcjonalny adres zapisu przechylenia. Jeśli pominięty, używany jest adres odczytu przechylenia.",
@@ -804,7 +804,7 @@
         }
       },
       "edit_cover": {
-        "title": "Edytuj standardową osłonę/roletę (otwórz/zamknij)",
+        "title": "Edytuj standardową osłonę (otwórz/zamknij)",
         "description": "Zaktualizuj parametry dla tej encji.",
         "data": {
           "open_command_address": "Adres zapisu otwórz",
@@ -850,7 +850,7 @@
         }
       },
       "edit_cover_position": {
-        "title": "Edytuj zaawansowaną osłonę/roletę z pozycją (0-100)",
+        "title": "Edytuj zaawansowaną osłonę z pozycją (0-100)",
         "description": "Zaktualizuj parametry dla tej encji.",
         "data": {
           "position_state_address": "Adres odczytu pozycji",
@@ -873,9 +873,9 @@
           "invert_position": "Odwróć pozycję"
         },
         "data_description": {
-          "position_state_address": "Adres odczytu pozycji osłony/rolety (0-100, np. DB1,B0, DB2,W4).",
-          "position_command_address": "Adres zapisu nowej pozycji osłony/rolety (0-100). Jeśli brak, użyty zostanie adres odczytu.",
-          "stop_command_address": "Opcjonalny adres zapisu komendy (zatrzymaj). Jeśli brak, zostanie wykonany zapis aktualnego położenia aby zatrzymać osłonę/roletę.",
+          "position_state_address": "Adres odczytu pozycji osłony (0-100, np. DB1,B0, DB2,W4).",
+          "position_command_address": "Adres zapisu nowej pozycji osłony (0-100). Jeśli brak, użyty zostanie adres odczytu.",
+          "stop_command_address": "Opcjonalny adres zapisu komendy (zatrzymaj). Jeśli brak, zostanie wykonany zapis aktualnego położenia aby zatrzymać osłonę.",
           "stop_pulse_duration": "Długość impulsu dla adresu zapisu zatrzymaj (0.1-60s), domyślnie (0.5s).",
           "tilt_state_address": "Opcjonalny adres odczytu przechylenia (0-100). Włącza sterowanie przechyleniem (otwórz/zamknij/ustaw/zatrzymaj).",
           "tilt_command_address": "Opcjonalny adres zapisu przechylenia. Jeśli pominięty, używany jest adres odczytu przechylenia.",
