@@ -1199,7 +1199,7 @@
     "download_backup": "Pobierz kopię zapasową",
     "configuration_load_error": "Nie można wczytać konfiguracji YAML.",
     "configuration_download_error": "Nie można pobrać kopii zapasowej.",
-    "connection_details_title": "Szczegóły połączenia",
+    "connection_details_title": "Parametry",
     "connection_details_help": "Pokaż szczegóły połączenia",
     "connection_details_description": "Parametry połączenia.",
     "close": "Zamknij",
