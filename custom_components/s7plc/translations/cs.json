@@ -1203,7 +1203,8 @@
       "history_unavailable": "Historická data nejsou dostupná; aktuální stav je stále zobrazen výše.",
       "day_short": "d",
       "hour_short": "h",
-      "minute_short": "min"
+      "minute_short": "min",
+      "current_downtime": "Aktuální doba odpojení"
     }
   }
 }
