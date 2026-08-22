@@ -1192,8 +1192,8 @@
         "label": "Przełączniki",
         "fields": {
           "control_behavior": {
-            "label": "Sposób sterowania",
-            "description": "Sposób sterowania"
+            "label": "Sterowanie",
+            "description": "Sterowanie"
           },
           "state_address": {
             "label": "Adres odczytu",
@@ -1309,7 +1309,7 @@
             "description": "Klasa urządzenia dla lepszego doprecyzowania interfejsu, zachowania lub statystyk."
           },
           "cover_control_mode": {
-            "label": "Typ sterowania",
+            "label": "Sterowanie",
             "description": "Wybierz typ sterowania przed wprowadzeniem adresów.",
             "options": {
               "traditional": "Otwórz / Zamknij",
@@ -1373,7 +1373,7 @@
         },
         "modes": {
           "control": {
-            "title": "Typ sterowania",
+            "title": "Sterowanie",
             "description": "Wybierz typ sterowania przed wprowadzeniem adresów."
           },
           "position_feedback": {
@@ -1398,8 +1398,8 @@
         "label": "Światła",
         "fields": {
           "control_behavior": {
-            "label": "Sposób sterowania",
-            "description": "Sposób sterowania"
+            "label": "Sterowanie",
+            "description": "Sterowanie"
           },
           "light_mode": {
             "label": "Typ światła",
@@ -1668,7 +1668,7 @@
       }
     },
     "control_behavior": {
-      "label": "Sposób sterowania",
+      "label": "Sterowanie",
       "sync_requires_different": "Wymaga różnych adresów stanu i polecenia.",
       "options": {
         "direct": {
