@@ -1380,12 +1380,12 @@
             "options": {
               "none": "Brak / Szacowane",
               "bits": "Oddzielne bity",
-              "status": "Pojedynczy status PLC"
+              "status": "Odczyt stanu"
             },
             "descriptions": {
-              "none": "Użyj wewnętrznego szacowania lub tylko pozycji.",
-              "bits": "Odczyt oddzielnych bitów otwierania, zamykania i zatrzymania.",
-              "status": "Dopasowanie jednej wartości statusu PLC."
+              "none": "Wewnętrzne szacowanie lub sama pozycja.",
+              "bits": "Odczyt stanów otwieranie, zamykanie i zatrzymania.",
+              "status": "Odczyt stanu w czasie rzeczywistym."
             }
           },
           "cover_stop_enabled": {
