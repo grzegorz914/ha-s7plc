@@ -1363,7 +1363,7 @@
             }
           },
           "cover_position_feedback": {
-            "label": "Identyfikacja pozycji",
+            "label": "Pozycja",
             "description": "Wybierz sposób identyfikacji pozycji otwarta/zamknięta.",
             "options": {
               "timed": "Czas",
@@ -1375,7 +1375,7 @@
             }
           },
           "cover_movement_feedback": {
-            "label": "Identyfikacja ruchu",
+            "label": "Ruch",
             "description": "Wybierz sposób identyfikacji ruchu.",
             "options": {
               "none": "Brak / Szacowane",
@@ -1423,11 +1423,11 @@
             "description": "Wybierz typ sterowania przed wprowadzeniem adresów."
           },
           "position_feedback": {
-            "title": "Identyfikacja pozycji",
+            "title": "Pozycja",
             "description": "Wybierz sposób identyfikacji pozycji, czas lub krańcówki."
           },
           "movement_feedback": {
-            "title": "Identyfikacja ruchu",
+            "title": "Ruch",
             "description": "Wybierz sposób identyfikacji ruchu niezależny od krańcówek."
           },
           "stop": {
