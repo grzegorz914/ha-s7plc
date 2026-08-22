@@ -307,7 +307,7 @@
           "cover_opening_address": "Opcjonalny adres odczytu aktualnego stanu (otwieranie). Niezależny od powyższych adresów krańcówek (otwarta/zamknięta).",
           "cover_closing_address": "Opcjonalny adres odczytu aktualnego stanu (zamykanie). Niezależny od powyższych adresów krańcówek (otwarta/zamknięta).",
           "cover_stopped_address": "Opcjonalny adres odczytu aktualnego stanu (zatrzymana). Niezależny od powyższych adresów krańcówek (otwarta/zamknięta).",
-          "cover_status_address": "Opcjonalny adres raportujący stan w czasie rzeczywistym (otwarta/zamknięta/otwieranie/zamykanie/zatrzymana), porównywany z wartościami skonfigurowanymi poniżej. Ma priorytet nad boolowskimi adresami stanu (otwarta/zamknięta/otwieranie/zamykanie/zatrzymana), gdy skonfigurowane. Opcjonalne skalowanie: 'Scale(0,1,0,10)', separator dziesiętny (.).",
+          "cover_status_address": "Opcjonalny adres odczytu stanów (otwarta/zamknięta/otwieranie/zamykanie/zatrzymana), porównywany z wartościami skonfigurowanymi poniżej. Ma priorytet nad adresami stanu (otwarta/zamknięta/otwieranie/zamykanie/zatrzymana). Opcjonalne skalowanie: 'Scale(0,1,0,10)', separator dziesiętny (.).",
           "cover_status_open_values": "Wartość(-i) oznaczające, że roleta jest całkowicie otwarta, odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 1 lub 2,3). Po dopasowaniu roleta zostanie zgłoszona jako otwarta, z priorytetem nad stanem opartym na krańcówkach. Pozostaw puste, aby pominąć ten stan.",
           "cover_status_closed_values": "Wartość(-i) oznaczające, że roleta jest całkowicie zamknięta, odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami. Po dopasowaniu roleta zostanie zgłoszona jako zamknięta, z priorytetem nad stanem opartym na krańcówkach. Pozostaw puste, aby pominąć ten stan.",
           "cover_status_opening_values": "Wartość(-i) oznaczające, że roleta się otwiera, odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 1 lub 2,3). Pozostaw puste, aby pominąć ten stan.",
@@ -812,7 +812,7 @@
           "cover_opening_address": "Opcjonalny adres odczytu aktualnego stanu (otwieranie). Niezależny od powyższych adresów krańcówek (otwarta/zamknięta).",
           "cover_closing_address": "Opcjonalny adres odczytu aktualnego stanu (zamykanie). Niezależny od powyższych adresów krańcówek (otwarta/zamknięta).",
           "cover_stopped_address": "Opcjonalny adres odczytu aktualnego stanu (zatrzymana). Niezależny od powyższych adresów krańcówek (otwarta/zamknięta).",
-          "cover_status_address": "Opcjonalny adres raportujący stan w czasie rzeczywistym (otwarta/zamknięta/otwieranie/zamykanie/zatrzymana), porównywany z wartościami skonfigurowanymi poniżej. Ma priorytet nad boolowskimi adresami stanu (otwarta/zamknięta/otwieranie/zamykanie/zatrzymana), gdy skonfigurowane. Opcjonalne skalowanie: 'Scale(0,1,0,10)', separator dziesiętny (.).",
+          "cover_status_address": "Opcjonalny adres odczytu stanów (otwarta/zamknięta/otwieranie/zamykanie/zatrzymana), porównywany z wartościami skonfigurowanymi poniżej. Ma priorytet nad adresami stanu (otwarta/zamknięta/otwieranie/zamykanie/zatrzymana). Opcjonalne skalowanie: 'Scale(0,1,0,10)', separator dziesiętny (.).",
           "cover_status_open_values": "Wartość(-i) oznaczające, że roleta jest całkowicie otwarta, odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 1 lub 2,3). Po dopasowaniu roleta zostanie zgłoszona jako otwarta, z priorytetem nad stanem opartym na krańcówkach. Pozostaw puste, aby pominąć ten stan.",
           "cover_status_closed_values": "Wartość(-i) oznaczające, że roleta jest całkowicie zamknięta, odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami. Po dopasowaniu roleta zostanie zgłoszona jako zamknięta, z priorytetem nad stanem opartym na krańcówkach. Pozostaw puste, aby pominąć ten stan.",
           "cover_status_opening_values": "Wartość(-i) oznaczające, że roleta się otwiera, odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 1 lub 2,3). Pozostaw puste, aby pominąć ten stan.",
@@ -1231,7 +1231,7 @@
           },
           "cover_status_address": {
             "label": "Adres odczytu stanów",
-            "description": "Opcjonalny adres raportujący stan w czasie rzeczywistym (otwarta/zamknięta/otwieranie/zamykanie/zatrzymana), porównywany z wartościami skonfigurowanymi poniżej. Ma priorytet nad boolowskimi adresami stanu (otwarta/zamknięta/otwieranie/zamykanie/zatrzymana), gdy skonfigurowane. Opcjonalne skalowanie: 'Scale(0,1,0,10)', separator dziesiętny (.)."
+            "description": "Opcjonalny adres odczytu stanów (otwarta/zamknięta/otwieranie/zamykanie/zatrzymana), porównywany z wartościami skonfigurowanymi poniżej. Ma priorytet nad adresami stanu (otwarta/zamknięta/otwieranie/zamykanie/zatrzymana). Opcjonalne skalowanie: 'Scale(0,1,0,10)', separator dziesiętny (.)."
           },
           "cover_status_open_values": {
             "label": "Wartość(-i) stanu (otwarta)",
