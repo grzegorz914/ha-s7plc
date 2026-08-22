@@ -542,15 +542,15 @@
           "current_temperature_address": "Adres odczytu temperatury aktualnej (np. DB1,REAL0, DB2,INT4). Opcjonalne skalowanie: 'Scale(0,1,0,10)', separator dziesiętny (.).",
           "target_temperature_address": "Adres zapisu temperatury zadanej (np. DB1,REAL4, DB2,INT8). Opcjonalne skalowanie: 'Scale(0,1,0,10)', separator dziesiętny (.).",
           "preset_mode_address": "Opcjonalny adres PLC do zapisu trybu HVAC, przy użyciu wartości skonfigurowanej poniżej dla każdego trybu. Przydatne, jeśli PLC musi włączać/wyłączać sterowanie klimatyzacją. Domyślnie tylko do zapisu; włącz preset_mode_bidirectional, aby również odczytywać go z powrotem. Opcjonalne skalowanie: 'Scale(0,1,0,10)', separator dziesiętny (.).",
-          "preset_mode_bidirectional": "Dwukierunkowa komunikacja synchronizuje temperaturę zadaną i tryb pracy w obu kierunkach, domyślnie włączone.",
+          "preset_mode_bidirectional": "Dwukierunkowa komunikacja synchronizuje tryb pracy w obu kierunkach, domyślnie wyłączone.",
           "on_off_address": "Opcjonalny adres (wł./wył.), dla urządzeń bez własnego trybu pracy (wył.), np. (nagrzewnica/chłodnica). Zapisuje (fałsz/0), gdy tryb pracy zostanie ustawiony na (wył.), oraz (prawda/1) dla każdego innego trybu. Odczytywany również z powrotem, aby odzwierciedlić rzeczywisty stan.",
           "preset_mode_off_value": "Wartość zapisywana, gdy tryb zostanie ustawiony na (wył., np. 0). Pozostaw puste, aby ukryć ten tryb z listy trybów termostatu. Jeśli skonfigurowano adres (wł./wył.), ta wartość jest ignorowana dla trybu (wył.), tryb pozostaje dostępny i jest przełączany przez ten adres.",
           "preset_mode_heat_value": "Wartość zapisywana, gdy tryb zostanie ustawiony na (grzanie, np. 1). Pozostaw puste, aby ukryć ten tryb z listy trybów termostatu.",
           "preset_mode_cool_value": "Wartość zapisywana, gdy tryb zostanie ustawiony na (chłodzenie, np. 2). Pozostaw puste, aby ukryć ten tryb z listy trybów termostatu.",
           "preset_mode_heat_cool_value": "Wartość zapisywana, gdy tryb zostanie ustawiony na (grzanie/chłodzenie, np. 3). Pozostaw puste, aby ukryć ten tryb z listy trybów termostatu.",
           "preset_mode_auto_value": "Wartość zapisywana, gdy tryb zostanie ustawiony na (auto np. 6) starszy odpowiednik trybu (grzanie/chłodzenie), domyślnie (puste).",
-          "preset_mode_dry_value": "Wartość zapisywana, gdy tryb zostanie ustawiony na (osuszanie np. 4), domyślnie (puste).",
-          "preset_mode_fan_only_value": "Wartość zapisywana, gdy tryb zostanie ustawiony na (wentylowanie np. 5), domyślnie (puste).",
+          "preset_mode_dry_value": "Wartość zapisywana, gdy tryb zostanie ustawiony na (osuszanie, np. 4) — tylko osuszanie powietrza, bez kontroli temperatury, domyślnie (puste).",
+          "preset_mode_fan_only_value": "Wartość zapisywana, gdy tryb zostanie ustawiony na (wentylowanie, np. 5) — tylko obieg powietrza, bez grzania i chłodzenia, domyślnie (puste).",
           "hvac_status_address": "Opcjonalny adres odczytu stanów w czasie rzeczywistym, porównywany z wartościami skonfigurowanymi poniżej. Bez niego stan zostanie ustalony na podstawie temperatury aktualnej i zadanej. Opcjonalne skalowanie: 'Scale(0,1,0,10)', separator dziesiętny (.).",
           "hvac_status_off_values": "Wartość(-i) oznaczające (wył.), odczytywane z adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 0 lub 0,10). Pozostaw puste, aby pominąć ten stan.",
           "hvac_status_heating_values": "Wartość(-i) oznaczające (grzanie), odczytywane z adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 1 lub 1,11). Pozostaw puste, aby pominąć ten stan.",
@@ -655,15 +655,15 @@
           "current_temperature_address": "Adres odczytu temperatury aktualnej (np. DB1,REAL0, DB2,INT4). Opcjonalne skalowanie: 'Scale(0,1,0,10)', separator dziesiętny (.).",
           "target_temperature_address": "Adres zapisu temperatury zadanej (np. DB1,REAL4, DB2,INT8). Opcjonalne skalowanie: 'Scale(0,1,0,10)', separator dziesiętny (.).",
           "preset_mode_address": "Opcjonalny adres PLC do zapisu trybu HVAC, przy użyciu wartości skonfigurowanej poniżej dla każdego trybu. Domyślnie tylko do zapisu; włącz preset_mode_bidirectional, aby również odczytywać go z powrotem. Opcjonalne skalowanie: 'Scale(0,1,0,10)', separator dziesiętny (.).",
-          "preset_mode_bidirectional": "Dwukierunkowa komunikacja synchronizuje temperaturę zadaną i tryb pracy w obu kierunkach, domyślnie włączone.",
+          "preset_mode_bidirectional": "Dwukierunkowa komunikacja synchronizuje tryb pracy w obu kierunkach, domyślnie wyłączone.",
           "on_off_address": "Opcjonalny adres (wł./wył.), dla urządzeń bez własnego trybu pracy (wył.), np. (nagrzewnica/chłodnica). Zapisuje (fałsz/0), gdy tryb pracy zostanie ustawiony na (wył.), oraz (prawda/1) dla każdego innego trybu. Odczytywany również z powrotem, aby odzwierciedlić rzeczywisty stan.",
           "preset_mode_off_value": "Wartość zapisywana, gdy tryb zostanie ustawiony na (wył., np. 0). Pozostaw puste, aby ukryć ten tryb z listy trybów termostatu. Jeśli skonfigurowano adres (wł./wył.), ta wartość jest ignorowana dla trybu (wył.), tryb pozostaje dostępny i jest przełączany przez ten adres.",
           "preset_mode_heat_value": "Wartość zapisywana, gdy tryb zostanie ustawiony na (grzanie, np. 1). Pozostaw puste, aby ukryć ten tryb z listy trybów termostatu.",
           "preset_mode_cool_value": "Wartość zapisywana, gdy tryb zostanie ustawiony na (chłodzenie, np. 2). Pozostaw puste, aby ukryć ten tryb z listy trybów termostatu.",
           "preset_mode_heat_cool_value": "Wartość zapisywana, gdy tryb zostanie ustawiony na (grzanie/chłodzenie, np. 3). Pozostaw puste, aby ukryć ten tryb z listy trybów termostatu.",
           "preset_mode_auto_value": "Wartość zapisywana, gdy tryb zostanie ustawiony na (auto np. 6) starszy odpowiednik trybu (grzanie/chłodzenie), domyślnie (puste).",
-          "preset_mode_dry_value": "Wartość zapisywana, gdy tryb zostanie ustawiony na (osuszanie np. 4), domyślnie (puste).",
-          "preset_mode_fan_only_value": "Wartość zapisywana, gdy tryb zostanie ustawiony na (wentylowanie np. 5), domyślnie (puste).",
+          "preset_mode_dry_value": "Wartość zapisywana, gdy tryb zostanie ustawiony na (osuszanie, np. 4) — tylko osuszanie powietrza, bez kontroli temperatury, domyślnie (puste).",
+          "preset_mode_fan_only_value": "Wartość zapisywana, gdy tryb zostanie ustawiony na (wentylowanie, np. 5) — tylko obieg powietrza, bez grzania i chłodzenia, domyślnie (puste).",
           "hvac_status_address": "Opcjonalny adres odczytu stanów w czasie rzeczywistym, porównywany z wartościami skonfigurowanymi poniżej. Bez niego stan zostanie ustalony na podstawie temperatury aktualnej i zadanej. Opcjonalne skalowanie: 'Scale(0,1,0,10)', separator dziesiętny (.).",
           "hvac_status_off_values": "Wartość(-i) oznaczające (wył.), odczytywane z adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 0 lub 0,10). Pozostaw puste, aby pominąć ten stan.",
           "hvac_status_heating_values": "Wartość(-i) oznaczające (grzanie), odczytywane z adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 1 lub 1,11). Pozostaw puste, aby pominąć ten stan.",
@@ -1546,13 +1546,13 @@
         "fields": {
           "control_mode": {
             "label": "Typ",
-            "description": "Home Assistant zarządza i steruje całym procesem regulacji. PLC dostarcza tylko odczyt temperatury.",
+            "description": "Home Assistant zarządza i steruje całym procesem regulacji i kontrolą wyjść. PLC dostarcza odczyt temperatury i opcjonalny stan.",
             "options": {
               "direct": "Kontroler",
               "setpoint": "Klient"
             },
             "descriptions": {
-              "direct": "Home Assistant zarządza i steruje całym procesem regulacji. PLC dostarcza tylko odczyt temperatury.",
+              "direct": "Home Assistant zarządza i steruje całym procesem regulacji i kontrolą wyjść. PLC dostarcza odczyt temperatury i opcjonalny stan.",
               "setpoint": "PLC zarządza całym procesem regulacji. Home Assistant pełni tylko rolę klienta."
             }
           },
@@ -1585,15 +1585,15 @@
             "description": "Opcjonalny adres PLC do zapisu trybu pracy, przy użyciu wartości skonfigurowanej poniżej dla każdego trybu. Przydatne, jeśli PLC musi włączać/wyłączać sterowanie klimatyzacją. Domyślnie tylko do zapisu, włącz dwukierunkową komunikację, aby również odczytywać go z powrotem. Opcjonalne skalowanie: 'Scale(0,1,0,10)', separator dziesiętny (.)."
           },
           "preset_mode_bidirectional": {
-            "label": "Odczyt trybu",
-            "description": "Tryb pracy będzie zapisywany tylko lokalnie.",
+            "label": "Synchronizacja",
+            "description": "Tryb pracy nie będzie synchronizowany z PLC, będzie tylko do niego wysyłany.",
             "options": {
-              "false": "Lokalny w Home Assistant",
-              "true": "Synchronizacja z PLC"
+              "false": "Wyłączona",
+              "true": "Włączona"
             },
             "descriptions": {
-              "false": "Tryb pracy będzie zapisywany tylko lokalnie.",
-              "true": "Tryb pracy będzie synchronizowany z PLC."
+              "false": "Wybrany tryb jest zapisywany do PLC, ale nie jest odczytywany z powrotem — Home Assistant zachowuje ostatnio ustawiony tryb.",
+              "true": "Tryb pracy będzie synchronizowany z PLC w obu kierunkach."
             }
           },
           "on_off_address": {
@@ -1622,11 +1622,11 @@
           },
           "preset_mode_dry_value": {
             "label": "Wartość trybu (osuszanie)",
-            "description": "Wartość zapisywana, gdy tryb zostanie ustawiony na (osuszanie np. 4)."
+            "description": "Wartość zapisywana, gdy tryb zostanie ustawiony na (osuszanie, np. 4) — tylko osuszanie powietrza, bez kontroli temperatury, domyślnie (puste)."
           },
           "preset_mode_fan_only_value": {
             "label": "Wartość trybu (wentylowanie)",
-            "description": "Wartość zapisywana, gdy tryb zostanie ustawiony na (wentylowanie np. 5)."
+            "description": "Wartość zapisywana, gdy tryb zostanie ustawiony na (wentylowanie, np. 5) — tylko obieg powietrza, bez grzania i chłodzenia, domyślnie (puste)."
           },
           "hvac_status_address": {
             "label": "Adres odczytu stanów",
@@ -1677,7 +1677,7 @@
             "description": "Krok regulacji temperatury zadanej (°C)."
           },
           "climate_direct_function": {
-            "label": "Tryby",
+            "label": "Sterowane wyjścia",
             "description": "Steruje wyjściami termostatu.",
             "options": {
               "heat": "Ogrzewanie",
@@ -1741,8 +1741,8 @@
             "description": "Konfiguracja parametrów dla temperatury."
           },
           "direct_function": {
-            "title": "Tryby pracy",
-            "description": "Wybierz jeden z dostępnych trybów pracy kontrolera."
+            "title": "Wyjścia",
+            "description": "Wybierz jeden z dostępnych trybów dla wyjść (ogrzewanie, chłodzenie, ogrzewanie/chłodzenie)."
           },
           "direct_feedback": {
             "title": "Stany pracy",
@@ -1757,8 +1757,8 @@
             "description": "Gdy kontrola pracy jest ustawiona na kodowane tryby, wartości są zapisywane pod adresem trybu pracy i zawsze określają, które tryby będą dostępne w Home Assistant. Puste pola wyłączają dany tryb."
           },
           "mode_feedback": {
-            "title": "Odczyt trybu pracy",
-            "description": "Wybierz, w jaki sposób ma być odczytywany tryb pracy. Jest to niezależne od stanu pracy."
+            "title": "Synchronizacja trybu pracy",
+            "description": "Wybierz, czy tryb pracy ma być synchronizowany z PLC w obu kierunkach. Jest to niezależne od stanu pracy."
           },
           "action_feedback": {
             "title": "Stany pracy",
@@ -1767,7 +1767,7 @@
         }
       },
       "entity_sync": {
-        "label": "Sterowniki",
+        "label": "Zapis do PLC",
         "fields": {
           "source_entity": {
             "label": "Encja źródłowa",
@@ -1798,7 +1798,7 @@
         },
         "pulse": {
           "title": "Sterowanie impulsowe",
-          "description": "W sterowaniu impulsowym na adres zapisu wysyłany jest (zał./wył.) zamiast zmiany jego stanu."
+          "description": "W sterowaniu impulsowym na adres zapisu wysyłany jest impuls (zał./wył.) zamiast zmiany stanu na przeciwny."
         }
       }
     },
@@ -1905,12 +1905,6 @@
       "required_error": "Wypełnij wszystkie wymagane pola.",
       "cover_required_error": "Wprowadź wymagane adresy dla wybranego typu osłony.",
       "climate_required_error": "Wprowadź adres temperatury docelowej.",
-      "climate_current_temperature_required_error": "Wprowadź adres odczytu temperatury.",
-      "climate_heating_output_required_error": "Wprowadź adres wyjścia grzania dla wybranej funkcji.",
-      "climate_cooling_output_required_error": "Wprowadź adres wyjścia chłodzenia dla wybranej funkcji.",
-      "climate_preset_mode_required_error": "Wprowadź adres trybu HVAC.",
-      "climate_on_off_required_error": "Wprowadź oddzielny adres wł./wył.",
-      "climate_status_required_error": "Wprowadź adres odczytu stanów PLC.",
       "brightness_state_required_error": "Wprowadź adres odczytu jasności.",
       "brightness_scale_error": "Skala jasności musi mieścić się w zakresie od 1 do 65535.",
       "configuration_load_error": "Nie można wczytać konfiguracji YAML.",
@@ -1942,7 +1936,13 @@
       "cover_endstops_required_error": "Identyfikacja ruchu krańcówkami wymaga adresów stanu otwarta i zamknięta.",
       "cover_status_required_error": "Identyfikacja ruchu w czasie rzeczywistym wymaga adresu odczytu stanów.",
       "cover_tilt_required_error": "Włączone przechylenie wymaga adresu odczytu przechylenia.",
-      "cover_stop_required_error": "Włączone stop wymaga adresu zapisu stop."
+      "cover_stop_required_error": "Włączone stop wymaga adresu zapisu stop.",
+      "climate_current_temperature_required_error": "Wprowadź adres odczytu temperatury.",
+      "climate_heating_output_required_error": "Wprowadź adres wyjścia grzania dla wybranej funkcji.",
+      "climate_cooling_output_required_error": "Wprowadź adres wyjścia chłodzenia dla wybranej funkcji.",
+      "climate_preset_mode_required_error": "Wprowadź adres trybu HVAC.",
+      "climate_on_off_required_error": "Wprowadź oddzielny adres wł./wył.",
+      "climate_status_required_error": "Wprowadź adres odczytu stanów PLC."
     },
     "editor": {
       "configuration_yaml": "Konfiguracja YAML",
