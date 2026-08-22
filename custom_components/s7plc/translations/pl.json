@@ -337,7 +337,7 @@
         "data": {
           "position_state_address": "Adres odczytu pozycji",
           "position_command_address": "Adres zapisu pozycji",
-          "stop_command_address": "Adres zapisu zatrzymaj",
+          "stop_command_address": "Adres zapisu stop",
           "stop_pulse_duration": "Długość impulsu (s)",
           "tilt_state_address": "Adres odczytu przechylenia",
           "tilt_command_address": "Adres zapisu przechylenia",
@@ -358,9 +358,9 @@
         "data_description": {
           "position_state_address": "Adres odczytu pozycji osłony (0-100, np. DB1,B0, DB2,W4).",
           "position_command_address": "Adres zapisu nowej pozycji osłony (0-100). Jeśli brak, użyty zostanie adres odczytu.",
-          "stop_command_address": "Opcjonalny adres zapisu komendy (zatrzymaj). Jeśli brak, zostanie wykonany zapis aktualnego położenia aby zatrzymać osłonę.",
-          "stop_pulse_duration": "Długość impulsu dla adresu zapisu zatrzymaj (0.1-60s), domyślnie (0.5s).",
-          "tilt_state_address": "Opcjonalny adres odczytu przechylenia (0-100). Włącza sterowanie przechyleniem (otwórz/zamknij/ustaw/zatrzymaj).",
+          "stop_command_address": "Opcjonalny adres zapisu komendy (stop). Jeśli brak, zostanie wykonany zapis aktualnego położenia aby zatrzymać osłonę.",
+          "stop_pulse_duration": "Długość impulsu dla adresu zapisu stop (0.1-60s), domyślnie (0.5s).",
+          "tilt_state_address": "Opcjonalny adres odczytu przechylenia (0-100). Włącza sterowanie przechyleniem (otwórz/zamknij/ustaw/stop).",
           "tilt_command_address": "Opcjonalny adres zapisu przechylenia. Jeśli pominięty, używany jest adres odczytu przechylenia.",
           "invert_tilt": "Odwraca skalę przechylenia (0 staje się 100 i odwrotnie) dla siłowników podłączonych w drugą stronę.",
           "cover_status_address": "Opcjonalny adres odczytu stanów w czasie rzeczywistym, porównywany z wartościami skonfigurowanymi poniżej. Bez niego roleta nie będzie raportować stanu (otwieranie/zamykanie/zatrzymana).",
@@ -855,7 +855,7 @@
         "data": {
           "position_state_address": "Adres odczytu pozycji",
           "position_command_address": "Adres zapisu pozycji",
-          "stop_command_address": "Adres zapisu zatrzymaj",
+          "stop_command_address": "Adres zapisu stop",
           "stop_pulse_duration": "Długość impulsu (s)",
           "tilt_state_address": "Adres odczytu przechylenia",
           "tilt_command_address": "Adres zapisu przechylenia",
@@ -875,9 +875,9 @@
         "data_description": {
           "position_state_address": "Adres odczytu pozycji osłony (0-100, np. DB1,B0, DB2,W4).",
           "position_command_address": "Adres zapisu nowej pozycji osłony (0-100). Jeśli brak, użyty zostanie adres odczytu.",
-          "stop_command_address": "Opcjonalny adres zapisu komendy (zatrzymaj). Jeśli brak, zostanie wykonany zapis aktualnego położenia aby zatrzymać osłonę.",
-          "stop_pulse_duration": "Długość impulsu dla adresu zapisu zatrzymaj (0.1-60s), domyślnie (0.5s).",
-          "tilt_state_address": "Opcjonalny adres odczytu przechylenia (0-100). Włącza sterowanie przechyleniem (otwórz/zamknij/ustaw/zatrzymaj).",
+          "stop_command_address": "Opcjonalny adres zapisu komendy (stop). Jeśli brak, zostanie wykonany zapis aktualnego położenia aby zatrzymać osłonę.",
+          "stop_pulse_duration": "Długość impulsu dla adresu zapisu stop (0.1-60s), domyślnie (0.5s).",
+          "tilt_state_address": "Opcjonalny adres odczytu przechylenia (0-100). Włącza sterowanie przechyleniem (otwórz/zamknij/ustaw/stop).",
           "tilt_command_address": "Opcjonalny adres zapisu przechylenia. Jeśli pominięty, używany jest adres odczytu przechylenia.",
           "invert_tilt": "Odwraca skalę przechylenia (0 staje się 100 i odwrotnie) dla siłowników podłączonych w drugą stronę.",
           "cover_status_address": "Opcjonalny adres odczytu stanów w czasie rzeczywistym, porównywany z wartościami skonfigurowanymi poniżej. Bez niego roleta nie będzie raportować stanu (otwieranie/zamykanie/zatrzymana).",
@@ -1310,16 +1310,16 @@
             "description": "Adres zapisu nowej pozycji osłony/rolety (0-100). Jeśli brak, użyty zostanie adres odczytu."
           },
           "stop_command_address": {
-            "label": "Adres zapisu zatrzymaj",
-            "description": "Opcjonalny adres zapisu komendy (zatrzymaj). Jeśli brak, zostanie wykonany zapis aktualnego położenia aby zatrzymać osłonę/roletę."
+            "label": "Adres zapisu stop",
+            "description": "Opcjonalny adres zapisu komendy (stop). Jeśli brak, zostanie wykonany zapis aktualnego położenia aby zatrzymać osłonę/roletę."
           },
           "stop_pulse_duration": {
             "label": "Długość impulsu (s)",
-            "description": "Długość impulsu dla adresu zapisu zatrzymaj (0.1-60s), domyślnie (0.5s)."
+            "description": "Długość impulsu dla adresu zapisu stop (0.1-60s), domyślnie (0.5s)."
           },
           "tilt_state_address": {
             "label": "Adres odczytu przechylenia",
-            "description": "Opcjonalny adres odczytu przechylenia (0-100). Włącza sterowanie przechyleniem (otwórz/zamknij/ustaw/zatrzymaj)."
+            "description": "Opcjonalny adres odczytu przechylenia (0-100). Włącza sterowanie przechyleniem (otwórz/zamknij/ustaw/stop)."
           },
           "tilt_command_address": {
             "label": "Adres zapisu przechylenia",
@@ -1384,15 +1384,15 @@
             }
           },
           "cover_stop_enabled": {
-            "label": "Komenda zatrzymaj",
-            "description": "Dedykowany adres zapisu komendy zatrzymaj.",
+            "label": "Stop",
+            "description": "Dedykowany adres zapisu komendy stop.",
             "options": {
               "disabled": "Wyłączone",
               "enabled": "Włączone"
             },
             "descriptions": {
               "disabled": "Zatrzymanie nastąpi poprzez ponowny zapis pozycji.",
-              "enabled": "Wysyła impuls na dedykowany adres zapisu zatrzymaj."
+              "enabled": "Zatrzymanie nastąpi poprzez wysłanie impulsu na dedykowany adres zapisu stop."
             }
           },
           "cover_tilt_enabled": {
