@@ -1573,15 +1573,15 @@
         "label": "Termostaty",
         "fields": {
           "control_mode": {
-            "label": "Typ sterowania",
-            "description": "Home Assistant reguluje temperaturę i steruje wyjściami ogrzewania/chłodzenia PLC.",
+            "label": "Sterowanie",
+            "description": "Home Assistant zarządza i steruje całym procesem regulacji. PLC dostarcza tylko odczyt temperatury.",
             "options": {
-              "direct": "Wyjścia bezpośrednie",
-              "setpoint": "Wartość zadana PLC"
+              "direct": "Kontroler",
+              "setpoint": "Klient"
             },
             "descriptions": {
-              "direct": "Home Assistant reguluje temperaturę i steruje wyjściami ogrzewania/chłodzenia PLC.",
-              "setpoint": "PLC reguluje temperaturę, a Home Assistant odczytuje i zapisuje wartość zadaną."
+              "direct": "Home Assistant zarządza i steruje całym procesem regulacji. PLC dostarcza tylko odczyt temperatury.",
+              "setpoint": "PLC zarządza całym procesem regulacji. Home Assistant pełni tylko rolę klienta."
             }
           },
           "current_temperature_address": {
@@ -1609,18 +1609,18 @@
             "description": "Opcjonalny adres odczytu stanu (chłodzenie). Jeśli brak, stan zostanie ustalony na podstawie temperatury aktualnej i zadanej."
           },
           "preset_mode_address": {
-            "label": "Adres trybu HVAC",
-            "description": "Opcjonalny adres PLC do zapisu trybu HVAC, przy użyciu wartości skonfigurowanej poniżej dla każdego trybu. Przydatne, jeśli PLC musi włączać/wyłączać sterowanie klimatyzacją. Domyślnie tylko do zapisu; włącz preset_mode_bidirectional, aby również odczytywać go z powrotem."
+            "label": "Adres trybu pracy",
+            "description": "Opcjonalny adres PLC do zapisu trybu pracy, przy użyciu wartości skonfigurowanej poniżej dla każdego trybu. Przydatne, jeśli PLC musi włączać/wyłączać sterowanie klimatyzacją. Domyślnie tylko do zapisu, włącz dwukierunkową komunikację, aby również odczytywać go z powrotem."
           },
           "preset_mode_bidirectional": {
-            "label": "Odczyt zwrotny trybu HVAC",
-            "description": "Zachowaj ostatni tryb HVAC zadany przez Home Assistant.",
+            "label": "Dwukierunkowa komunikacja",
+            "description": "Tryb pracy zostanie zapisany przez Home Assistant.",
             "options": {
-              "false": "Zachowaj ostatni zadany tryb",
-              "true": "Odczytaj bieżący tryb z PLC"
+              "false": "Wyłączona",
+              "true": "Tryb pracy będzie synchronizowany z PLC"
             },
             "descriptions": {
-              "false": "Zachowaj ostatni tryb HVAC zadany przez Home Assistant.",
+              "false": "Tryb pracy zostanie zapisany przez Home Assistant.",
               "true": "Odczytaj wybrany tryb HVAC z adresu trybu; nie jest to stan pracy ogrzewania/chłodzenia."
             }
           },
