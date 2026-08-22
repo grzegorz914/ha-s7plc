@@ -1740,10 +1740,10 @@
           "label": "Profil połączenia S7"
         },
         "rack": {
-          "label": "CPU rack (zwykle 0)."
+          "label": "CPU rack"
         },
         "slot": {
-          "label": "CPU slot (1 dla S7-1200/1500)."
+          "label": "CPU slot"
         },
         "local_tsap": {
           "label": "Lokalny TSAP"
