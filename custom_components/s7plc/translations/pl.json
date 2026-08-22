@@ -1449,14 +1449,14 @@
         },
         "mode": {
           "title": "Typ światła",
-          "description": "Sterowanie włącz/wyłącz lub włącz/wyłącz z jasnością.",
+          "description": "Wybierz typ zainstalowanego światła.",
           "options": {
             "on_off": {
-              "title": "Włącz/Wyłącz",
+              "title": "Włącz / Wyłącz",
               "description": "Tylko włączanie i wyłączanie."
             },
             "dimmable": {
-              "title": "Włącz/Wyłącz ze ściemnianiem",
+              "title": "Włącz / Wyłącz ze ściemnianiem",
               "description": "Włączanie, wyłączanie i regulacja jasności."
             }
           }
