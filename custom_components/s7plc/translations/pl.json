@@ -1356,15 +1356,15 @@
             }
           },
           "cover_stop_enabled": {
-            "label": "Polecenie stop",
-            "description": "Włącz dedykowane polecenie stop PLC.",
+            "label": "Komenda zatrzymaj",
+            "description": "Dedykowany adres zapisu komendy zatrzymaj.",
             "options": {
               "disabled": "Wyłączone",
               "enabled": "Włączone"
             },
             "descriptions": {
-              "disabled": "Użyj zastępczego zatrzymania przez zapis pozycji.",
-              "enabled": "Wysyła impuls na dedykowany adres stop."
+              "disabled": "Zatrzymanie nastąpi poprzez ponowny zapis pozycji.",
+              "enabled": "Wysyła impuls na dedykowany adres zapisu zatrzymaj."
             }
           },
           "cover_tilt_enabled": {
