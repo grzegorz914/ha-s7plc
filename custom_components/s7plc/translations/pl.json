@@ -1287,11 +1287,11 @@
             "description": "Wartość(-i) oznaczające, że roleta jest zatrzymana (bez ruchu), odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami. Pozostaw puste, aby pominąć ten stan."
           },
           "opening_state_address": {
-            "label": "Krańcówka otwarcia",
+            "label": "Adres stanu otwarta",
             "description": "Opcjonalny adres odczytu aktualnego stanu (otwarta)."
           },
           "closing_state_address": {
-            "label": "Krańcówka zamknięcia",
+            "label": "Adres stanu zamknięta",
             "description": "Opcjonalny adres odczytu aktualnego stanu (zamknięta)."
           },
           "cover_opening_address": {
@@ -1352,31 +1352,31 @@
           },
           "cover_control_mode": {
             "label": "Typ sterowania",
-            "description": "Wybierz sposób sterowania osłoną przez PLC.",
+            "description": "Wybierz typ sterowania przed wprowadzeniem adresów.",
             "options": {
               "traditional": "Otwórz / Zamknij",
               "position": "Pozycja 0–100%"
             },
             "descriptions": {
-              "traditional": "Dwa oddzielne polecenia: otwórz i zamknij.",
-              "position": "Liczbowa pozycja odczytu i polecenia."
+              "traditional": "Proste sterowanie otwórz i zamknij.",
+              "position": "Zaawansowane sterowanie z pozycją."
             }
           },
           "cover_position_feedback": {
-            "label": "Sprzężenie pozycji",
-            "description": "Wybierz sposób określania pozycji krańcowej.",
+            "label": "Identyfikacja pozycji",
+            "description": "Wybierz sposób raportowania pozycji krańcowej.",
             "options": {
-              "timed": "Czasowo",
+              "timed": "Czas",
               "endstops": "Krańcówki"
             },
             "descriptions": {
-              "timed": "Szacowanie pozycji na podstawie czasu pracy.",
-              "endstops": "Odczyt krańcówek pełnego otwarcia i zamknięcia."
+              "timed": "Szacowanie pozycji na podstawie czasu.",
+              "endstops": "Odczyt z krańcówek otwarcia i zamknięcia."
             }
           },
           "cover_movement_feedback": {
-            "label": "Sprzężenie ruchu",
-            "description": "Wybierz sposób raportowania bieżącego ruchu.",
+            "label": "Identyfikacja ruchu",
+            "description": "Wybierz sposób raportowania ruchu.",
             "options": {
               "none": "Brak / Szacowane",
               "bits": "Oddzielne bity",
@@ -1420,14 +1420,14 @@
         "modes": {
           "control": {
             "title": "Typ sterowania",
-            "description": "Wybierz model sterowania przed wprowadzeniem adresów PLC."
+            "description": "Wybierz typ sterowania przed wprowadzeniem adresów."
           },
           "position_feedback": {
-            "title": "Sprzężenie pozycji",
+            "title": "Identyfikacja pozycji",
             "description": "Wybierz szacowanie czasowe lub fizyczne krańcówki."
           },
           "movement_feedback": {
-            "title": "Sprzężenie ruchu",
+            "title": "Identyfikacja ruchu",
             "description": "Utrzymuj wskazanie ruchu niezależne od pozycji krańcowej."
           },
           "stop": {
