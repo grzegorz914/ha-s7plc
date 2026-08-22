@@ -1831,7 +1831,7 @@
       "invalid_integer": "Wprowadź liczbę całkowitą (wartości dziesiętne nie są dozwolone).",
       "duplicate_preset_value": "Ta sama wartość nie może być przypisana do dwóch różnych trybów HVAC.",
       "duplicate_status_value": "Ta sama wartość nie może być przypisana do dwóch różnych stanów HVAC.",
-      "cover_commands_required_error": "Otwórz / Zamknij wymaga obu adresów zapisu (otwórz,zamknij).",
+      "cover_commands_required_error": "Sterowanie (Otwórz / Zamknij) wymaga obu adresów zapisu (otwórz/zamknij).",
       "cover_position_required_error": "Sterowanie pozycją wymaga adresu odczytu pozycji.",
       "cover_endstops_required_error": "Identyfikacja ruchu krańcówkami wymaga adresów stanu otwarta i zamknięta.",
       "cover_status_required_error": "Identyfikacja ruchu w czasie rzeczywistym wymaga adresu odczytu stanów.",
