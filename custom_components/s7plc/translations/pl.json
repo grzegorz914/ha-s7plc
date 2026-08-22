@@ -1428,7 +1428,7 @@
           },
           "movement_feedback": {
             "title": "Identyfikacja ruchu",
-            "description": "Utrzymuj wskazanie ruchu niezależne od pozycji krańcowej."
+            "description": "Wybierz sposób identyfikacji ruchu niezależny od krańcówek."
           },
           "stop": {
             "title": "Stop",
