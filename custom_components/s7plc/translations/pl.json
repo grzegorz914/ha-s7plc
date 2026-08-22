@@ -1384,8 +1384,8 @@
             "description": "Jeden adres zapisu steruje sekwencyjnie (otwórz/stop/zamknij/stop)."
           },
           "command_bidirectional": {
-            "label": "Dwukierunkowe polecenie",
-            "description": "Synchronizuje adres polecenia z adresem stanu, gdy stan zmieni się zewnętrznie."
+            "label": "Dwukierunkowa komunikacja",
+            "description": "Dwukierunkowa komunikacja synchronizuje adres zapisu pozycji i przechylenia w obu kierunkach, domyślnie wyłączone."
           }
         },
         "modes": {
