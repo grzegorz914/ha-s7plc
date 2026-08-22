@@ -1702,7 +1702,7 @@
             }
           },
           "climate_action_feedback": {
-            "label": "Źródło stanu pracy",
+            "label": "Źródło stanów pracy",
             "description": "Określ rzeczywisty stan pracy na podstawie bieżącej i docelowej temperatury.",
             "options": {
               "inferred": "Określ na podstawie temperatur",
@@ -1721,7 +1721,7 @@
           },
           "temperature": {
             "title": "Temperatura",
-            "description": "Skonfiguruj mierzoną temperaturę, limity i wartość zadaną."
+            "description": "Konfiguracja parametrów temperatur, limitów i kroku."
           },
           "direct_function": {
             "title": "Funkcja sterowania bezpośredniego",
@@ -1736,7 +1736,7 @@
             "description": "Wybierz sposób wysyłania przez Home Assistant poleceń wartości zadanej, trybu i zasilania."
           },
           "available_modes": {
-            "title": "Dostępne tryby HVAC",
+            "title": "Tryby pracy",
             "description": "Puste wartości wyłączają dany tryb. Gdy sterowanie kodowane jest włączone, wartości są zapisywane pod adresem trybu i zawsze określają, które tryby udostępnia Home Assistant."
           },
           "mode_feedback": {
@@ -1744,7 +1744,7 @@
             "description": "Wybierz, czy wybrany tryb HVAC ma być zapamiętany, czy odczytywany zwrotnie z PLC. Jest to niezależne od stanu pracy."
           },
           "action_feedback": {
-            "title": "Informacja o stanie pracy",
+            "title": "Stany pracy",
             "description": "Wybierz, jak Home Assistant określa rzeczywiste ogrzewanie, chłodzenie, bezczynność i inne działania robocze."
           }
         }
