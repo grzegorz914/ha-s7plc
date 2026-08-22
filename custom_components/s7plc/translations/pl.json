@@ -1545,11 +1545,15 @@
         "label": "Termostaty",
         "fields": {
           "control_mode": {
-            "label": "Tryb sterowania",
-            "description": "Tryb sterowania",
+            "label": "Typ sterowania",
+            "description": "Home Assistant reguluje temperaturę i steruje wyjściami ogrzewania/chłodzenia PLC.",
             "options": {
-              "direct": "Kontroler",
-              "setpoint": "Klient"
+              "direct": "Wyjścia bezpośrednie",
+              "setpoint": "Wartość zadana PLC"
+            },
+            "descriptions": {
+              "direct": "Home Assistant reguluje temperaturę i steruje wyjściami ogrzewania/chłodzenia PLC.",
+              "setpoint": "PLC reguluje temperaturę, a Home Assistant odczytuje i zapisuje wartość zadaną."
             }
           },
           "current_temperature_address": {
@@ -1581,8 +1585,16 @@
             "description": "Opcjonalny adres PLC do zapisu trybu HVAC, przy użyciu wartości skonfigurowanej poniżej dla każdego trybu. Przydatne, jeśli PLC musi włączać/wyłączać sterowanie klimatyzacją. Domyślnie tylko do zapisu; włącz preset_mode_bidirectional, aby również odczytywać go z powrotem. Opcjonalne skalowanie: 'Scale(0,1,0,10)', separator dziesiętny (.)."
           },
           "preset_mode_bidirectional": {
-            "label": "Odczytuj tryb HVAC ze sterownika PLC",
-            "description": "Odczytuje również preset_mode_address i używa go jako bieżącego trybu HVAC. Domyślnie wyłączone dla zachowania kompatybilności wstecznej: niektóre PLC traktują ten adres wyłącznie jako komendę i mogą go resetować lub modyfikować niezależnie od żądanego trybu, co przy odczycie mogłoby błędnie zgłaszać tryb."
+            "label": "Odczyt zwrotny trybu HVAC",
+            "description": "Zachowaj ostatni tryb HVAC zadany przez Home Assistant.",
+            "options": {
+              "false": "Zachowaj ostatni zadany tryb",
+              "true": "Odczytaj bieżący tryb z PLC"
+            },
+            "descriptions": {
+              "false": "Zachowaj ostatni tryb HVAC zadany przez Home Assistant.",
+              "true": "Odczytaj wybrany tryb HVAC z adresu trybu; nie jest to stan pracy ogrzewania/chłodzenia."
+            }
           },
           "on_off_address": {
             "label": "Adres wł./wył.",
@@ -1663,6 +1675,94 @@
           "temp_step": {
             "label": "Krok",
             "description": "Krok regulacji temperatury zadanej (°C)."
+          },
+          "climate_direct_function": {
+            "label": "Ogrzewanie i chłodzenie",
+            "description": "Steruj wyjściem ogrzewania.",
+            "options": {
+              "heat": "Ogrzewanie",
+              "cool": "Chłodzenie",
+              "heat_cool": "Ogrzewanie i chłodzenie"
+            },
+            "descriptions": {
+              "heat": "Steruj wyjściem ogrzewania.",
+              "cool": "Steruj wyjściem chłodzenia.",
+              "heat_cool": "Steruj oddzielnymi wyjściami ogrzewania i chłodzenia."
+            }
+          },
+          "climate_direct_feedback": {
+            "label": "Informacja zwrotna działania",
+            "description": "Określ aktywność na podstawie poleceń termostatu.",
+            "options": {
+              "inferred": "Określana przez Home Assistant",
+              "plc": "Oddzielne bity informacji zwrotnej PLC"
+            },
+            "descriptions": {
+              "inferred": "Określ aktywność na podstawie poleceń termostatu.",
+              "plc": "Odczytaj z PLC opcjonalne bity informacji zwrotnej ogrzewania i chłodzenia."
+            }
+          },
+          "climate_mode_control": {
+            "label": "Sposób sterowania trybem",
+            "description": "Zapisuj tylko wartość zadaną temperatury.",
+            "options": {
+              "setpoint": "Tylko wartość zadana",
+              "on_off": "Wartość zadana + oddzielne Wł./Wył.",
+              "coded": "Kodowane tryby HVAC",
+              "coded_on_off": "Kodowane tryby + oddzielne Wł./Wył."
+            },
+            "descriptions": {
+              "setpoint": "Zapisuj tylko wartość zadaną temperatury.",
+              "on_off": "Zapisuj wartość zadaną i oddzielny bit zasilania.",
+              "coded": "Zapisuj żądane tryby HVAC w PLC jako wartości liczbowe.",
+              "coded_on_off": "Zapisuj kodowane tryby HVAC i oddzielny bit zasilania."
+            }
+          },
+          "climate_action_feedback": {
+            "label": "Źródło stanu pracy",
+            "description": "Określ rzeczywisty stan pracy na podstawie bieżącej i docelowej temperatury.",
+            "options": {
+              "inferred": "Określ na podstawie temperatur",
+              "plc": "Odczytaj kodowany stan z PLC"
+            },
+            "descriptions": {
+              "inferred": "Określ rzeczywisty stan pracy na podstawie bieżącej i docelowej temperatury.",
+              "plc": "Odczytaj rzeczywiste działanie ogrzewania, chłodzenia lub bezczynności z kodowanej wartości PLC."
+            }
+          }
+        },
+        "sections": {
+          "control": {
+            "title": "Typ sterowania",
+            "description": "Wybierz, gdzie ma być wykonywana regulacja temperatury."
+          },
+          "temperature": {
+            "title": "Temperatura",
+            "description": "Skonfiguruj mierzoną temperaturę, limity i wartość zadaną."
+          },
+          "direct_function": {
+            "title": "Funkcja sterowania bezpośredniego",
+            "description": "Wybierz, którymi wyjściami steruje Home Assistant."
+          },
+          "direct_feedback": {
+            "title": "Informacja o działaniu bezpośrednim",
+            "description": "Wybierz sposób wykrywania rzeczywistej aktywności ogrzewania i chłodzenia."
+          },
+          "mode_control": {
+            "title": "Polecenia trybu HVAC",
+            "description": "Wybierz sposób wysyłania przez Home Assistant poleceń wartości zadanej, trybu i zasilania."
+          },
+          "available_modes": {
+            "title": "Dostępne tryby HVAC",
+            "description": "Puste wartości wyłączają dany tryb. Gdy sterowanie kodowane jest włączone, wartości są zapisywane pod adresem trybu i zawsze określają, które tryby udostępnia Home Assistant."
+          },
+          "mode_feedback": {
+            "title": "Odczyt trybu HVAC",
+            "description": "Wybierz, czy wybrany tryb HVAC ma być zapamiętany, czy odczytywany zwrotnie z PLC. Jest to niezależne od stanu pracy."
+          },
+          "action_feedback": {
+            "title": "Informacja o stanie pracy",
+            "description": "Wybierz, jak Home Assistant określa rzeczywiste ogrzewanie, chłodzenie, bezczynność i inne działania robocze."
           }
         }
       },
@@ -1805,6 +1905,12 @@
       "required_error": "Wypełnij wszystkie wymagane pola.",
       "cover_required_error": "Wprowadź wymagane adresy dla wybranego typu osłony.",
       "climate_required_error": "Wprowadź adres temperatury docelowej.",
+      "climate_current_temperature_required_error": "Wprowadź adres odczytu temperatury.",
+      "climate_heating_output_required_error": "Wprowadź adres wyjścia grzania dla wybranej funkcji.",
+      "climate_cooling_output_required_error": "Wprowadź adres wyjścia chłodzenia dla wybranej funkcji.",
+      "climate_preset_mode_required_error": "Wprowadź adres trybu HVAC.",
+      "climate_on_off_required_error": "Wprowadź oddzielny adres wł./wył.",
+      "climate_status_required_error": "Wprowadź adres odczytu stanów PLC.",
       "brightness_state_required_error": "Wprowadź adres odczytu jasności.",
       "brightness_scale_error": "Skala jasności musi mieścić się w zakresie od 1 do 65535.",
       "configuration_load_error": "Nie można wczytać konfiguracji YAML.",
