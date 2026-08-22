@@ -1754,7 +1754,7 @@
         "sections": {
           "control": {
             "title": "Typ sterowania",
-            "description": "Wybierz, gdzie ma być wykonywana regulacja temperatury."
+            "description": "Wybierz typ sterowania termostatem."
           },
           "temperature": {
             "title": "Temperatura",
