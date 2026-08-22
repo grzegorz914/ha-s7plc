@@ -1403,11 +1403,11 @@
           },
           "stop": {
             "title": "Stop",
-            "description": "Opcjonalne sterowanie dedykowanym przyciskiem stop dla osłon z pozycją."
+            "description": "Opcjonalne sterowanie dedykowanym przyciskiem stop."
           },
           "tilt": {
             "title": "Przechylenie",
-            "description": "Opcjonalne sterowanie przechyleniem dla osłon z pozycją."
+            "description": "Włącz opcjonalne sterowanie przechyleniem."
           }
         }
       },
