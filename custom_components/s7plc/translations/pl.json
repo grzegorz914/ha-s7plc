@@ -1480,7 +1480,7 @@
           "description": "Wybierz sterowanie włącz/wyłącz lub jasnością",
           "options": {
             "on_off": {
-              "title": "Włącz/Wyłącz",
+              "title": "Włącz / Wyłącz",
               "description": "Tylko włączanie i wyłączanie"
             },
             "dimmable": {
