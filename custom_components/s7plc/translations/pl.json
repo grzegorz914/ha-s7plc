@@ -1366,8 +1366,8 @@
               "enabled": "Włączone"
             },
             "descriptions": {
-              "disabled": "Nie konfiguruj przechylenia.",
-              "enabled": "Odczyt i zapis pozycji przechylenia."
+              "disabled": "Brak sterowania przechyleniem.",
+              "enabled": "Pełne sterowanie przechyleniem."
             }
           }
         },
