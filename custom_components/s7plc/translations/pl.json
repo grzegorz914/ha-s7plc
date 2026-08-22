@@ -1733,23 +1733,23 @@
         },
         "sections": {
           "control": {
-            "title": "Typ sterowania",
+            "title": "Sterowanie",
             "description": "Wybierz typ sterowania termostatem."
           },
           "temperature": {
             "title": "Temperatura",
-            "description": "Konfiguracja parametrów temperatur, limitów i kroku."
+            "description": "Konfiguracja parametrów dla temperatury."
           },
           "direct_function": {
-            "title": "Funkcja sterowania bezpośredniego",
+            "title": "Tryby pracy",
             "description": "Wybierz, którymi wyjściami steruje Home Assistant."
           },
           "direct_feedback": {
-            "title": "Informacja o działaniu bezpośrednim",
+            "title": "Stany",
             "description": "Wybierz sposób wykrywania rzeczywistej aktywności ogrzewania i chłodzenia."
           },
           "mode_control": {
-            "title": "Polecenia trybu HVAC",
+            "title": "Rodzaj trybu pracy",
             "description": "Wybierz sposób wysyłania przez Home Assistant poleceń wartości zadanej, trybu i zasilania."
           },
           "available_modes": {
