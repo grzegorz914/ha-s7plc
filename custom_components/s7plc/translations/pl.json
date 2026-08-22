@@ -1370,7 +1370,7 @@
             },
             "descriptions": {
               "timed": "Szacowanie pozycji na podstawie czasu.",
-              "endstops": "Odczyt z krańcówek otwarcia i zamknięcia."
+              "endstops": "Odczyt z adresów stanu otwarta i zamknięta."
             }
           },
           "cover_movement_feedback": {
@@ -1423,7 +1423,7 @@
           },
           "position_feedback": {
             "title": "Identyfikacja pozycji",
-            "description": "Wybierz szacowanie czasowe lub fizyczne krańcówki."
+            "description": "Wybierz sposób identyfikacji pozycji, czas lub krańcówki."
           },
           "movement_feedback": {
             "title": "Identyfikacja ruchu",
