@@ -214,7 +214,7 @@
           "max_value": "Wartość wyjściowa maks.",
           "unit_of_measurement": "Jednostka miary",
           "state_class": "Klasa stanu",
-          "real_precision": "Miejsca dziesiętne REAL",
+          "real_precision": "Miejsca dziesiętne",
           "scan_interval": "Interwał skanowania (s)",
           "add_another": "Dodaj kolejną encje po zapisaniu"
         },
@@ -230,7 +230,7 @@
           "max_value": "Maksymalna wartość wyjściowa skalowania liniowego.",
           "unit_of_measurement": "Jednostka miary (np. °C, RPM, bar). Pozostaw puste, aby użyć domyślnej jednostki wg. klasy urządzenia.",
           "state_class": "Klasa stanu dla lepszego doprecyzowania interfejsu, zachowania lub statystyk.",
-          "real_precision": "Liczba miejsc po przecinku dla wartości REAL. Pozostaw puste, aby użyć wartości domyślnej (1).",
+          "real_precision": "Liczba miejsc po przecinku. Pozostaw puste, aby użyć wartości domyślnej (1).",
           "scan_interval": "Interwał skanowania w (s). Pozostaw puste, aby dziedziczyć domyślne ustawienie PLC.",
           "add_another": "Nie zamykaj okna konfiguracji po zapisie, aby dodać kolejną encje."
         }
@@ -443,7 +443,7 @@
           "scale_raw_max": "Wartość wejściowa maks.",
           "min_value": "Limit dolny",
           "max_value": "Limit górny",
-          "real_precision": "Miejsca dziesiętne REAL",
+          "real_precision": "Miejsca dziesiętne",
           "scan_interval": "Interwał skanowania (s)",
           "add_another": "Dodaj kolejną encje po zapisaniu"
         },
@@ -460,7 +460,7 @@
           "scale_raw_max": "Maksymalna wartość wejściowa skalowania liniowego.",
           "min_value": "Minimalna wartość wyjściowa skalowania liniowego. Jeśli zostaną wypełnione tylko wartości wyjsciowe to zamiast skalowania będzie wykonane limitowanie.",
           "max_value": "Maksymalna wartość wyjściowa skalowania liniowego.",
-          "real_precision": "Liczba miejsc po przecinku dla wartości REAL. Pozostaw puste, aby użyć wartości domyślnej (1).",
+          "real_precision": "Liczba miejsc po przecinku. Pozostaw puste, aby użyć wartości domyślnej (1).",
           "scan_interval": "Interwał skanowania w (s). Pozostaw puste, aby dziedziczyć domyślne ustawienie PLC.",
           "add_another": "Nie zamykaj okna konfiguracji po zapisie, aby dodać kolejną encje."
         }
@@ -740,7 +740,7 @@
           "max_value": "Wartość wyjściowa maks.",
           "unit_of_measurement": "Jednostka miary",
           "state_class": "Klasa stanu",
-          "real_precision": "Miejsca dziesiętne REAL",
+          "real_precision": "Miejsca dziesiętne",
           "scan_interval": "Interwał skanowania (s)"
         },
         "data_description": {
@@ -755,7 +755,7 @@
           "max_value": "Maksymalna wartość wyjściowa skalowania liniowego.",
           "unit_of_measurement": "Jednostka miary (np. °C, RPM, bar). Pozostaw puste, aby użyć domyślnej jednostki wg. klasy urządzenia.",
           "state_class": "Klasa stanu dla lepszego doprecyzowania interfejsu, zachowania lub statystyk.",
-          "real_precision": "Liczba miejsc po przecinku dla wartości REAL. Pozostaw puste, aby użyć wartości domyślnej (1).",
+          "real_precision": "Liczba miejsc po przecinku. Pozostaw puste, aby użyć wartości domyślnej (1).",
           "scan_interval": "Interwał skanowania w (s). Pozostaw puste, aby dziedziczyć domyślne ustawienie PLC."
         }
       },
@@ -955,7 +955,7 @@
           "scale_raw_max": "Wartość wejściowa maks.",
           "min_value": "Limit dolny",
           "max_value": "Limit górny",
-          "real_precision": "Miejsca dziesiętne REAL",
+          "real_precision": "Miejsca dziesiętne",
           "scan_interval": "Interwał skanowania (s)"
         },
         "data_description": {
@@ -971,7 +971,7 @@
           "scale_raw_max": "Maksymalna wartość wejściowa skalowania liniowego.",
           "min_value": "Minimalna wartość wyjściowa skalowania liniowego. Jeśli zostaną wypełnione tylko wartości wyjsciowe to zamiast skalowania będzie wykonane limitowanie.",
           "max_value": "Maksymalna wartość wyjściowa skalowania liniowego.",
-          "real_precision": "Liczba miejsc po przecinku dla wartości REAL. Pozostaw puste, aby użyć wartości domyślnej (1).",
+          "real_precision": "Liczba miejsc po przecinku. Pozostaw puste, aby użyć wartości domyślnej (1).",
           "scan_interval": "Interwał skanowania w (s). Pozostaw puste, aby dziedziczyć domyślne ustawienie PLC."
         }
       },
@@ -1203,8 +1203,8 @@
             "description": "Klasa stanu dla lepszego doprecyzowania interfejsu, zachowania lub statystyk."
           },
           "real_precision": {
-            "label": "Miejsca dziesiętne REAL",
-            "description": "Liczba miejsc po przecinku dla wartości REAL. Pozostaw puste, aby użyć wartości domyślnej (1)."
+            "label": "Miejsca dziesiętne",
+            "description": "Liczba miejsc po przecinku. Pozostaw puste, aby użyć wartości domyślnej (1)."
           }
         }
       },
@@ -1444,7 +1444,7 @@
           },
           "state_address": {
             "label": "Adres odczytu",
-            "description": "Adres odczytu stanu (np. Q0.0, DB1,X0.1)"
+            "description": "Adres odczytu stanu (np. Q0.0, DB1,X0.1)."
           },
           "command_address": {
             "label": "Adres zapisu",
@@ -1539,8 +1539,8 @@
             "description": "Maksymalna wartość wejściowa skalowania liniowego."
           },
           "real_precision": {
-            "label": "Miejsca dziesiętne REAL",
-            "description": "Liczba miejsc po przecinku dla wartości REAL. Pozostaw puste, aby użyć wartości domyślnej (1)."
+            "label": "Miejsca dziesiętne",
+            "description": "Liczba miejsc po przecinku. Pozostaw puste, aby użyć wartości domyślnej (1)."
           }
         }
       },
