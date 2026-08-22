@@ -1853,10 +1853,10 @@
       "duplicate_status_value": "Ta sama wartość nie może być przypisana do dwóch różnych stanów HVAC.",
       "cover_commands_required_error": "Otwórz / Zamknij wymaga obu adresów poleceń.",
       "cover_position_required_error": "Sterowanie pozycją wymaga adresu odczytu pozycji.",
-      "cover_endstops_required_error": "Sprzężenie krańcówkami wymaga adresu pełnego otwarcia lub zamknięcia.",
-      "cover_status_required_error": "Sprzężenie pojedynczym statusem PLC wymaga adresu odczytu stanów.",
+      "cover_endstops_required_error": "Identyfikacja ruchu krańcówkami wymaga adresów stanu otwarta i zamknięta.",
+      "cover_status_required_error": "Identyfikacja ruchu w czasie rzeczywistym wymaga adresu odczytu stanów.",
       "cover_tilt_required_error": "Włączone przechylenie wymaga adresu odczytu przechylenia.",
-      "cover_stop_required_error": "Włączone polecenie stop wymaga adresu zapisu stop."
+      "cover_stop_required_error": "Włączone stop wymaga adresu zapisu stop."
     },
     "editor": {
       "configuration_yaml": "Zaawansowany YAML",
