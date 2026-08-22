@@ -1359,7 +1359,7 @@
           },
           "cover_position_feedback": {
             "label": "Identyfikacja pozycji",
-            "description": "Wybierz sposób raportowania pozycji krańcowej.",
+            "description": "Wybierz sposób identyfikacji pozycji otwarta/zamknięta.",
             "options": {
               "timed": "Czas",
               "endstops": "Krańcówki"
@@ -1371,7 +1371,7 @@
           },
           "cover_movement_feedback": {
             "label": "Identyfikacja ruchu",
-            "description": "Wybierz sposób raportowania ruchu.",
+            "description": "Wybierz sposób identyfikacji ruchu.",
             "options": {
               "none": "Brak / Szacowane",
               "bits": "Oddzielne bity",
