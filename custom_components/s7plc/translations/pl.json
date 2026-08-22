@@ -1698,7 +1698,7 @@
         },
         "pulse": {
           "title": "Sterowanie impulsowe",
-          "description": "Sterowanie impulsowe działa jak przycisk i wysyła (zał./wył.) zamiast zmiany stanu."
+          "description": "W sterowaniu impulsowym na adres zapisu wysyłany jest (zał./wył.) zamiast zmiany jego stanu."
         }
       }
     },
