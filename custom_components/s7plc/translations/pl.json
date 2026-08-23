@@ -1622,23 +1622,23 @@
           },
           "preset_mode_off_value": {
             "label": "Wartość trybu (wył.)",
-            "description": "Wartość zapisywana, gdy tryb zostanie ustawiony na (wył., np. 0). Jeśli skonfigurowano adres (wł./wył.), ta wartość jest ignorowana dla trybu (wył.), tryb pozostaje dostępny i jest przełączany przez ten adres."
+            "description": "Wartość zapisywana, gdy tryb zostanie ustawiony na (wył., np. 0). Pozostaw puste, aby ukryć ten tryb z listy trybów termostatu. Jeśli skonfigurowano adres (wł./wył.), ta wartość jest ignorowana dla trybu (wył.), tryb pozostaje dostępny i jest przełączany przez ten adres."
           },
           "preset_mode_heat_value": {
             "label": "Wartość trybu (grzanie)",
-            "description": "Wartość zapisywana, gdy tryb zostanie ustawiony na (grzanie, np. 1)."
+            "description": "Wartość zapisywana, gdy tryb zostanie ustawiony na (grzanie, np. 1). Pozostaw puste, aby ukryć ten tryb z listy trybów termostatu."
           },
           "preset_mode_cool_value": {
             "label": "Wartość trybu (chłodzenie)",
-            "description": "Wartość zapisywana, gdy tryb zostanie ustawiony na (chłodzenie, np. 2)."
+            "description": "Wartość zapisywana, gdy tryb zostanie ustawiony na (chłodzenie, np. 2). Pozostaw puste, aby ukryć ten tryb z listy trybów termostatu."
           },
           "preset_mode_heat_cool_value": {
             "label": "Wartość trybu (grzanie/chłodzenie)",
-            "description": "Wartość zapisywana, gdy tryb zostanie ustawiony na (grzanie/chłodzenie, np. 3)."
+            "description": "Wartość zapisywana, gdy tryb zostanie ustawiony na (grzanie/chłodzenie, np. 3). Pozostaw puste, aby ukryć ten tryb z listy trybów termostatu."
           },
           "preset_mode_auto_value": {
             "label": "Wartość trybu (auto)",
-            "description": "Wartość zapisywana, gdy tryb zostanie ustawiony na (auto np. 6) starszy odpowiednik trybu (grzanie/chłodzenie)."
+            "description": "Wartość zapisywana, gdy tryb zostanie ustawiony na (auto np. 6) starszy odpowiednik trybu (grzanie/chłodzenie), domyślnie (puste)."
           },
           "preset_mode_dry_value": {
             "label": "Wartość trybu (osuszanie)",
