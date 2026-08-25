@@ -78,7 +78,6 @@ from .entity import S7BaseEntity, async_configure_entity_availability
 from .helpers import (
     default_entity_name,
     get_coordinator_and_device_info,
-    make_unique_topic,
     parse_mode_values,
 )
 
@@ -94,7 +93,6 @@ async def async_setup_entry(
     coord, device_info, _ = get_coordinator_and_device_info(entry)
 
     entities = []
-    seen_topics: set[str] = set()
     for item in entry.options.get(CONF_CLIMATES, []):
         current_temp_address = item.get(CONF_CURRENT_TEMPERATURE_ADDRESS)
         if not current_temp_address:
@@ -132,10 +130,8 @@ async def async_setup_entry(
             heating_action = item.get(CONF_HEATING_ACTION_ADDRESS)
             cooling_action = item.get(CONF_COOLING_ACTION_ADDRESS)
 
-            topic = make_unique_topic(
-                seen_topics, f"climate_direct:{current_temp_address}"
-            )
             unique_id = item[CONF_UID]
+            topic = f"climate_direct:{unique_id}"
 
             # Register current temperature for reading
             await coord.add_item(
@@ -181,10 +177,8 @@ async def async_setup_entry(
                 )
                 continue
 
-            topic = make_unique_topic(
-                seen_topics, f"climate_setpoint:{current_temp_address}"
-            )
             unique_id = item[CONF_UID]
+            topic = f"climate_setpoint:{unique_id}"
 
             # Register current and target temperature for reading
             await coord.add_item(

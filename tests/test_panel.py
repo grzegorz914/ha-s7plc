@@ -1418,11 +1418,15 @@ async def test_save_entity_shared_validation_rejects_invalid_input(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("editor", ["visual", "yaml"])
-async def test_save_entity_shared_validation_rejects_duplicate_address(
+async def test_save_entity_shared_validation_allows_duplicate_read_address(
     monkeypatch, editor
 ) -> None:
+    """Two sensors sharing the same read address are now legitimate (issue
+    #115): uid, not address, is the entity's real identity, and the
+    coordinator topic is uid-keyed so their scan_interval/real_precision
+    bookkeeping can't collide."""
     existing = {"name": "First", "address": "DB1,REAL0", "uid": "existing"}
-    handler, hass, _entry, _updates = await _save_entity_handler(
+    handler, hass, _entry, updates = await _save_entity_handler(
         monkeypatch, {"sensors": [existing]}
     )
     connection = _Connection()
@@ -1437,7 +1441,12 @@ async def test_save_entity_shared_validation_rejects_duplicate_address(
         {"id": 1, "entry_id": "entry-1", "entity_type": "sensors", **payload},
     )
 
-    assert connection.error[0] == "invalid_entity"
+    assert connection.error is None
+    saved_sensors = updates[0]["sensors"]
+    assert len(saved_sensors) == 2
+    assert saved_sensors[0]["uid"] == "existing"
+    assert saved_sensors[1]["address"] == "DB1,REAL0"
+    assert saved_sensors[1]["uid"] != "existing"
 
 
 @pytest.mark.asyncio

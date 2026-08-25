@@ -672,10 +672,6 @@ class EntityConfigBuilder:
         if errors:
             return None, errors
 
-        # Check for duplicates
-        if self._has_duplicate(CONF_SENSORS, address, skip_idx=skip_idx):
-            return None, {"base": "duplicate_entry"}
-
         # Build item with optional fields
         item = self._build_base_item(
             address,
@@ -732,10 +728,6 @@ class EntityConfigBuilder:
         if errors:
             return None, errors
 
-        # Check for duplicates
-        if self._has_duplicate(CONF_BINARY_SENSORS, address, skip_idx=skip_idx):
-            return None, {"base": "duplicate_entry"}
-
         # Build item with optional fields
         item = self._build_base_item(
             address,
@@ -763,15 +755,6 @@ class EntityConfigBuilder:
         )
         if errors:
             return None, errors
-
-        # Check for duplicates
-        if self._has_duplicate(
-            CONF_SWITCHES,
-            state_address,
-            keys=(CONF_STATE_ADDRESS, CONF_ADDRESS),
-            skip_idx=skip_idx,
-        ):
-            return None, {"base": "duplicate_entry"}
 
         # Validate optional command address
         command_address = None
@@ -1170,15 +1153,6 @@ class EntityConfigBuilder:
                 if addr_errors:
                     return None, addr_errors
 
-        # Check for duplicates
-        if self._has_duplicate(
-            CONF_COVERS,
-            position_state,
-            keys=(CONF_POSITION_STATE_ADDRESS,),
-            skip_idx=skip_idx,
-        ):
-            return None, {"base": "duplicate_entry"}
-
         # Validate optional real-time movement status (cover_status_address
         # and its per-status value mappings)
         cover_status_fields, cover_status_errors = self._validate_cover_status_fields(
@@ -1320,15 +1294,6 @@ class EntityConfigBuilder:
         if errors:
             return None, errors
 
-        # Check for duplicates
-        if self._has_duplicate(
-            CONF_LIGHTS,
-            state_address,
-            keys=(CONF_STATE_ADDRESS, CONF_ADDRESS),
-            skip_idx=skip_idx,
-        ):
-            return None, {"base": "duplicate_entry"}
-
         # Validate optional command address
         command_address = None
         if user_input.get(CONF_COMMAND_ADDRESS):
@@ -1417,10 +1382,6 @@ class EntityConfigBuilder:
 
         # Parse tag to get type information
         address_tag = parse_tag(address)
-
-        # Check for duplicates
-        if self._has_duplicate(CONF_NUMBERS, address, skip_idx=skip_idx):
-            return None, {"base": "duplicate_entry"}
 
         # Validate optional command address
         command_address = None
@@ -1607,10 +1568,6 @@ class EntityConfigBuilder:
 
         if address_tag.data_type not in (DataType.STRING, DataType.WSTRING):
             return None, {"base": "text_requires_string_type"}
-
-        # Check for duplicates
-        if self._has_duplicate(CONF_TEXTS, address, skip_idx=skip_idx):
-            return None, {"base": "duplicate_entry"}
 
         # Validate optional command address
         command_address = None

@@ -356,7 +356,7 @@ async def test_async_setup_entry_with_scan_interval(fake_hass, mock_coordinator,
     # Verify scan_interval was passed to add_item
     assert len(mock_coordinator.add_item_calls) == 1
     args, kwargs = mock_coordinator.add_item_calls[0]
-    assert args == ("switch:db1,x0.0", "db1,x0.0", 5)
+    assert args == ("switch:uid-1", "db1,x0.0", 5)
 
 
 @pytest.mark.asyncio

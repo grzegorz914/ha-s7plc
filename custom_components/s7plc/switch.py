@@ -44,8 +44,8 @@ async def async_setup_entry(
         pulse_duration = item.get(CONF_PULSE_DURATION, DEFAULT_PULSE_DURATION)
         name = item.get(CONF_NAME) or default_entity_name(state_address)
         area = item.get(CONF_AREA)
-        topic = f"switch:{state_address}"
         unique_id = item[CONF_UID]
+        topic = f"switch:{unique_id}"
         scan_interval = item.get(CONF_SCAN_INTERVAL)
         await coord.add_item(topic, state_address, scan_interval)
         entities.append(

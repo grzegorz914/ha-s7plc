@@ -62,8 +62,8 @@ async def async_setup_entry(
             continue
         name = item.get(CONF_NAME) or default_entity_name(address)
         area = item.get(CONF_AREA)
-        topic = f"number:{address}"
         unique_id = item[CONF_UID]
+        topic = f"number:{unique_id}"
         command_address = item.get(CONF_COMMAND_ADDRESS) or address
         min_value = item.get(CONF_MIN_VALUE)
         max_value = item.get(CONF_MAX_VALUE)

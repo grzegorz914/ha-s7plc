@@ -153,13 +153,14 @@ async def async_setup_entry(
 
         if position_state:
             # Position-based cover (0-100)
+            unique_id = item[CONF_UID]
             position_command = item.get(CONF_POSITION_COMMAND_ADDRESS)
             scan_interval = item.get(CONF_SCAN_INTERVAL)
             invert_position = item.get(CONF_INVERT_POSITION, False)
             stop_command = item.get(CONF_STOP_COMMAND_ADDRESS)
             stop_pulse = item.get(CONF_STOP_PULSE_DURATION, DEFAULT_PULSE_DURATION)
 
-            position_topic = f"cover:position:{position_state}"
+            position_topic = f"cover:position:{unique_id}"
             await coord.add_item(position_topic, position_state, scan_interval)
 
             # Optional end-stop/movement feedback, same model traditional
@@ -213,9 +214,10 @@ async def async_setup_entry(
             # Optional: tilt control, symmetric to position above.
             tilt_state = item.get(CONF_TILT_STATE_ADDRESS)
             tilt_command = None
+            tilt_topic = None
             if tilt_state:
                 tilt_command = item.get(CONF_TILT_COMMAND_ADDRESS)
-                tilt_topic = f"cover:tilt:{tilt_state}"
+                tilt_topic = f"cover:tilt:{unique_id}"
                 await coord.add_item(tilt_topic, tilt_state, scan_interval)
 
             invert_tilt = item.get(CONF_INVERT_TILT, False)
@@ -228,7 +230,7 @@ async def async_setup_entry(
             cover_status_address = item.get(CONF_COVER_STATUS_ADDRESS)
             cover_status_topic = None
             if cover_status_address:
-                cover_status_topic = f"cover:status:{cover_status_address}"
+                cover_status_topic = f"cover:status:{unique_id}"
                 await coord.add_item(
                     cover_status_topic, cover_status_address, scan_interval
                 )
@@ -250,7 +252,6 @@ async def async_setup_entry(
             )
 
             name = item.get(CONF_NAME) or default_entity_name(position_state)
-            unique_id = item[CONF_UID]
             device_class = item.get(CONF_DEVICE_CLASS)
 
             entities.append(
@@ -261,6 +262,7 @@ async def async_setup_entry(
                     device_info,
                     position_state,
                     position_command,
+                    position_topic,
                     invert_position,
                     device_class,
                     area,
@@ -268,6 +270,7 @@ async def async_setup_entry(
                     stop_pulse,
                     tilt_state_address=tilt_state,
                     tilt_command_address=tilt_command,
+                    tilt_topic=tilt_topic,
                     invert_tilt=invert_tilt,
                     cover_status_topic=cover_status_topic,
                     cover_status_address=cover_status_address,
@@ -307,6 +310,7 @@ async def async_setup_entry(
             _LOGGER.debug("Skipping cover with missing close command address")
             continue
 
+        unique_id = item[CONF_UID]
         feedback_mode = _traditional_feedback_mode(item)
         # Only feedback belonging to the selected mode may affect the entity.
         opened_state = (
@@ -325,11 +329,11 @@ async def async_setup_entry(
         closed_topic = None
 
         if opened_state:
-            opened_topic = f"cover:opened:{opened_state}"
+            opened_topic = f"cover:opened:{unique_id}"
             await coord.add_item(opened_topic, opened_state, scan_interval)
 
         if closed_state:
-            closed_topic = f"cover:closed:{closed_state}"
+            closed_topic = f"cover:closed:{unique_id}"
             await coord.add_item(closed_topic, closed_state, scan_interval)
 
         # Optional: real-time movement status, read independently of the
@@ -360,19 +364,19 @@ async def async_setup_entry(
         cover_stopped_topic = None
 
         if cover_opening_address:
-            cover_opening_topic = f"cover:opening:{cover_opening_address}"
+            cover_opening_topic = f"cover:opening:{unique_id}"
             await coord.add_item(
                 cover_opening_topic, cover_opening_address, scan_interval
             )
 
         if cover_closing_address:
-            cover_closing_topic = f"cover:closing:{cover_closing_address}"
+            cover_closing_topic = f"cover:closing:{unique_id}"
             await coord.add_item(
                 cover_closing_topic, cover_closing_address, scan_interval
             )
 
         if cover_stopped_address:
-            cover_stopped_topic = f"cover:stopped:{cover_stopped_address}"
+            cover_stopped_topic = f"cover:stopped:{unique_id}"
             await coord.add_item(
                 cover_stopped_topic, cover_stopped_address, scan_interval
             )
@@ -384,7 +388,7 @@ async def async_setup_entry(
         cover_status_address = item.get(CONF_COVER_STATUS_ADDRESS)
         cover_status_topic = None
         if cover_status_address:
-            cover_status_topic = f"cover:status:{cover_status_address}"
+            cover_status_topic = f"cover:status:{unique_id}"
             await coord.add_item(
                 cover_status_topic, cover_status_address, scan_interval
             )
@@ -406,7 +410,6 @@ async def async_setup_entry(
         )
 
         name = item.get(CONF_NAME) or default_entity_name(open_command)
-        unique_id = item[CONF_UID]
         device_class = item.get(CONF_DEVICE_CLASS)
 
         raw_operate_time = item.get(CONF_OPERATE_TIME, DEFAULT_OPERATE_TIME)
@@ -1287,6 +1290,7 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
         device_info: DeviceInfo,
         position_state: str,
         position_command: str | None,
+        position_topic: str,
         invert_position: bool = False,
         device_class: str | None = None,
         suggested_area_id: str | None = None,
@@ -1294,6 +1298,7 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
         stop_pulse_duration: float = DEFAULT_PULSE_DURATION,
         tilt_state_address: str | None = None,
         tilt_command_address: str | None = None,
+        tilt_topic: str | None = None,
         invert_tilt: bool = False,
         cover_status_topic: str | None = None,
         cover_status_address: str | None = None,
@@ -1319,21 +1324,19 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
             name=name,
             unique_id=unique_id,
             device_info=device_info,
-            topic=f"cover:position:{position_state}",
+            topic=position_topic,
             suggested_area_id=suggested_area_id,
         )
         self._position_state_address = position_state
         self._position_command_address = position_command or position_state
-        self._position_topic = f"cover:position:{position_state}"
+        self._position_topic = position_topic
         self._invert_position = invert_position
         self._stop_command_address = stop_command
         self._stop_pulse_duration = float(stop_pulse_duration)
 
         self._tilt_state_address = tilt_state_address
         self._tilt_command_address = tilt_command_address or tilt_state_address
-        self._tilt_topic = (
-            f"cover:tilt:{tilt_state_address}" if tilt_state_address else None
-        )
+        self._tilt_topic = tilt_topic if tilt_state_address else None
         self._invert_tilt = invert_tilt
 
         # Optional real-time movement status: a raw position alone can't
