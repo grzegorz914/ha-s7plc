@@ -526,6 +526,18 @@
               "disabled": "Non configurare l’inclinazione.",
               "enabled": "Legge e comanda la posizione dell’inclinazione."
             }
+          },
+          "position_tilt_bidirectional": {
+            "label": "Metodo",
+            "description": "Metodo di sincronizzazione della posizione e inclinazione impostate con il PLC. Indipendente dal riscontro di posizione.",
+            "options": {
+              "false": "Unidirezionale",
+              "true": "Bidirezionale"
+            },
+            "descriptions": {
+              "false": "La posizione e l'inclinazione impostate verranno scritte sul PLC ma non rilette.",
+              "true": "La posizione e l'inclinazione impostate verranno sincronizzate con il PLC in entrambe le direzioni."
+            }
           }
         },
         "modes": {
@@ -548,6 +560,10 @@
           "tilt": {
             "title": "Inclinazione",
             "description": "Controllo opzionale dell’inclinazione per le cover a posizione."
+          },
+          "position_tilt_feedback": {
+            "title": "Riscontro posizione e inclinazione",
+            "description": "Scegli se l'ultima posizione e inclinazione comandate vengono memorizzate o rilette dal PLC."
           }
         }
       },

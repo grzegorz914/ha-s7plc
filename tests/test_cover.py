@@ -1590,7 +1590,7 @@ async def test_position_cover_extra_state_attributes(fake_hass, mock_coordinator
     assert attrs["cover_type"] == "position"
     assert attrs["s7_position_state_address"] == "DB1,B0"
     assert attrs["s7_position_command_address"] == "DB1,B1"
-    assert attrs["command_bidirectional"] is False
+    assert attrs["position_tilt_bidirectional"] is False
     assert "s7_target_position" not in attrs
     assert "s7_target_tilt" not in attrs
 
@@ -2245,7 +2245,7 @@ async def test_position_cover_setup_with_status_address(
 
 
 # ============================================================================
-# command_bidirectional (target position/tilt) Tests
+# position_tilt_bidirectional (target position/tilt) Tests
 # ============================================================================
 
 
@@ -2277,11 +2277,11 @@ async def _setup_position_cover(fake_hass, mock_coordinator, device_info, option
 async def test_position_cover_setup_registers_command_topic_when_bidirectional(
     fake_hass, mock_coordinator, device_info
 ):
-    """command_bidirectional + a genuinely separate position_command_address
+    """position_tilt_bidirectional + a genuinely separate position_command_address
     registers a second coordinator topic for it."""
     from custom_components.s7plc.const import (
         CONF_POSITION_COMMAND_ADDRESS,
-        CONF_COMMAND_BIDIRECTIONAL,
+        CONF_POSITION_TILT_BIDIRECTIONAL,
     )
 
     cover = await _setup_position_cover(
@@ -2290,7 +2290,7 @@ async def test_position_cover_setup_registers_command_topic_when_bidirectional(
         device_info,
         {
             CONF_POSITION_COMMAND_ADDRESS: "db1,b1",
-            CONF_COMMAND_BIDIRECTIONAL: True,
+            CONF_POSITION_TILT_BIDIRECTIONAL: True,
         },
     )
 
@@ -2302,7 +2302,7 @@ async def test_position_cover_setup_registers_command_topic_when_bidirectional(
 async def test_position_cover_setup_no_command_topic_when_bidirectional_disabled(
     fake_hass, mock_coordinator, device_info
 ):
-    """Without command_bidirectional, no second topic is registered even
+    """Without position_tilt_bidirectional, no second topic is registered even
     with a separate position_command_address."""
     from custom_components.s7plc.const import CONF_POSITION_COMMAND_ADDRESS
 
@@ -2321,15 +2321,15 @@ async def test_position_cover_setup_no_command_topic_when_bidirectional_disabled
 async def test_position_cover_setup_no_command_topic_when_command_defaults_to_state(
     fake_hass, mock_coordinator, device_info
 ):
-    """command_bidirectional is enabled but position_command_address is left
+    """position_tilt_bidirectional is enabled but position_command_address is left
     blank (defaults to the state address) - nothing separate to read back."""
-    from custom_components.s7plc.const import CONF_COMMAND_BIDIRECTIONAL
+    from custom_components.s7plc.const import CONF_POSITION_TILT_BIDIRECTIONAL
 
     cover = await _setup_position_cover(
         fake_hass,
         mock_coordinator,
         device_info,
-        {CONF_COMMAND_BIDIRECTIONAL: True},
+        {CONF_POSITION_TILT_BIDIRECTIONAL: True},
     )
 
     assert mock_coordinator.add_item.call_count == 1
@@ -2339,7 +2339,7 @@ async def test_position_cover_setup_no_command_topic_when_command_defaults_to_st
 def test_position_cover_target_position_attribute(
     fake_hass, mock_coordinator, device_info
 ):
-    """s7_target_position is exposed once command_bidirectional is enabled
+    """s7_target_position is exposed once position_tilt_bidirectional is enabled
     with a genuinely separate position_command_address and coordinator data
     for it is available."""
     from custom_components.s7plc.cover import S7PositionCover
@@ -2351,19 +2351,19 @@ def test_position_cover_target_position_attribute(
         device_info,
         "db1,b0",
         "db1,b1",
-        command_bidirectional=True,
+        position_tilt_bidirectional=True,
     )
     mock_coordinator.data = {"cover:position_command:db1,b1": 42}
 
     attrs = cover.extra_state_attributes
-    assert attrs["command_bidirectional"] is True
+    assert attrs["position_tilt_bidirectional"] is True
     assert attrs["s7_target_position"] == 42
 
 
 def test_position_cover_target_position_absent_when_bidirectional_disabled(
     fake_hass, mock_coordinator, device_info
 ):
-    """Same distinct command address, but command_bidirectional off
+    """Same distinct command address, but position_tilt_bidirectional off
     (default) - no target-position attribute and no topic to read from."""
     from custom_components.s7plc.cover import S7PositionCover
 
@@ -2378,14 +2378,14 @@ def test_position_cover_target_position_absent_when_bidirectional_disabled(
     mock_coordinator.data = {"cover:position_command:db1,b1": 42}
 
     attrs = cover.extra_state_attributes
-    assert attrs["command_bidirectional"] is False
+    assert attrs["position_tilt_bidirectional"] is False
     assert "s7_target_position" not in attrs
 
 
 def test_position_cover_target_position_absent_when_command_defaults_to_state(
     fake_hass, mock_coordinator, device_info
 ):
-    """command_bidirectional enabled but no separate command address
+    """position_tilt_bidirectional enabled but no separate command address
     configured - nothing genuinely separate to read back."""
     from custom_components.s7plc.cover import S7PositionCover
 
@@ -2396,7 +2396,7 @@ def test_position_cover_target_position_absent_when_command_defaults_to_state(
         device_info,
         "db1,b0",
         None,
-        command_bidirectional=True,
+        position_tilt_bidirectional=True,
     )
     mock_coordinator.data = {"cover:position:db1,b0": 42}
 
@@ -2750,7 +2750,7 @@ def test_explicit_status_is_authoritative_without_endstop_fallback(
 
 
 def test_position_cover_target_tilt_attribute(fake_hass, mock_coordinator, device_info):
-    """s7_target_tilt is exposed once command_bidirectional is enabled with
+    """s7_target_tilt is exposed once position_tilt_bidirectional is enabled with
     a genuinely separate tilt_command_address and coordinator data for it
     is available."""
     from custom_components.s7plc.cover import S7PositionCover
@@ -2764,7 +2764,7 @@ def test_position_cover_target_tilt_attribute(fake_hass, mock_coordinator, devic
         "db1,b1",
         tilt_state_address="db1,b2",
         tilt_command_address="db1,b3",
-        command_bidirectional=True,
+        position_tilt_bidirectional=True,
     )
     mock_coordinator.data = {"cover:tilt_command:db1,b3": 60}
 
@@ -2775,7 +2775,7 @@ def test_position_cover_target_tilt_attribute(fake_hass, mock_coordinator, devic
 def test_position_cover_target_tilt_absent_when_command_defaults_to_state(
     fake_hass, mock_coordinator, device_info
 ):
-    """command_bidirectional enabled but tilt_command_address left blank
+    """position_tilt_bidirectional enabled but tilt_command_address left blank
     (defaults to tilt_state_address) - nothing separate to read back."""
     from custom_components.s7plc.cover import S7PositionCover
 
@@ -2787,7 +2787,7 @@ def test_position_cover_target_tilt_absent_when_command_defaults_to_state(
         "db1,b0",
         "db1,b1",
         tilt_state_address="db1,b2",
-        command_bidirectional=True,
+        position_tilt_bidirectional=True,
     )
     mock_coordinator.data = {"cover:tilt:db1,b2": 60}
 

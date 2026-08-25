@@ -526,6 +526,18 @@
               "disabled": "Nenastavovat naklopení.",
               "enabled": "Číst a řídit pozici naklopení."
             }
+          },
+          "position_tilt_bidirectional": {
+            "label": "Metoda",
+            "description": "Metoda synchronizace požadované polohy a naklonění s PLC. Nezávislé na zpětné vazbě polohy.",
+            "options": {
+              "false": "Jednosměrná",
+              "true": "Obousměrná"
+            },
+            "descriptions": {
+              "false": "Požadovaná poloha a naklonění budou zapisovány do PLC, ale nebudou z něj čteny zpět.",
+              "true": "Požadovaná poloha a naklonění budou synchronizovány s PLC v obou směrech."
+            }
           }
         },
         "modes": {
@@ -548,6 +560,10 @@
           "tilt": {
             "title": "Naklopení",
             "description": "Volitelné řízení naklopení pro poziční kryty."
+          },
+          "position_tilt_feedback": {
+            "title": "Zpětná vazba polohy a naklonění",
+            "description": "Vyberte, zda si má naposledy odeslaná poloha a naklonění pamatovat, nebo se má číst zpět z PLC."
           }
         }
       },

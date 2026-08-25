@@ -2897,6 +2897,7 @@ def test_cover_editor_sections_are_ordered_and_yaml_remains_raw() -> None:
         "addresses",
         "cover-stop",
         "cover-tilt",
+        "cover-position-tilt-feedback",
         "ha",
     ]
     positions = [
@@ -2940,6 +2941,7 @@ def test_cover_translation_modes_have_language_parity() -> None:
             "movement_feedback",
             "stop",
             "tilt",
+            "position_tilt_feedback",
         }
         assert expected_errors <= panel["errors"].keys()
 

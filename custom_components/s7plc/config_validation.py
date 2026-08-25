@@ -25,7 +25,6 @@ from .const import (
     CONF_CLOSE_COMMAND_ADDRESS,
     CONF_CLOSING_STATE_ADDRESS,
     CONF_COMMAND_ADDRESS,
-    CONF_COMMAND_BIDIRECTIONAL,
     CONF_COOLING_ACTION_ADDRESS,
     CONF_COOLING_OUTPUT_ADDRESS,
     CONF_COVER_CLOSING_ADDRESS,
@@ -69,6 +68,7 @@ from .const import (
     CONF_PATTERN,
     CONF_POSITION_COMMAND_ADDRESS,
     CONF_POSITION_STATE_ADDRESS,
+    CONF_POSITION_TILT_BIDIRECTIONAL,
     CONF_PRESET_MODE_ADDRESS,
     CONF_PRESET_MODE_AUTO_VALUE,
     CONF_PRESET_MODE_BIDIRECTIONAL,
@@ -199,7 +199,7 @@ ENTITY_ALLOWED_FIELDS: dict[str, frozenset[str]] = {
         CONF_OPERATE_TIME,
         CONF_USE_STATE_TOPICS,
         CONF_INVERT_POSITION,
-        CONF_COMMAND_BIDIRECTIONAL,
+        CONF_POSITION_TILT_BIDIRECTIONAL,
         CONF_DEVICE_CLASS,
     },
     CONF_LIGHTS: _COMMON_FIELDS
@@ -1075,9 +1075,9 @@ class EntityConfigBuilder:
         if user_input.get(CONF_INVERT_POSITION, False):
             item[CONF_INVERT_POSITION] = True
 
-        # Add command_bidirectional flag
-        if user_input.get(CONF_COMMAND_BIDIRECTIONAL, False):
-            item[CONF_COMMAND_BIDIRECTIONAL] = True
+        # Add position_tilt_bidirectional flag
+        if user_input.get(CONF_POSITION_TILT_BIDIRECTIONAL, False):
+            item[CONF_POSITION_TILT_BIDIRECTIONAL] = True
 
         # Apply scan interval
         self._apply_scan_interval(item, user_input.get(CONF_SCAN_INTERVAL))

@@ -526,6 +526,18 @@
               "disabled": "Brak sterowania przechyleniem.",
               "enabled": "Pełne sterowanie przechyleniem."
             }
+          },
+          "position_tilt_bidirectional": {
+            "label": "Metoda",
+            "description": "Metoda synchronizacji pozycji i przechylenia zadanego z PLC. Niezależnie od odczytu pozycji.",
+            "options": {
+              "false": "Jednokierunkowa",
+              "true": "Dwukierunkowa"
+            },
+            "descriptions": {
+              "false": "Pozycja i przechylenie zadane będą zapisywane do PLC, ale nie będą z niego odczytywane.",
+              "true": "Pozycja i przechylenie zadane będą synchronizowane z PLC w obu kierunkach."
+            }
           }
         },
         "modes": {
@@ -548,6 +560,10 @@
           "tilt": {
             "title": "Przechylenie",
             "description": "Opcjonalna funkcja sterowania przechyleniem osłony."
+          },
+          "position_tilt_feedback": {
+            "title": "Synchronizacja pozycji i przechylenia",
+            "description": "Wybierz metodę synchronizacji pozycji i przechylenia zadanego z PLC."
           }
         }
       },
