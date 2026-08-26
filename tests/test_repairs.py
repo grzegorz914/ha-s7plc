@@ -296,6 +296,39 @@ def test_get_expected_unique_ids_traditional_cover_variants():
     assert "uid-command" in expected3
 
 
+def test_get_expected_unique_ids_toggle_mode_cover_without_close_command():
+    """A toggle_mode cover never has close_command_address set (single-pulse
+    relay, see config_validation.py) - it must still count as expected so a
+    real, unchanged toggle_mode cover isn't reported (and, if the repair is
+    confirmed, deleted) as orphaned."""
+    from conftest import ConfigEntry, HomeAssistant
+
+    hass = HomeAssistant()
+
+    entry = ConfigEntry(
+        options={
+            "covers": [
+                {
+                    "open_command_address": "DB1,X0.0",
+                    "toggle_mode": True,
+                    "uid": "uid-toggle",
+                }
+            ]
+        },
+        entry_id="test-toggle",
+    )
+    entry.runtime_data = RuntimeEntryData(
+        coordinator=None, name="PLC1", host="192.168.1.1", device_id="dev1"
+    )
+    hass.data[DOMAIN] = {}
+    hass.config_entries._entries.append(entry)
+
+    flow = repairs.OrphanedEntitiesRepairFlow("test-toggle")
+    flow.hass = hass
+    expected = asyncio.run(flow._get_expected_unique_ids(entry))
+    assert "uid-toggle" in expected
+
+
 def test_async_create_fix_flow_extracts_entry_id():
     """Test that async_create_fix_flow extracts entry_id from issue_id."""
     from conftest import HomeAssistant
