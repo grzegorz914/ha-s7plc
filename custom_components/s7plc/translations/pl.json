@@ -424,11 +424,11 @@
           },
           "position_command_address": {
             "label": "Adres zapisu pozycji",
-            "description": "Adres zapisu nowej pozycji osłony (0-100). Jeśli brak, użyty zostanie adres odczytu."
+            "description": "Adres zapisu nowej pozycji osłony (0-100). Jeśli pusty, użyty zostanie adres odczytu."
           },
           "stop_command_address": {
             "label": "Adres zapisu stop",
-            "description": "Opcjonalny adres zapisu komendy (stop). Jeśli brak, zostanie wykonany zapis aktualnego położenia aby zatrzymać osłonę."
+            "description": "Opcjonalny adres zapisu komendy (stop). Jeśli pusty, zostanie wykonany zapis aktualnego położenia aby zatrzymać osłonę."
           },
           "stop_pulse_duration": {
             "label": "Długość impulsu (s)",
@@ -579,7 +579,7 @@
           },
           "command_address": {
             "label": "Adres zapisu",
-            "description": "Opcjonalny adres zapisu. Jeśli brak, użyty zostanie adres odczytu."
+            "description": "Opcjonalny adres zapisu. Jeśli pusty, użyty zostanie adres odczytu."
           },
           "brightness_state_address": {
             "label": "Adres odczytu jasności",
@@ -635,7 +635,7 @@
           },
           "command_address": {
             "label": "Adres zapisu",
-            "description": "Opcjonalny adres zapisu. Jeśli brak, użyty zostanie adres odczytu."
+            "description": "Opcjonalny adres zapisu. Jeśli pusty, użyty zostanie adres odczytu."
           },
           "device_class": {
             "label": "Klasa urządzenia",
@@ -705,7 +705,7 @@
           },
           "command_address": {
             "label": "Adres zapisu",
-            "description": "Opcjonalny adres zapisu. Jeśli brak, użyty zostanie adres odczytu."
+            "description": "Opcjonalny adres zapisu. Jeśli pusty, użyty zostanie adres odczytu."
           },
           "pattern": {
             "label": "Wzorzec (regex)",
@@ -746,11 +746,11 @@
           },
           "heating_action_address": {
             "label": "Adres stanu grzanie",
-            "description": "Opcjonalny adres odczytu stanu (grzanie). Jeśli brak, stan zostanie ustalony na podstawie temperatury aktualnej i zadanej."
+            "description": "Opcjonalny adres odczytu stanu (grzanie). Jeśli pusty, stan zostanie ustalony na podstawie temperatury aktualnej i zadanej."
           },
           "cooling_action_address": {
             "label": "Adres stanu chłodzenie",
-            "description": "Opcjonalny adres odczytu stanu (chłodzenie). Jeśli brak, stan zostanie ustalony na podstawie temperatury aktualnej i zadanej."
+            "description": "Opcjonalny adres odczytu stanu (chłodzenie). Jeśli pusty, stan zostanie ustalony na podstawie temperatury aktualnej i zadanej."
           },
           "preset_mode_address": {
             "label": "Adres trybów pracy",
@@ -1135,7 +1135,7 @@
       "invalid_options_map": "Nieprawidłowe mapowanie, użyj par np. '0:Pump A;1:Pump B'. Wartości i tekst nie mogą się powtarzać w mapowaniu.",
       "options_map_out_of_range": "Co najmniej jedna wartość mapowania wykracza poza zakres typu danych.",
       "select_requires_integer_type": "Adres odczytu i zapisu listy musi być dyskretnym typem danych PLC (BYTE, WORD, DWORD, SINT, USINT, INT, DINT lub TIME).",
-      "select_command_type_mismatch": "Adres polecenia musi używać TIME wtedy i tylko wtedy, gdy adres stanu używa TIME."
+      "select_command_type_mismatch": "Adres zapisu musi używać TIME tylko i wyłącznie gdy adres stanu używa TIME."
     },
     "editor": {
       "configuration_yaml": "Konfiguracja YAML",
