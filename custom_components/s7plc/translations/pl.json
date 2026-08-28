@@ -380,23 +380,23 @@
           },
           "cover_status_open_values": {
             "label": "Wartość(-i) stanu (otwarta)",
-            "description": "Wartość(-i) oznaczające, że osłona jest całkowicie otwarta, odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 1 lub 2,3). Po dopasowaniu osłona zostanie zgłoszona jako otwarta, z priorytetem nad stanem opartym na krańcówkach. Pozostaw puste, aby pominąć ten stan."
+            "description": "Wartość(-i) oznaczające, że osłona jest całkowicie otwarta, odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 1 lub 2,3). Po dopasowaniu osłona zostanie zgłoszona jako otwarta, z priorytetem nad stanem opartym na krańcówkach. Pozostaw puste, aby pominąć ten stan."
           },
           "cover_status_closed_values": {
             "label": "Wartość(-i) stanu (zamknięta)",
-            "description": "Wartość(-i) oznaczające, że osłona jest całkowicie zamknięta, odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami. Po dopasowaniu osłona zostanie zgłoszona jako zamknięta, z priorytetem nad stanem opartym na krańcówkach. Pozostaw puste, aby pominąć ten stan."
+            "description": "Wartość(-i) oznaczające, że osłona jest całkowicie zamknięta, odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami. Po dopasowaniu osłona zostanie zgłoszona jako zamknięta, z priorytetem nad stanem opartym na krańcówkach. Pozostaw puste, aby pominąć ten stan."
           },
           "cover_status_opening_values": {
             "label": "Wartość(-i) stanu (otwieranie)",
-            "description": "Wartość(-i) oznaczające, że osłona się otwiera, odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 1 lub 2,3). Pozostaw puste, aby pominąć ten stan."
+            "description": "Wartość(-i) oznaczające, że osłona się otwiera, odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 1 lub 2,3). Pozostaw puste, aby pominąć ten stan."
           },
           "cover_status_closing_values": {
             "label": "Wartość(-i) stanu (zamykanie)",
-            "description": "Wartość(-i) oznaczające, że osłona się zamyka, odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami. Pozostaw puste, aby pominąć ten stan."
+            "description": "Wartość(-i) oznaczające, że osłona się zamyka, odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami. Pozostaw puste, aby pominąć ten stan."
           },
           "cover_status_stopped_values": {
             "label": "Wartość(-i) stanu (zatrzymana)",
-            "description": "Wartość(-i) oznaczające, że osłona jest zatrzymana (bez ruchu), odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami. Pozostaw puste, aby pominąć ten stan."
+            "description": "Wartość(-i) oznaczające, że osłona jest zatrzymana (bez ruchu), odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami. Pozostaw puste, aby pominąć ten stan."
           },
           "opening_state_address": {
             "label": "Adres stanu otwarta",
