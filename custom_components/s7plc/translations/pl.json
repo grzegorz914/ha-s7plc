@@ -367,8 +367,8 @@
           "open_command_address": {
             "label": "Adres zapisu otwórz",
             "description": "Adres wyzwalający otwieranie (np. Q0.0, DB1,X0.0).",
-            "label_toggle": "Adres komendy jednego przycisku",
-            "description_toggle": "Adres PLC pojedynczej komendy impulsowej używanej do otwierania, zatrzymywania i zamykania osłony."
+            "label_toggle": "Adres zapisu",
+            "description_toggle": "Adres zapisu komendy jednego przycisku (otwórz/stop/zamknij) osłony."
           },
           "close_command_address": {
             "label": "Adres zapisu zamknij",
@@ -376,7 +376,7 @@
           },
           "cover_status_address": {
             "label": "Adres odczytu stanów",
-            "description": "Adres PLC zawierający stan osłony, porównywany z wartościami skonfigurowanymi poniżej. W zależności od wybranych źródeł sprzężenia zwrotnego pozycji i ruchu, może dostarczać ustaloną pozycję otwarta/zamknięta, stan ruchu albo oba jednocześnie."
+            "description": "Adres stanów osłony, porównywany z wartościami skonfigurowanymi poniżej. W zależności od wybranych metod odczytu stanu pozycji i ruchu, może dostarczać ustaloną pozycję (otwarta/zamknięta), lub ruchu (otwieranie/zamykanie/zatrzymana)."
           },
           "cover_status_open_values": {
             "label": "Wartość(-i) stanu (otwarta)",
@@ -688,7 +688,7 @@
           },
           "options_map": {
             "label": "Mapowanie",
-            "description": "Każda wartość PLC odpowiada opcji wyświetlanej w Home Assistant. Wartości TIME są wyrażone w sekundach. W YAML zapis ma postać par 'wartość:etykieta' rozdzielonych ';'.",
+            "description": "Mapowanie zamienia wartości liczbowe na tekst i odwrotnie. W YAML jako options_map: '0:Pump A;1:Pump B'.",
             "value_label": "Wartość",
             "label_label": "Tekst",
             "add_option": "Dodaj",
