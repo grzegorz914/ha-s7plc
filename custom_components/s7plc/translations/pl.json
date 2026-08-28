@@ -806,31 +806,31 @@
           },
           "hvac_status_off_values": {
             "label": "Wartość(-i) stanu (wył.)",
-            "description": "Wartość(-i) oznaczające (wył.), odczytywane z adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 0 lub 0,10). Pozostaw puste, aby pominąć ten stan."
+            "description": "Wartość(-i) oznaczające (wył.), odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 0 lub 0,10). Pozostaw puste, aby pominąć ten stan."
           },
           "hvac_status_heating_values": {
             "label": "Wartość(-i) stanu (grzanie)",
-            "description": "Wartość(-i) oznaczające (grzanie), odczytywane z adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 1 lub 1,11). Pozostaw puste, aby pominąć ten stan."
+            "description": "Wartość(-i) oznaczające (grzanie), odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 1 lub 1,11). Pozostaw puste, aby pominąć ten stan."
           },
           "hvac_status_cooling_values": {
             "label": "Wartość(-i) stanu (chłodzenie)",
-            "description": "Wartość(-i) oznaczające (chłodzenie), odczytywane z adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 2 lub 2,12). Pozostaw puste, aby pominąć ten stan."
+            "description": "Wartość(-i) oznaczające (chłodzenie), odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 2 lub 2,12). Pozostaw puste, aby pominąć ten stan."
           },
           "hvac_status_idle_values": {
             "label": "Wartość(-i) stanu (bezczynny)",
-            "description": "Wartość(-i) oznaczające stan (bezczynny), odczytywane z adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 3 lub 3,13). Zawsze dostępne dla stanów nierozpoznanych."
+            "description": "Wartość(-i) oznaczające stan (bezczynny), odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 3 lub 3,13). Zawsze dostępne dla stanów nierozpoznanych."
           },
           "hvac_status_drying_values": {
             "label": "Wartość(-i) stanu (osuszanie)",
-            "description": "Opcjonalna wartość(-i) oznaczające stan (osuszanie), odczytywane z adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 4 lub 4,14). Pozostaw puste, aby pominąć ten stan."
+            "description": "Opcjonalna wartość(-i) oznaczające stan (osuszanie), odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 4 lub 4,14). Pozostaw puste, aby pominąć ten stan."
           },
           "hvac_status_fan_values": {
             "label": "Wartość(-i) stanu (wentylowanie)",
-            "description": "Opcjonalna wartość(-i) oznaczające stan (wentylowanie), odczytywane z adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 5 lub 5,15). Pozostaw puste, aby pominąć ten stan."
+            "description": "Opcjonalna wartość(-i) oznaczające stan (wentylowanie), odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 5 lub 5,15). Pozostaw puste, aby pominąć ten stan."
           },
           "hvac_status_preheating_values": {
             "label": "Wartość(-i) stanu (podgrzewanie wstępne)",
-            "description": "Opcjonalna wartość(-i) oznaczające stan (podgrzewanie wstępne), odczytywane z adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 6 lub 6,16). Pozostaw puste, aby pominąć ten stan."
+            "description": "Opcjonalna wartość(-i) oznaczające stan (podgrzewanie wstępne), odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 6 lub 6,16). Pozostaw puste, aby pominąć ten stan."
           },
           "hvac_status_defrosting_values": {
             "label": "Wartość(-i) stanu (rozmrażanie)",
