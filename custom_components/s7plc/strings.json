@@ -217,6 +217,7 @@
       "no_area": "No area",
       "none_option": "None",
       "address_example": "e.g. DB1,REAL0",
+      "address_example_integer": "e.g. DB1,W0",
       "address_example_bool": "e.g. DB1,X0.0",
       "address_example_string": "e.g. DB1,S0.254",
       "entity_example": "e.g. sensor.living_room_temperature",
@@ -1162,6 +1163,21 @@
       "expand_section": "Expand section",
       "collapse_section": "Collapse section",
       "all_entities": "All entities"
+    },
+    "address_builder": {
+      "guided": "Guided",
+      "manual": "Manual",
+      "area": "Memory area",
+      "db_number": "DB number",
+      "data_type": "Data type",
+      "offset": "Byte / element offset",
+      "bit": "Bit index",
+      "length": "String length",
+      "preview": "Address preview",
+      "configure": "Configure address",
+      "invalid": "This address cannot be represented by the guided editor. Correct it manually.",
+      "incomplete": "Complete all required address parts.",
+      "unsupported": "This area and data type combination is not supported."
     }
   }
 }

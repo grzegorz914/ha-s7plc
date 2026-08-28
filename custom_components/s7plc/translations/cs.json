@@ -217,6 +217,7 @@
       "no_area": "Žádná oblast",
       "none_option": "Žádná",
       "address_example": "např. DB1,REAL0",
+      "address_example_integer": "např. DB1,W0",
       "address_example_bool": "např. DB1,X0.0",
       "address_example_string": "např. DB1,S0.254",
       "entity_example": "např. sensor.teplota_obyvaciho_pokoje",
@@ -1162,6 +1163,21 @@
       "expand_section": "Rozbalit sekci",
       "collapse_section": "Sbalit sekci",
       "all_entities": "Všechny entity"
+    },
+    "address_builder": {
+      "guided": "Průvodce",
+      "manual": "Ručně",
+      "area": "Paměťová oblast",
+      "db_number": "Číslo DB",
+      "data_type": "Datový typ",
+      "offset": "Posun bajtu / prvku",
+      "bit": "Číslo bitu",
+      "length": "Délka řetězce",
+      "preview": "Náhled adresy",
+      "configure": "Nastavit adresu",
+      "invalid": "Tuto adresu nelze zobrazit v průvodci. Opravte ji ručně.",
+      "incomplete": "Vyplňte všechny povinné části adresy.",
+      "unsupported": "Tato kombinace oblasti a datového typu není podporována."
     }
   }
 }

@@ -217,6 +217,7 @@
       "no_area": "Brak obszaru",
       "none_option": "Brak",
       "address_example": "np. DB1,REAL0",
+      "address_example_integer": "np. DB1,W0",
       "address_example_bool": "np. DB1,X0.0",
       "address_example_string": "np. DB1,S0.254",
       "entity_example": "np. sensor.temperatura_salonu",
@@ -1162,6 +1163,21 @@
       "expand_section": "Rozwiń sekcję",
       "collapse_section": "Zwiń sekcję",
       "all_entities": "Wszystkie encje"
+    },
+    "address_builder": {
+      "guided": "Kreator",
+      "manual": "Ręcznie",
+      "area": "Obszar pamięci",
+      "db_number": "Numer DB",
+      "data_type": "Typ danych",
+      "offset": "Przesunięcie bajtu / elementu",
+      "bit": "Numer bitu",
+      "length": "Długość tekstu",
+      "preview": "Podgląd adresu",
+      "configure": "Skonfiguruj adres",
+      "invalid": "Tego adresu nie można przedstawić w kreatorze. Popraw go ręcznie.",
+      "incomplete": "Uzupełnij wszystkie wymagane części adresu.",
+      "unsupported": "Ta kombinacja obszaru i typu danych nie jest obsługiwana."
     }
   }
 }
