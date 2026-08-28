@@ -217,6 +217,7 @@
       "no_area": "Nessuna area",
       "none_option": "Nessuna",
       "address_example": "es. DB1,REAL0",
+      "address_example_integer": "es. DB1,W0",
       "address_example_bool": "es. DB1,X0.0",
       "address_example_string": "es. DB1,S0.254",
       "entity_example": "es. sensor.temperatura_soggiorno",
@@ -1178,6 +1179,21 @@
       "expand_section": "Espandi sezione",
       "collapse_section": "Comprimi sezione",
       "all_entities": "Tutte le entità"
+    },
+    "address_builder": {
+      "guided": "Guidato",
+      "manual": "Manuale",
+      "area": "Area di memoria",
+      "db_number": "Numero DB",
+      "data_type": "Tipo di dato",
+      "offset": "Offset byte / elemento",
+      "bit": "Numero bit",
+      "length": "Lunghezza stringa",
+      "preview": "Anteprima indirizzo",
+      "configure": "Configura indirizzo",
+      "invalid": "Questo indirizzo non può essere rappresentato dall’editor guidato. Correggilo manualmente.",
+      "incomplete": "Completa tutte le parti obbligatorie dell’indirizzo.",
+      "unsupported": "Questa combinazione di area e tipo di dato non è supportata."
     }
   }
 }
