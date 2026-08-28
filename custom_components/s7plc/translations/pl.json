@@ -497,7 +497,7 @@
               "opening": "Odczyt z binarnego adresu stanu (otwarta).",
               "closing": "Odczyt z binarnego adresu stanu (zamknięta).",
               "both": "Odczyt z binarnych adresów stanu (otwarta/zamknięta).",
-              "status": "Odczyt z liczbowego adresu stanów, wartości (otwarta/zamknięta)."
+              "status": "Odczyt z liczbowego adresu stanów (otwarta/zamknięta)."
             }
           },
           "cover_movement_feedback": {
@@ -511,7 +511,7 @@
             "descriptions": {
               "none": "Wewnętrzne szacowanie lub tylko pozycja.",
               "bits": "Odczyt z binarnych adresów stanu (otwieranie/zamykanie/zatrzymana).",
-              "status": "Odczyt z jednego liczbowego adresu stanów."
+              "status": "Odczyt z liczbowego adresu stanów (otwieranie/zamykanie/zatrzymana)."
             }
           },
           "cover_stop_enabled": {
