@@ -396,7 +396,7 @@
           },
           "cover_status_stopped_values": {
             "label": "Wartość(-i) stanu (zatrzymana)",
-            "description": "Wartość(-i) oznaczające, że osłona jest zatrzymana (bez ruchu), odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami. Pozostaw puste, aby pominąć ten stan."
+            "description": "Wartość(-i) oznaczające, że osłona jest zatrzymana, odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami. Pozostaw puste, aby pominąć ten stan."
           },
           "opening_state_address": {
             "label": "Adres stanu otwarta",
@@ -834,7 +834,7 @@
           },
           "hvac_status_defrosting_values": {
             "label": "Wartość(-i) stanu (rozmrażanie)",
-            "description": "Opcjonalna wartość oznaczająca stan (rozmrażanie) odczytywana z adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 7 lub 7,17). Pozostaw puste, aby pominąć ten stan."
+            "description": "Opcjonalna wartość oznaczająca stan (rozmrażanie) odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 7 lub 7,17). Pozostaw puste, aby pominąć ten stan."
           },
           "min_temp": {
             "label": "Limit dolny",
