@@ -1174,7 +1174,7 @@
       "default_address_mode_description": "Domyślny edytor stosowany do adresów bez indywidualnego ustawienia.",
       "use_guided": "Użyj prowadzonego, gdy jest to możliwe",
       "use_manual": "Użyj zaawansowanego",
-      "set_all_addresses": "Ustaw wszystkie adresy",
+      "set_all_addresses": "Ustaw wszędzie",
       "apply_guided_all": "Zastosuj prowadzony do wszystkich",
       "apply_manual_all": "Zastosuj zaawansowany do wszystkich",
       "mixed_address_mode": "Mieszany"
