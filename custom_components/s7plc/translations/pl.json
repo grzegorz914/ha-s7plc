@@ -1087,7 +1087,7 @@
       "select_entity": "Wybierz encję",
       "delete_selected": "Usuń wybrane",
       "delete_selected_confirm": "Usunąć {count} wybranych encji?",
-      "duplicate": "Duplikuj encję"
+      "duplicate": "Duplikuj"
     },
     "errors": {
       "required_error": "Wypełnij wszystkie wymagane pola.",
@@ -1171,7 +1171,7 @@
       "duplicate_entity": "Duplikuj encję",
       "configure_duplicate": "Utwórz nową encję na podstawie tej konfiguracji",
       "default_address_mode": "Edytor adresów",
-      "default_address_mode_description": "Domyślny edytor adresów stosowany do adresów bez indywidualnego ustawienia.",
+      "default_address_mode_description": "Domyślny edytor stosowany do adresów bez indywidualnego ustawienia.",
       "use_guided": "Użyj prowadzonego, gdy jest to możliwe",
       "use_manual": "Użyj zaawansowanego",
       "set_all_addresses": "Ustaw wszystkie adresy",
