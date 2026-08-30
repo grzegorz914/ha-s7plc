@@ -215,6 +215,35 @@ def test_address_builder_layout_is_full_width_and_responsive() -> None:
     assert "min-width:150px" not in dialog_styles
 
 
+def test_safari_form_control_normalization_is_preserved() -> None:
+    """Safari controls share dimensions without removing number spinners."""
+    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
+    styles = source.split("get dialogStyles(){return `", 1)[1].split("`;}", 1)[0]
+
+    assert ".address-controls input,.address-controls select{height:38px}" in styles
+    assert (
+        ".visual-form input,.visual-form select{width:100%;min-width:0;"
+        "background:var(--card-background-color)"
+    ) in styles
+    assert (
+        ".visual-form select{-webkit-appearance:none;-moz-appearance:none;"
+        "appearance:none;background-image:linear-gradient(45deg,transparent 50%,"
+        "var(--secondary-text-color) 50%),linear-gradient(135deg,"
+        "var(--secondary-text-color) 50%,transparent 50%)"
+    ) in styles
+    assert "background-position:calc(100% - 18px) calc(50% - 3px)," in styles
+    assert "background-size:5px 5px,5px 5px;background-repeat:no-repeat;" in styles
+    assert "padding-right:30px" in styles
+
+    # Keep native numeric steppers: height, rather than hidden chrome, is the fix.
+    assert "::-webkit-inner-spin-button" not in styles
+    assert "::-webkit-outer-spin-button" not in styles
+    select_rule = styles.split(".visual-form select{-webkit", 1)[1].split("}", 1)[0]
+    assert "linear-gradient(" in select_rule
+    assert "svg" not in select_rule.lower()
+    assert "data:" not in select_rule.lower()
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
 def test_address_builders_use_inner_query_container_and_hidden_controls() -> None:
     """S7 and LOGO keep semantic fieldsets while isolating WebKit containment."""
@@ -4554,3 +4583,68 @@ def test_duplicate_translation_keys_match_all_supported_languages() -> None:
         assert panel["editor"]["configure_duplicate"]
         structures.append((set(panel["actions"]), set(panel["editor"])))
     assert all(structure == structures[0] for structure in structures[1:])
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
+def test_default_address_mode_storage_and_precedence() -> None:
+    """The global default is safe, validated, shared, and below field preferences."""
+    script = f'''
+const store=new Map();
+global.HTMLElement=class {{}};global.customElements={{get(){{}},define(){{}}}};
+global.localStorage={{getItem:key=>store.get(key)??null,setItem:(key,value)=>store.set(key,value)}};
+{PANEL_LOADER}
+const panel=new S7PlcConfigurationPanel();panel.escape=value=>String(value??"");panel.t=key=>key;
+panel.entries=[{{entry_id:"one",plc_family:"s7"}},{{entry_id:"two",plc_family:"s7"}}];
+const mode=html=>html.includes('data-address-mode="guided" class="active"')?"guided":"manual";
+panel.entryId="one";panel._addressPreferenceContext={{entryId:"one",type:"switches",identity:"new-draft"}};
+const result={{missing:panel.readDefaultAddressMode()}};
+store.set(DEFAULT_ADDRESS_MODE_STORAGE_KEY,"manual");result.saved=panel.readDefaultAddressMode();
+result.newManual=mode(panel.addressField("state_address","DB1,X0.0","","",false,"switches"));
+panel.writeAddressMode(panel.addressPreferenceKey("state_address"),"guided");
+result.individualWins=mode(panel.addressField("state_address","DB1,X0.0","","",false,"switches"));
+result.invalidAddress=mode(panel.addressField("command_address","invalid","","",false,"switches"));
+panel.entryId="two";result.sharedAcrossPlcs=panel.readDefaultAddressMode();
+store.set(DEFAULT_ADDRESS_MODE_STORAGE_KEY,"mixed");result.invalid=panel.readDefaultAddressMode();
+global.localStorage={{getItem(){{throw Error("denied")}},setItem(){{throw Error("denied")}}}};
+result.readException=panel.readDefaultAddressMode();result.writeException=panel.writeDefaultAddressMode("manual");
+console.log(JSON.stringify(result));'''
+    result = subprocess.run(["node", "-e", script], check=True, capture_output=True, text=True)
+    assert json.loads(result.stdout) == {
+        "missing": "guided", "saved": "manual", "newManual": "manual",
+        "individualWins": "guided", "invalidAddress": "manual",
+        "sharedAcrossPlcs": "manual", "invalid": "guided",
+        "readException": "guided", "writeException": False,
+    }
+
+
+def test_address_mode_controls_are_accessible_responsive_and_translated() -> None:
+    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
+    page_styles = source.split("get styles(){return `", 1)[1].split("`;}", 1)[0]
+    dialog_styles = source.split("get dialogStyles(){return `", 1)[1].split("`;}", 1)[0]
+    assert 'data-default-address-mode="guided"' in source
+    assert 'button type="button" data-apply-address-mode="guided"' in source
+    assert 'button type="button" data-apply-address-mode="manual"' in source
+    assert "aria-label=\"${this.t('editor.apply_guided_all')}\"" in source
+    assert "aria-label=\"${this.t('editor.apply_manual_all')}\"" in source
+    assert 'role="status" aria-live="polite"' in source
+    assert ".default-address-mode{" in page_styles
+    assert ".address-mode-actions button{" in page_styles
+    assert ".bulk-address-modes" not in page_styles
+    assert ".sr-only" not in page_styles
+    assert ".bulk-address-modes{" in dialog_styles
+    assert ".bulk-address-modes button{" in dialog_styles
+    assert ".sr-only{" in dialog_styles
+    assert ".address-mode-actions button,.bulk-address-modes button" not in source
+    mobile_dialog_styles = dialog_styles.split("@media(max-width:650px){", 1)[1]
+    assert ".bulk-address-modes{justify-content:flex-start}" in mobile_dialog_styles
+    assert (
+        ".default-address-mode{align-items:flex-start;flex-direction:column}"
+        in page_styles
+    )
+    keys = {
+        "default_address_mode", "default_address_mode_description", "use_guided",
+        "use_manual", "set_all_addresses", "apply_guided_all",
+        "apply_manual_all", "mixed_address_mode",
+    }
+    for language in ("en", "it", "de", "pl", "cs"):
+        translation = json.loads(Path(f"custom_components/s7plc/translations/{language}.json").read_text(encoding="utf-8"))
+        assert keys <= translation["config_panel"]["editor"].keys()
