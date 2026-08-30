@@ -100,14 +100,14 @@ def test_connection_details_structural_styles_are_preserved() -> None:
 
 
 def test_compact_selector_descriptions_wrap_long_tokens() -> None:
-    """Compact cards wrap unspaced descriptions without changing their sizing."""
+    """Compact cards wrap unspaced descriptions at their natural height."""
     source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
 
-    assert ".control-card small{font-size:10.5px!important;line-height:1.45;" in source
-    assert "margin-top:6px;overflow-wrap:anywhere}" in source
+    assert ".control-card small{font-size:10.5px!important;line-height:1.4;" in source
+    assert "margin-top:4px;overflow-wrap:anywhere}" in source
     assert ".compact-control-card span{min-width:0;max-width:100%}" in source
     assert (
-        ".light-options .control-card,.compact-control-card{min-height:110px;"
+        ".light-options .control-card,.compact-control-card{min-height:0;"
     ) in source
     assert "grid-auto-rows:max-content" not in source
 
@@ -163,10 +163,10 @@ process.stdout.write(JSON.stringify({properties, attributes}));
     assert json.loads(result.stdout) == {
         "attributes": {"width": "large"},
         "properties": {
-            "--ha-dialog-width-lg": "1200px",
-            "--ha-dialog-max-width": "min(1200px,96vw)",
-            "--mdc-dialog-max-width": "min(1200px,96vw)",
-            "--mdc-dialog-min-width": "min(1200px,96vw)",
+            "--ha-dialog-width-lg": "960px",
+            "--ha-dialog-max-width": "min(960px,96vw)",
+            "--mdc-dialog-max-width": "min(960px,96vw)",
+            "--mdc-dialog-min-width": "min(960px,96vw)",
             "--dialog-content-padding": "0",
         },
     }
@@ -174,7 +174,7 @@ process.stdout.write(JSON.stringify({properties, attributes}));
     # The modern large preset is scoped to openEditor; other dialogs retain their sizes.
     assert source.count("setAttribute('width','large')") == 1
     assert source.count("--ha-dialog-width-lg") == 1
-    assert "min-width:1200px" not in source
+    assert "min-width:960px" not in source
 
 
 def test_address_builder_layout_is_full_width_and_responsive() -> None:
@@ -183,19 +183,64 @@ def test_address_builder_layout_is_full_width_and_responsive() -> None:
     dialog_styles = source.split("get dialogStyles(){return `", 1)[1].split("`;}", 1)[0]
     mobile_styles = dialog_styles.rsplit("@media(max-width:650px){", 1)[1]
 
-    assert ".address-builder{container-type:inline-size;grid-column:1/-1;min-width:0" in dialog_styles
+    assert ".address-builder{grid-column:1/-1;min-width:0" in dialog_styles
+    assert ".address-builder{container-type:inline-size" not in dialog_styles
     assert (
-        ".address-controls{display:grid;grid-template-columns:repeat(auto-fit,"
-        "minmax(min(100%,150px),1fr));gap:10px 12px}"
+        ".address-builder-layout{container-type:inline-size;box-sizing:border-box;"
+        "min-width:0;max-width:100%}"
     ) in dialog_styles
     assert (
-        "@container(min-width:850px){.address-controls{"
+        ".address-controls{display:grid;grid-template-columns:repeat(auto-fit,"
+        "minmax(min(100%,130px),1fr));gap:8px 10px}"
+    ) in dialog_styles
+    assert (
+        "@container(min-width:640px){.address-controls{"
         "grid-template-columns:repeat(5,minmax(0,1fr))}}"
     ) in dialog_styles
     assert ".field-grid{grid-template-columns:1fr}" in mobile_styles
     assert ".address-controls{grid-template-columns:1fr}" in mobile_styles
+    assert (
+        ".address-guided,.address-controls{box-sizing:border-box;min-width:0;"
+        "max-width:100%}"
+    ) in dialog_styles
+    assert (
+        ".address-controls label{box-sizing:border-box;min-width:0;"
+        "max-width:100%}"
+    ) in dialog_styles
+    assert (
+        ".address-controls input,.address-controls select,.address-manual input"
+        "{box-sizing:border-box;width:100%;min-width:0;max-width:100%}"
+    ) in dialog_styles
     assert "width:150px" not in dialog_styles
     assert "min-width:150px" not in dialog_styles
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
+def test_address_builders_use_inner_query_container_and_hidden_controls() -> None:
+    """S7 and LOGO keep semantic fieldsets while isolating WebKit containment."""
+    script = f'''global.HTMLElement=class {{}};global.customElements={{get(){{}},define(){{}}}};{PANEL_LOADER}
+const panel=new S7PlcConfigurationPanel();panel.escape=value=>String(value??"");panel.t=key=>key;
+panel.entries=[{{entry_id:"s7",plc_family:"s7"}}];panel.entryId="s7";
+const s7=panel.addressField("address","DB1,X0.0","Address","",true,"sensors");
+const profile={{family:"logo_0ba8",areas:[{{name:"I",first:1,last:24,vm_offset:1024,data_type:"X"}}],vm_areas:[{{name:"V",first:0,last:850,data_type:"X",width:1,bit_min:0,bit_max:7}}]}};
+const logo=panel.logoAddressField("address","DB1,X1024.0","Address","",true,"binary_sensors",profile);
+console.log(JSON.stringify({{s7,logo}}));'''
+    markup = json.loads(
+        subprocess.run(
+            ["node", "-e", script], check=True, capture_output=True, text=True
+        ).stdout
+    )
+
+    for builder in markup.values():
+        assert builder.startswith('<fieldset class="address-builder"')
+        assert "</legend><div class=\"address-builder-layout\">" in builder
+        assert builder.endswith("</div></fieldset>")
+        assert 'class="address-guided"' in builder
+    assert "data-db-number hidden" not in markup["s7"]
+    assert "data-bit hidden" not in markup["s7"]
+    assert "data-length hidden" not in markup["s7"]
+    assert "data-logo-bit hidden" in markup["logo"]
+    assert 'class="address-manual" hidden' in markup["logo"]
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
@@ -4373,3 +4418,148 @@ def test_logo_yaml_save_does_not_invent_optional_command_address() -> None:
     )
     assert saved["numbers"][0]["address"] == "DB1,WORD2"
     assert "command_address" not in saved["numbers"][0]
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
+def test_address_modes_persist_per_plc_entity_and_field() -> None:
+    """Saved UI choices are isolated and invalid/absent preferences fall back safely."""
+    script = f'''
+const store = new Map();
+global.HTMLElement=class {{}};global.customElements={{get(){{}},define(){{}}}};
+global.localStorage={{getItem:key=>store.get(key)??null,setItem:(key,value)=>store.set(key,value)}};
+{PANEL_LOADER}
+const panel=new S7PlcConfigurationPanel();panel.escape=value=>String(value??"");panel.t=key=>key;
+panel.entries=[{{entry_id:"plc-a",plc_family:"s7"}},{{entry_id:"plc-b",plc_family:"s7"}}];
+const render=(entryId,identity,field,value)=>{{panel.entryId=entryId;panel._addressPreferenceContext={{entryId,type:"switches",identity}};return panel.addressField(field,value,field,"",false,"switches");}};
+const mode=html=>html.includes('data-address-mode="guided" class="active"')?"guided":"manual";
+const state={{automatic:mode(render("plc-a","entity-a","state_address","DB1,X0.0")),unparseable:mode(render("plc-a","entity-a","state_address","not-an-address"))}};
+panel._addressPreferenceContext={{entryId:"plc-a",type:"switches",identity:"entity-a"}};
+panel.writeAddressMode(panel.addressPreferenceKey("state_address"),"manual");
+panel.writeAddressMode(panel.addressPreferenceKey("command_address"),"guided");
+state.savedManual=mode(render("plc-a","entity-a","state_address","DB1,X0.0"));
+state.otherField=mode(render("plc-a","entity-a","command_address","DB1,X0.1"));
+state.otherEntity=mode(render("plc-a","entity-b","state_address","DB1,X0.0"));
+state.otherPlc=mode(render("plc-b","entity-a","state_address","DB1,X0.0"));
+store.set(ADDRESS_MODE_STORAGE_KEY,'{{"bad":"sideways"');
+state.invalidStorage=mode(render("plc-a","entity-a","state_address","DB1,X0.0"));
+store.set(ADDRESS_MODE_STORAGE_KEY,JSON.stringify({{[panel.addressPreferenceKey("state_address")]:"guided"}}));
+state.invalidNeverGuided=mode(render("plc-a","entity-a","state_address","not-an-address"));
+console.log(JSON.stringify(state));'''
+    result = subprocess.run(
+        ["node", "-e", script], check=True, capture_output=True, text=True
+    )
+    assert json.loads(result.stdout) == {
+        "automatic": "guided",
+        "unparseable": "manual",
+        "savedManual": "manual",
+        "otherField": "guided",
+        "otherEntity": "guided",
+        "otherPlc": "guided",
+        "invalidStorage": "guided",
+        "invalidNeverGuided": "manual",
+    }
+
+
+def test_address_mode_toggle_preserves_address_value() -> None:
+    """Mode event handlers only copy the current value; they never clear or convert it."""
+    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
+
+    assert "manual.value=hidden.value;setMode('manual');this.writeAddressMode" in source
+    assert "hidden.value=manual.value;writeParts(parsed);setMode('guided')" in source
+    assert "this.writeAddressMode(field.dataset.addressPreferenceKey,'manual')" in source
+    assert "this.writeAddressMode(field.dataset.addressPreferenceKey,'guided')" in source
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
+def test_duplicate_action_is_accessible_for_every_existing_entity_and_clicks_editor() -> (
+    None
+):
+    """Both layouts use the same cards, whose duplicate action opens create mode."""
+    script = f"""global.HTMLElement=class {{}};global.customElements={{get(){{}},define(){{}}}};{PANEL_LOADER}
+const panel=new S7PlcConfigurationPanel();
+panel.t=key=>({{"actions.duplicate":"Duplicate entity","common.entity":"Entity"}}[key]||key);
+panel.bt=key=>key;panel.escape=value=>String(value??"");panel.icon=()=>"help";panel.stateText=()=>"";panel.selectedIndices=new Set();panel._viewMode="tabs";
+panel.entries=[{{entry_id:"entry",entities:Object.fromEntries(TYPES.map(type=>[type,[{{uid:`uid-${{type}}`,name:type,address:"DB1,X0.0"}}]]))}}];panel.entryId="entry";
+const markup=Object.fromEntries(TYPES.map(type=>[type,panel.entityCards(panel.entries[0],type)]));
+let call=null;panel.openEditor=(...args)=>call=args;
+let stopped=false;const button={{dataset:{{duplicate:"0",entityType:"lights"}}}};
+button.onclick=event=>{{event.stopPropagation();panel.duplicateEntity(Number(button.dataset.duplicate),button.dataset.entityType);}};
+button.onclick({{stopPropagation:()=>stopped=true}});
+console.log(JSON.stringify({{markup,call,stopped,empty:panel.entityCards({{entities:{{sensors:[]}}}},"sensors")}}));"""
+    result = json.loads(
+        subprocess.run(
+            ["node", "-e", script], check=True, capture_output=True, text=True
+        ).stdout
+    )
+
+    for markup in result["markup"].values():
+        assert 'type="button" data-duplicate="0"' in markup
+        assert 'icon="mdi:content-copy"' in markup
+        assert 'title="Duplicate entity"' in markup
+        assert 'aria-label="Duplicate entity"' in markup
+        assert "<ha-tooltip>Duplicate entity</ha-tooltip>" in markup
+        assert (
+            markup.index("data-edit=")
+            < markup.index("data-duplicate=")
+            < markup.index("data-delete=")
+        )
+    assert "data-duplicate" not in result["empty"]
+    assert result["stopped"] is True
+    assert result["call"][:2] == [None, "lights"]
+    assert result["call"][2]["uid"] == "uid-lights"
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
+def test_duplicate_editor_deep_clones_sanitizes_and_infers_virtual_modes() -> None:
+    """A duplicate is an independent create draft with clean YAML and inferred UI state."""
+    script = r"""
+const vm=require("vm");let Panel;let dialog;let captured;
+const form={dataset:{},elements:{},querySelector:()=>null,querySelectorAll:()=>[]};
+const context={structuredClone,HTMLElement:class{},customElements:{get(){},define:(_,cls)=>Panel=cls},document:{createElement:()=>dialog={style:{setProperty(){}},setAttribute(){},querySelector:s=>s==='form'?form:{},querySelectorAll:()=>[],addEventListener(){},remove(){}},body:{appendChild(){}}}};
+vm.createContext(context);vm.runInContext(require('fs').readFileSync(process.argv[1],'utf8'),context);
+const panel=new Panel();panel.entryId='entry';panel.entries=[{entry_id:'entry',entities:{selects:[]}}];panel.t=k=>k;panel.escape=v=>String(v??'');panel.icon=()=>"help";panel.initAddressBuilders=()=>{};panel.editorSections=(type,item)=>(captured={type,item},'');
+const source={uid:'original-uid',name:'Copy me',address:'DB1,BYTE0',command_address:'DB1,BYTE2',options_map:{nested:[{value:1,label:'One'}]},area:'kitchen',availability_mode:'bit',availability_address:'DB1,X4.0'};
+panel.openEditor(null,'selects',source);
+captured.item.options_map.nested[0].label='Changed only in draft';
+const light=panel.inferred({state_address:'DB1,X0.0',brightness_state_address:'DB1,BYTE2'},'lights');
+const cover=panel.inferred({position_state_address:'DB1,BYTE4',stop_command_address:'DB1,X8.0'},'covers');
+const climate=panel.inferred({current_temperature_address:'DB1,REAL0',target_temperature_address:'DB1,REAL4',preset_mode_address:'DB1,BYTE8',on_off_address:'DB1,X9.0',hvac_status_address:'DB1,BYTE10'},'climates');
+console.log(JSON.stringify({draft:captured.item,source,header:dialog.headerTitle,html:dialog.innerHTML,light,cover,climate}));
+"""
+    result = json.loads(
+        subprocess.run(
+            ["node", "-e", script, str(PANEL_JAVASCRIPT)],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    )
+
+    assert "uid" not in result["draft"]
+    assert "original-uid" not in result["html"]
+    assert result["header"] == "editor.duplicate_entity"
+    assert result["source"]["options_map"]["nested"][0]["label"] == "One"
+    assert (
+        result["draft"]["options_map"]["nested"][0]["label"] == "Changed only in draft"
+    )
+    assert result["draft"]["area"] == "kitchen"
+    assert result["draft"]["availability_address"] == "DB1,X4.0"
+    assert result["light"]["light_mode"] == "dimmable"
+    assert result["cover"]["cover_control_mode"] == "position"
+    assert result["cover"]["cover_stop_enabled"] == "enabled"
+    assert result["climate"]["climate_mode_control"] == "coded_on_off"
+    assert result["climate"]["climate_action_feedback"] == "plc"
+
+
+def test_duplicate_translation_keys_match_all_supported_languages() -> None:
+    """Every shipped locale exposes the duplicate action and editor copy."""
+    files = [
+        Path("custom_components/s7plc/strings.json"),
+        *sorted(Path("custom_components/s7plc/translations").glob("*.json")),
+    ]
+    structures = []
+    for path in files:
+        panel = json.loads(path.read_text(encoding="utf-8"))["config_panel"]
+        assert panel["actions"]["duplicate"]
+        assert panel["editor"]["duplicate_entity"]
+        assert panel["editor"]["configure_duplicate"]
+        structures.append((set(panel["actions"]), set(panel["editor"])))
+    assert all(structure == structures[0] for structure in structures[1:])
