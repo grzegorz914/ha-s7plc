@@ -1226,7 +1226,7 @@
         "read": "Wartość odczytana z PLC jest konwertowana przed wyświetleniem w Home Assistant.",
         "write": "Wartość Home Assistant jest konwertowana przed zapisaniem do PLC.",
         "bidirectional_distinct": "Odczyt z obu adresów stanu i zapisu.",
-        "bidirectional_same": "Konwersja działa obu kierunkach dla tego samego adresu."
+        "bidirectional_same": "Konwersja dla tego samego adresu działa w obu kierunkach."
       },
       "clamp_description": "Wartości poniżej lub powyżej ustawionych limitów są ograniczane do tych wartości.",
       "clamp_preview": "Ograniczanie jest aktywne dla odczytu i zapisu podgląd jest tylko lokalny.",
