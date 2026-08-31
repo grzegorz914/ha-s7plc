@@ -496,6 +496,50 @@ async def test_number_linear_scale_writes_using_conversion_endpoints(
 
 
 @pytest.mark.asyncio
+async def test_number_one_conversion_applies_to_distinct_read_and_write_addresses(
+    mock_coordinator, fake_hass
+):
+    """A single value_conversions channel must drive both directions even
+    when the read (address) and write (command_address) addresses are
+    genuinely different PLC locations - the conversion is purely a value
+    transform, address routing is unrelated to it."""
+    mock_coordinator.data = {"number:db1,w0": 500.0}
+    conversion = {
+        "type": "linear_scale",
+        "plc_min": 0,
+        "plc_max": 1000,
+        "ha_min": -50,
+        "ha_max": 50,
+    }
+    ent = S7Number(
+        mock_coordinator,
+        name="Number",
+        unique_id="uid",
+        device_info={"identifiers": {"domain"}},
+        topic="number:db1,w0",
+        address="db1,w0",
+        command_address="db1,w4",
+        min_value=-100,
+        max_value=100,
+        step=1,
+        value_conversion=conversion,
+    )
+    ent.hass = fake_hass
+
+    # Read side: PLC 500 on the read address db1,w0 -> HA 0.
+    assert ent.native_value == pytest.approx(0.0)
+
+    # Write side: HA 25 -> PLC 750, sent to db1,w4 (the distinct write
+    # address), using the exact same conversion config's inverse formula.
+    await ent.async_set_native_value(25)
+    assert mock_coordinator.write_calls[-1] == (
+        "write_batched",
+        "db1,w4",
+        pytest.approx(750),
+    )
+
+
+@pytest.mark.asyncio
 async def test_number_setup_entry_generates_name_from_address(mock_coordinator, fake_hass, dummy_entry, monkeypatch):
     """Test number setup entry generates default names."""
     coord = mock_coordinator
