@@ -2487,6 +2487,7 @@ def test_position_cover_target_position_attribute(
         device_info,
         "db1,b0",
         "db1,b1",
+        "cover:position:test_id",
         position_tilt_bidirectional=True,
     )
     mock_coordinator.data = {"cover:position_command:db1,b1": 42}
@@ -2510,6 +2511,7 @@ def test_position_cover_target_position_absent_when_bidirectional_disabled(
         device_info,
         "db1,b0",
         "db1,b1",
+        "cover:position:test_id",
     )
     mock_coordinator.data = {"cover:position_command:db1,b1": 42}
 
@@ -2532,9 +2534,10 @@ def test_position_cover_target_position_absent_when_command_defaults_to_state(
         device_info,
         "db1,b0",
         None,
+        "cover:position:test_id",
         position_tilt_bidirectional=True,
     )
-    mock_coordinator.data = {"cover:position:db1,b0": 42}
+    mock_coordinator.data = {"cover:position:test_id": 42}
 
     attrs = cover.extra_state_attributes
     assert "s7_target_position" not in attrs
@@ -3117,8 +3120,10 @@ def test_position_cover_target_tilt_attribute(fake_hass, mock_coordinator, devic
         device_info,
         "db1,b0",
         "db1,b1",
+        "cover:position:test_id",
         tilt_state_address="db1,b2",
         tilt_command_address="db1,b3",
+        tilt_topic="cover:tilt:test_id",
         position_tilt_bidirectional=True,
     )
     mock_coordinator.data = {"cover:tilt_command:db1,b3": 60}
@@ -3141,10 +3146,12 @@ def test_position_cover_target_tilt_absent_when_command_defaults_to_state(
         device_info,
         "db1,b0",
         "db1,b1",
+        "cover:position:test_id",
         tilt_state_address="db1,b2",
+        tilt_topic="cover:tilt:test_id",
         position_tilt_bidirectional=True,
     )
-    mock_coordinator.data = {"cover:tilt:db1,b2": 60}
+    mock_coordinator.data = {"cover:tilt:test_id": 60}
 
     attrs = cover.extra_state_attributes
     assert "s7_target_tilt" not in attrs
