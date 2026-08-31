@@ -352,8 +352,8 @@
           "open_command_address": {
             "label": "Adres zapisu otwórz",
             "description": "Adres wyzwalający otwieranie (np. Q0.0, DB1,X0.0).",
-            "label_toggle": "Adres komendy jednego przycisku",
-            "description_toggle": "Adres PLC pojedynczej komendy impulsowej używanej do otwierania, zatrzymywania i zamykania osłony."
+            "label_toggle": "Adres zapisu",
+            "description_toggle": "Adres zapisu komendy jednego przycisku (otwórz/stop/zamknij) osłony."
           },
           "close_command_address": {
             "label": "Adres zapisu zamknij",
@@ -361,27 +361,27 @@
           },
           "cover_status_address": {
             "label": "Adres odczytu stanów",
-            "description": "Adres PLC zawierający stan osłony, porównywany z wartościami skonfigurowanymi poniżej. W zależności od wybranych źródeł sprzężenia zwrotnego pozycji i ruchu, może dostarczać ustaloną pozycję otwarta/zamknięta, stan ruchu albo oba jednocześnie."
+            "description": "Adres stanów osłony, porównywany z wartościami skonfigurowanymi poniżej. W zależności od wybranych metod odczytu stanu pozycji i ruchu, może dostarczać ustaloną pozycję (otwarta/zamknięta), lub ruchu (otwieranie/zamykanie/zatrzymana)."
           },
           "cover_status_open_values": {
             "label": "Wartość(-i) stanu (otwarta)",
-            "description": "Wartość(-i) oznaczające, że osłona jest całkowicie otwarta, odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 1 lub 2,3). Po dopasowaniu osłona zostanie zgłoszona jako otwarta, z priorytetem nad stanem opartym na krańcówkach. Pozostaw puste, aby pominąć ten stan."
+            "description": "Wartość(-i) oznaczające, że osłona jest całkowicie otwarta, odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 1 lub 2,3). Po dopasowaniu osłona zostanie zgłoszona jako otwarta, z priorytetem nad stanem opartym na krańcówkach. Pozostaw puste, aby pominąć ten stan."
           },
           "cover_status_closed_values": {
             "label": "Wartość(-i) stanu (zamknięta)",
-            "description": "Wartość(-i) oznaczające, że osłona jest całkowicie zamknięta, odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami. Po dopasowaniu osłona zostanie zgłoszona jako zamknięta, z priorytetem nad stanem opartym na krańcówkach. Pozostaw puste, aby pominąć ten stan."
+            "description": "Wartość(-i) oznaczające, że osłona jest całkowicie zamknięta, odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami. Po dopasowaniu osłona zostanie zgłoszona jako zamknięta, z priorytetem nad stanem opartym na krańcówkach. Pozostaw puste, aby pominąć ten stan."
           },
           "cover_status_opening_values": {
             "label": "Wartość(-i) stanu (otwieranie)",
-            "description": "Wartość(-i) oznaczające, że osłona się otwiera, odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 1 lub 2,3). Pozostaw puste, aby pominąć ten stan."
+            "description": "Wartość(-i) oznaczające, że osłona się otwiera, odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 1 lub 2,3). Pozostaw puste, aby pominąć ten stan."
           },
           "cover_status_closing_values": {
             "label": "Wartość(-i) stanu (zamykanie)",
-            "description": "Wartość(-i) oznaczające, że osłona się zamyka, odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami. Pozostaw puste, aby pominąć ten stan."
+            "description": "Wartość(-i) oznaczające, że osłona się zamyka, odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami. Pozostaw puste, aby pominąć ten stan."
           },
           "cover_status_stopped_values": {
             "label": "Wartość(-i) stanu (zatrzymana)",
-            "description": "Wartość(-i) oznaczające, że osłona jest zatrzymana (bez ruchu), odczytywane z powyższego adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami. Pozostaw puste, aby pominąć ten stan."
+            "description": "Wartość(-i) oznaczające, że osłona jest zatrzymana, odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami. Pozostaw puste, aby pominąć ten stan."
           },
           "opening_state_address": {
             "label": "Adres stanu otwarta",
@@ -409,11 +409,11 @@
           },
           "position_command_address": {
             "label": "Adres zapisu pozycji",
-            "description": "Adres zapisu nowej pozycji osłony (0-100). Jeśli brak, użyty zostanie adres odczytu."
+            "description": "Adres zapisu nowej pozycji osłony (0-100). Jeśli pusty, użyty zostanie adres odczytu."
           },
           "stop_command_address": {
             "label": "Adres zapisu stop",
-            "description": "Opcjonalny adres zapisu komendy (stop). Jeśli brak, zostanie wykonany zapis aktualnego położenia aby zatrzymać osłonę."
+            "description": "Opcjonalny adres zapisu komendy (stop). Jeśli pusty, zostanie wykonany zapis aktualnego położenia aby zatrzymać osłonę."
           },
           "stop_pulse_duration": {
             "label": "Długość impulsu (s)",
@@ -482,7 +482,7 @@
               "opening": "Odczyt z binarnego adresu stanu (otwarta).",
               "closing": "Odczyt z binarnego adresu stanu (zamknięta).",
               "both": "Odczyt z binarnych adresów stanu (otwarta/zamknięta).",
-              "status": "Odczyt z liczbowego adresu stanów, wartości (otwarta/zamknięta)."
+              "status": "Odczyt z liczbowego adresu stanów (otwarta/zamknięta)."
             }
           },
           "cover_movement_feedback": {
@@ -496,7 +496,7 @@
             "descriptions": {
               "none": "Wewnętrzne szacowanie lub tylko pozycja.",
               "bits": "Odczyt z binarnych adresów stanu (otwieranie/zamykanie/zatrzymana).",
-              "status": "Odczyt z jednego liczbowego adresu stanów."
+              "status": "Odczyt z liczbowego adresu stanów (otwieranie/zamykanie/zatrzymana)."
             }
           },
           "cover_stop_enabled": {
@@ -580,7 +580,7 @@
           },
           "command_address": {
             "label": "Adres zapisu",
-            "description": "Opcjonalny adres zapisu. Jeśli brak, użyty zostanie adres odczytu."
+            "description": "Opcjonalny adres zapisu. Jeśli pusty, użyty zostanie adres odczytu."
           },
           "brightness_state_address": {
             "label": "Adres odczytu jasności",
@@ -632,7 +632,7 @@
           },
           "command_address": {
             "label": "Adres zapisu",
-            "description": "Opcjonalny adres zapisu. Jeśli brak, użyty zostanie adres odczytu."
+            "description": "Opcjonalny adres zapisu. Jeśli pusty, użyty zostanie adres odczytu."
           },
           "device_class": {
             "label": "Klasa urządzenia",
@@ -673,7 +673,7 @@
           },
           "options_map": {
             "label": "Mapowanie",
-            "description": "Każda wartość PLC odpowiada opcji wyświetlanej w Home Assistant. Wartości TIME są wyrażone w sekundach. W YAML zapis ma postać par 'wartość:etykieta' rozdzielonych ';'.",
+            "description": "Mapowanie zamienia wartości liczbowe na tekst i odwrotnie. W YAML jako options_map: '0:Pump A;1:Pump B'.",
             "value_label": "Wartość",
             "label_label": "Tekst",
             "add_option": "Dodaj",
@@ -690,7 +690,7 @@
           },
           "command_address": {
             "label": "Adres zapisu",
-            "description": "Opcjonalny adres zapisu. Jeśli brak, użyty zostanie adres odczytu."
+            "description": "Opcjonalny adres zapisu. Jeśli pusty, użyty zostanie adres odczytu."
           },
           "pattern": {
             "label": "Wzorzec (regex)",
@@ -731,11 +731,11 @@
           },
           "heating_action_address": {
             "label": "Adres stanu grzanie",
-            "description": "Opcjonalny adres odczytu stanu (grzanie). Jeśli brak, stan zostanie ustalony na podstawie temperatury aktualnej i zadanej."
+            "description": "Opcjonalny adres odczytu stanu (grzanie). Jeśli pusty, stan zostanie ustalony na podstawie temperatury aktualnej i zadanej."
           },
           "cooling_action_address": {
             "label": "Adres stanu chłodzenie",
-            "description": "Opcjonalny adres odczytu stanu (chłodzenie). Jeśli brak, stan zostanie ustalony na podstawie temperatury aktualnej i zadanej."
+            "description": "Opcjonalny adres odczytu stanu (chłodzenie). Jeśli pusty, stan zostanie ustalony na podstawie temperatury aktualnej i zadanej."
           },
           "preset_mode_address": {
             "label": "Adres trybów pracy",
@@ -791,35 +791,35 @@
           },
           "hvac_status_off_values": {
             "label": "Wartość(-i) stanu (wył.)",
-            "description": "Wartość(-i) oznaczające (wył.), odczytywane z adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 0 lub 0,10). Pozostaw puste, aby pominąć ten stan."
+            "description": "Wartość(-i) oznaczające (wył.), odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 0 lub 0,10). Pozostaw puste, aby pominąć ten stan."
           },
           "hvac_status_heating_values": {
             "label": "Wartość(-i) stanu (grzanie)",
-            "description": "Wartość(-i) oznaczające (grzanie), odczytywane z adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 1 lub 1,11). Pozostaw puste, aby pominąć ten stan."
+            "description": "Wartość(-i) oznaczające (grzanie), odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 1 lub 1,11). Pozostaw puste, aby pominąć ten stan."
           },
           "hvac_status_cooling_values": {
             "label": "Wartość(-i) stanu (chłodzenie)",
-            "description": "Wartość(-i) oznaczające (chłodzenie), odczytywane z adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 2 lub 2,12). Pozostaw puste, aby pominąć ten stan."
+            "description": "Wartość(-i) oznaczające (chłodzenie), odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 2 lub 2,12). Pozostaw puste, aby pominąć ten stan."
           },
           "hvac_status_idle_values": {
             "label": "Wartość(-i) stanu (bezczynny)",
-            "description": "Wartość(-i) oznaczające stan (bezczynny), odczytywane z adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 3 lub 3,13). Zawsze dostępne dla stanów nierozpoznanych."
+            "description": "Wartość(-i) oznaczające stan (bezczynny), odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 3 lub 3,13). Zawsze dostępne dla stanów nierozpoznanych."
           },
           "hvac_status_drying_values": {
             "label": "Wartość(-i) stanu (osuszanie)",
-            "description": "Opcjonalna wartość(-i) oznaczające stan (osuszanie), odczytywane z adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 4 lub 4,14). Pozostaw puste, aby pominąć ten stan."
+            "description": "Opcjonalna wartość(-i) oznaczające stan (osuszanie), odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 4 lub 4,14). Pozostaw puste, aby pominąć ten stan."
           },
           "hvac_status_fan_values": {
             "label": "Wartość(-i) stanu (wentylowanie)",
-            "description": "Opcjonalna wartość(-i) oznaczające stan (wentylowanie), odczytywane z adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 5 lub 5,15). Pozostaw puste, aby pominąć ten stan."
+            "description": "Opcjonalna wartość(-i) oznaczające stan (wentylowanie), odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 5 lub 5,15). Pozostaw puste, aby pominąć ten stan."
           },
           "hvac_status_preheating_values": {
             "label": "Wartość(-i) stanu (podgrzewanie wstępne)",
-            "description": "Opcjonalna wartość(-i) oznaczające stan (podgrzewanie wstępne), odczytywane z adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 6 lub 6,16). Pozostaw puste, aby pominąć ten stan."
+            "description": "Opcjonalna wartość(-i) oznaczające stan (podgrzewanie wstępne), odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 6 lub 6,16). Pozostaw puste, aby pominąć ten stan."
           },
           "hvac_status_defrosting_values": {
             "label": "Wartość(-i) stanu (rozmrażanie)",
-            "description": "Opcjonalna wartość oznaczająca stan (rozmrażanie) odczytywana z adresu stanu. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 7 lub 7,17). Pozostaw puste, aby pominąć ten stan."
+            "description": "Opcjonalna wartość oznaczająca stan (rozmrażanie) odczyt z adresu stanów. Jedna lub więcej liczb całkowitych oddzielonych przecinkami (np. 7 lub 7,17). Pozostaw puste, aby pominąć ten stan."
           },
           "min_temp": {
             "label": "Limit dolny",
@@ -1067,7 +1067,7 @@
       "select_entity": "Wybierz encję",
       "delete_selected": "Usuń wybrane",
       "delete_selected_confirm": "Usunąć {count} wybranych encji?",
-      "duplicate": "Duplikuj encję"
+      "duplicate": "Duplikuj"
     },
     "errors": {
       "required_error": "Wypełnij wszystkie wymagane pola.",
@@ -1127,7 +1127,7 @@
       "invalid_options_map": "Nieprawidłowe mapowanie, użyj par np. '0:Pump A;1:Pump B'. Wartości i tekst nie mogą się powtarzać w mapowaniu.",
       "options_map_out_of_range": "Co najmniej jedna wartość mapowania wykracza poza zakres typu danych.",
       "select_requires_integer_type": "Adres odczytu i zapisu listy musi być dyskretnym typem danych PLC (BYTE, WORD, DWORD, SINT, USINT, INT, DINT lub TIME).",
-      "select_command_type_mismatch": "Adres polecenia musi używać TIME wtedy i tylko wtedy, gdy adres stanu używa TIME.",
+      "select_command_type_mismatch": "Adres zapisu musi używać TIME tylko i wyłącznie gdy adres stanu używa TIME.",
       "value_conversions_must_be_mapping": "Konwersje wartości muszą być mapą.",
       "scale_requires_both_raw_endpoints": "Both legacy raw scale endpoints are required."
     },
@@ -1151,14 +1151,14 @@
       "save_help": "Ustawienia są zapisywane bezpośrednio w konfiguracji PLC.",
       "duplicate_entity": "Duplikuj encję",
       "configure_duplicate": "Utwórz nową encję na podstawie tej konfiguracji",
-      "default_address_mode": "Domyślny tryb edytora adresów",
-      "default_address_mode_description": "Stosowany do pól adresowych bez indywidualnego ustawienia.",
-      "use_guided": "Użyj kreatora, gdy jest to możliwe",
-      "use_manual": "Użyj trybu ręcznego",
-      "set_all_addresses": "Ustaw wszystkie adresy",
-      "apply_guided_all": "Zastosuj tryb kreatora do wszystkich",
-      "apply_manual_all": "Zastosuj tryb ręczny do wszystkich",
-      "mixed_address_mode": "Tryb mieszany"
+      "default_address_mode": "Edytor adresów",
+      "default_address_mode_description": "Domyślny edytor stosowany do adresów bez indywidualnego ustawienia.",
+      "use_guided": "Użyj prowadzonego, gdy jest to możliwe",
+      "use_manual": "Użyj zaawansowanego",
+      "set_all_addresses": "Ustaw wszędzie",
+      "apply_guided_all": "Zastosuj prowadzony do wszystkich",
+      "apply_manual_all": "Zastosuj zaawansowany do wszystkich",
+      "mixed_address_mode": "Mieszany"
     },
     "layout": {
       "switch_to_tabs": "Przełącz na kategorie",
@@ -1168,14 +1168,14 @@
       "all_entities": "Wszystkie encje"
     },
     "address_builder": {
-      "guided": "Kreator",
-      "manual": "Ręcznie",
+      "guided": "Prowadzony",
+      "manual": "Zaawansowany",
       "area": "Obszar pamięci",
       "db_number": "Numer DB",
       "data_type": "Typ danych",
-      "offset": "Przesunięcie bajtu / elementu",
-      "bit": "Numer bitu",
-      "length": "Długość tekstu",
+      "offset": "Bajt",
+      "bit": "Bit",
+      "length": "Długość",
       "preview": "Podgląd adresu",
       "configure": "Skonfiguruj adres",
       "invalid": "Tego adresu nie można przedstawić w kreatorze. Popraw go ręcznie.",
