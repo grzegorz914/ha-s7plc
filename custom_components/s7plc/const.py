@@ -158,6 +158,12 @@ CONF_TILT_STATE_ADDRESS = "tilt_state_address"
 CONF_TILT_COMMAND_ADDRESS = "tilt_command_address"
 CONF_INVERT_TILT = "invert_tilt"
 
+# Position cover: when position_command_address/tilt_command_address is
+# configured as a genuinely separate address from the state address, also
+# read it back and expose it as a target-position/target-tilt attribute.
+CONF_POSITION_TILT_BIDIRECTIONAL = "position_tilt_bidirectional"
+DEFAULT_POSITION_TILT_BIDIRECTIONAL = False
+
 # Position cover: optional real-time movement status, same climate-style
 # single status address + per-status value mapping as hvac_status_address
 # (unlike the traditional cover's 3 separate boolean addresses above) — a

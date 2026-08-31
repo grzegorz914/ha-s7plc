@@ -2772,8 +2772,8 @@ def test_panel_hides_close_and_operate_time_in_toggle_control_mode() -> None:
 
     assert (
         "control==='position'?['position_state_address','position_command_address',"
-        "'invert_position']:control==='toggle'?['open_command_address']:"
-        "['open_command_address','close_command_address']"
+        "'invert_position','position_tilt_bidirectional']:control==='toggle'?"
+        "['open_command_address']:['open_command_address','close_command_address']"
     ) in source
     assert "if(control==='traditional')visible.add('operate_time')" in source
 
@@ -3580,6 +3580,7 @@ def test_cover_editor_sections_are_ordered_and_yaml_remains_raw() -> None:
         "addresses",
         "cover-stop",
         "cover-tilt",
+        "cover-position-tilt-feedback",
         "ha",
     ]
     positions = [
@@ -3623,6 +3624,7 @@ def test_cover_translation_modes_have_language_parity() -> None:
             "movement_feedback",
             "stop",
             "tilt",
+            "position_tilt_feedback",
         }
         assert expected_errors <= panel["errors"].keys()
 

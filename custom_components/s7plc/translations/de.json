@@ -522,6 +522,18 @@
               "disabled": "Keine Neigung konfigurieren.",
               "enabled": "Neigungsposition lesen und steuern."
             }
+          },
+          "position_tilt_bidirectional": {
+            "label": "Methode",
+            "description": "Methode zur Synchronisierung der gewünschten Position und Neigung mit der SPS. Unabhängig von der Positionsrückmeldung.",
+            "options": {
+              "false": "Einseitig",
+              "true": "Zweiseitig"
+            },
+            "descriptions": {
+              "false": "Die gewünschte Position und Neigung werden an die SPS geschrieben, aber nicht zurückgelesen.",
+              "true": "Die gewünschte Position und Neigung werden in beide Richtungen mit der SPS synchronisiert."
+            }
           }
         },
         "modes": {
@@ -544,6 +556,10 @@
           "tilt": {
             "title": "Neigung",
             "description": "Optionale Neigungssteuerung für Positionsabdeckungen."
+          },
+          "position_tilt_feedback": {
+            "title": "Positions-/Neigungsrückmeldung",
+            "description": "Wählen Sie, ob die zuletzt gesendete Position und Neigung gespeichert oder von der SPS zurückgelesen werden."
           }
         }
       },

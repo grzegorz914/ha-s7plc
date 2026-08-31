@@ -69,6 +69,7 @@ from .const import (
     CONF_PATTERN,
     CONF_POSITION_COMMAND_ADDRESS,
     CONF_POSITION_STATE_ADDRESS,
+    CONF_POSITION_TILT_BIDIRECTIONAL,
     CONF_PRESET_MODE_ADDRESS,
     CONF_PRESET_MODE_AUTO_VALUE,
     CONF_PRESET_MODE_BIDIRECTIONAL,
@@ -236,6 +237,7 @@ ENTITY_ALLOWED_FIELDS: dict[str, frozenset[str]] = {
         CONF_TOGGLE_MODE,
         CONF_TOGGLE_PULSE_DURATION,
         CONF_INVERT_POSITION,
+        CONF_POSITION_TILT_BIDIRECTIONAL,
         CONF_DEVICE_CLASS,
     },
     CONF_LIGHTS: _COMMON_FIELDS
@@ -1250,6 +1252,10 @@ class EntityConfigBuilder:
         # Add invert_position flag
         if user_input.get(CONF_INVERT_POSITION, False):
             item[CONF_INVERT_POSITION] = True
+
+        # Add position_tilt_bidirectional flag
+        if user_input.get(CONF_POSITION_TILT_BIDIRECTIONAL, False):
+            item[CONF_POSITION_TILT_BIDIRECTIONAL] = True
 
         # Apply scan interval
         self._apply_scan_interval(item, user_input.get(CONF_SCAN_INTERVAL))

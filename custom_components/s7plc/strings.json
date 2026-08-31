@@ -522,6 +522,18 @@
               "disabled": "Do not configure tilt.",
               "enabled": "Read and command tilt position."
             }
+          },
+          "position_tilt_bidirectional": {
+            "label": "Position/tilt readback",
+            "description": "Keep the last commanded position and tilt, or read them back from the PLC.",
+            "options": {
+              "false": "Keep last commanded value",
+              "true": "Read from PLC"
+            },
+            "descriptions": {
+              "false": "Keep the last position and tilt commanded by Home Assistant.",
+              "true": "Read back the last commanded position and tilt from the command address."
+            }
           }
         },
         "modes": {
@@ -544,6 +556,10 @@
           "tilt": {
             "title": "Tilt",
             "description": "Optional tilt control for position covers."
+          },
+          "position_tilt_feedback": {
+            "title": "Position/tilt feedback",
+            "description": "Choose whether the last commanded position and tilt are remembered or read back from the PLC."
           }
         }
       },
