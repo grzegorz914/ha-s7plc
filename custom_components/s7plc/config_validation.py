@@ -460,6 +460,40 @@ class EntityConfigBuilder:
 
         return False
 
+    def _has_command_conflict(
+        self,
+        option_key: str,
+        effective_command: str,
+        *,
+        state_key: str,
+        command_key: str = CONF_COMMAND_ADDRESS,
+        skip_idx: int | None = None,
+    ) -> bool:
+        """Return ``True`` if ``effective_command`` collides with another
+        entry's write target.
+
+        An entry's write target is its explicit command address if one is
+        configured, otherwise it falls back to its state/read address (the
+        entity writes there too). Sharing a state address alone is safe —
+        that's the read-only case the uid-topics work intentionally
+        allows — but two entries whose *write* targets coincide would
+        silently fight over the same PLC output, so that case must still
+        be rejected as a duplicate.
+        """
+
+        normalized = self._normalized_address(effective_command)
+        if normalized is None:
+            return False
+
+        for idx, item in enumerate(self._options.get(option_key, [])):
+            if skip_idx is not None and idx == skip_idx:
+                continue
+            stored = item.get(command_key) or item.get(state_key)
+            if self._normalized_address(stored) == normalized:
+                return True
+
+        return False
+
     def _validate_address_field(
         self, address: str | None
     ) -> tuple[str | None, dict[str, str]]:
@@ -676,10 +710,6 @@ class EntityConfigBuilder:
         if errors:
             return None, errors
 
-        # Check for duplicates
-        if self._has_duplicate(CONF_SENSORS, address, skip_idx=skip_idx):
-            return None, {"base": "duplicate_entry"}
-
         # Build item with optional fields
         item = self._build_base_item(
             address,
@@ -707,10 +737,6 @@ class EntityConfigBuilder:
         address, errors = self._validate_address_field(user_input.get(CONF_ADDRESS))
         if errors:
             return None, errors
-
-        # Check for duplicates
-        if self._has_duplicate(CONF_BINARY_SENSORS, address, skip_idx=skip_idx):
-            return None, {"base": "duplicate_entry"}
 
         # Build item with optional fields
         item = self._build_base_item(
@@ -740,15 +766,6 @@ class EntityConfigBuilder:
         if errors:
             return None, errors
 
-        # Check for duplicates
-        if self._has_duplicate(
-            CONF_SWITCHES,
-            state_address,
-            keys=(CONF_STATE_ADDRESS, CONF_ADDRESS),
-            skip_idx=skip_idx,
-        ):
-            return None, {"base": "duplicate_entry"}
-
         # Validate optional command address
         command_address = None
         if user_input.get(CONF_COMMAND_ADDRESS):
@@ -757,6 +774,20 @@ class EntityConfigBuilder:
             )
             if cmd_errors:
                 return None, cmd_errors
+
+        # A write target (command_address, or state_address when no
+        # separate command address is configured — switch.py falls back
+        # the same way at runtime) must not collide with another switch's
+        # write target, or the two would silently fight over one coil.
+        # Sharing just the state/read address is fine and intentionally
+        # unchecked.
+        if self._has_command_conflict(
+            CONF_SWITCHES,
+            command_address or state_address,
+            state_key=CONF_STATE_ADDRESS,
+            skip_idx=skip_idx,
+        ):
+            return None, {"base": "duplicate_entry"}
 
         # Build item
         item: dict[str, Any] = {CONF_STATE_ADDRESS: state_address}
@@ -1049,6 +1080,19 @@ class EntityConfigBuilder:
             if cmd_errors:
                 return None, cmd_errors
 
+        # See the matching check in _build_switch_item: the effective
+        # write target (explicit position_command_address, or
+        # position_state_address when cover.py falls back to it at
+        # runtime) must be unique.
+        if self._has_command_conflict(
+            CONF_COVERS,
+            position_command or position_state,
+            state_key=CONF_POSITION_STATE_ADDRESS,
+            command_key=CONF_POSITION_COMMAND_ADDRESS,
+            skip_idx=skip_idx,
+        ):
+            return None, {"base": "duplicate_entry"}
+
         # Get optional tilt state/command addresses; symmetric to position
         # above.
         tilt_state_addr = None
@@ -1145,15 +1189,6 @@ class EntityConfigBuilder:
                 _, addr_errors = self._validate_address_field(candidate)
                 if addr_errors:
                     return None, addr_errors
-
-        # Check for duplicates
-        if self._has_duplicate(
-            CONF_COVERS,
-            position_state,
-            keys=(CONF_POSITION_STATE_ADDRESS,),
-            skip_idx=skip_idx,
-        ):
-            return None, {"base": "duplicate_entry"}
 
         # Validate optional real-time movement status (cover_status_address
         # and its per-status value mappings)
@@ -1300,15 +1335,6 @@ class EntityConfigBuilder:
         if errors:
             return None, errors
 
-        # Check for duplicates
-        if self._has_duplicate(
-            CONF_LIGHTS,
-            state_address,
-            keys=(CONF_STATE_ADDRESS, CONF_ADDRESS),
-            skip_idx=skip_idx,
-        ):
-            return None, {"base": "duplicate_entry"}
-
         # Validate optional command address
         command_address = None
         if user_input.get(CONF_COMMAND_ADDRESS):
@@ -1317,6 +1343,17 @@ class EntityConfigBuilder:
             )
             if cmd_errors:
                 return None, cmd_errors
+
+        # See the matching check in _build_switch_item: the effective
+        # write target (explicit command_address, or state_address when
+        # light.py falls back to it at runtime) must be unique.
+        if self._has_command_conflict(
+            CONF_LIGHTS,
+            command_address or state_address,
+            state_key=CONF_STATE_ADDRESS,
+            skip_idx=skip_idx,
+        ):
+            return None, {"base": "duplicate_entry"}
 
         # Build item
         item: dict[str, Any] = {CONF_STATE_ADDRESS: state_address}
@@ -1385,10 +1422,6 @@ class EntityConfigBuilder:
         # Parse tag to get type information
         address_tag = parse_tag(address)
 
-        # Check for duplicates
-        if self._has_duplicate(CONF_NUMBERS, address, skip_idx=skip_idx):
-            return None, {"base": "duplicate_entry"}
-
         # Validate optional command address
         command_address = None
         if user_input.get(CONF_COMMAND_ADDRESS):
@@ -1397,6 +1430,17 @@ class EntityConfigBuilder:
             )
             if cmd_errors:
                 return None, cmd_errors
+
+        # See the matching check in _build_switch_item: the effective
+        # write target (explicit command_address, or the plain address
+        # when number.py falls back to it at runtime) must be unique.
+        if self._has_command_conflict(
+            CONF_NUMBERS,
+            command_address or address,
+            state_key=CONF_ADDRESS,
+            skip_idx=skip_idx,
+        ):
+            return None, {"base": "duplicate_entry"}
 
         # Parse numeric values
         min_value: float | None = None
@@ -1564,10 +1608,6 @@ class EntityConfigBuilder:
         if address_tag.data_type not in (DataType.STRING, DataType.WSTRING):
             return None, {"base": "text_requires_string_type"}
 
-        # Check for duplicates
-        if self._has_duplicate(CONF_TEXTS, address, skip_idx=skip_idx):
-            return None, {"base": "duplicate_entry"}
-
         # Validate optional command address
         command_address = None
         if user_input.get(CONF_COMMAND_ADDRESS):
@@ -1576,6 +1616,17 @@ class EntityConfigBuilder:
             )
             if cmd_errors:
                 return None, cmd_errors
+
+        # See the matching check in _build_switch_item: the effective
+        # write target (explicit command_address, or the plain address
+        # when text.py falls back to it at runtime) must be unique.
+        if self._has_command_conflict(
+            CONF_TEXTS,
+            command_address or address,
+            state_key=CONF_ADDRESS,
+            skip_idx=skip_idx,
+        ):
+            return None, {"base": "duplicate_entry"}
 
         # Build item with optional fields
         item = self._build_base_item(

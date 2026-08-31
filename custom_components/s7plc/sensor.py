@@ -292,8 +292,8 @@ async def async_setup_entry(
             continue
         name = item.get(CONF_NAME) or default_entity_name(address)
         area = item.get(CONF_AREA)
-        topic = f"sensor:{address}"
         unique_id = item[CONF_UID]
+        topic = f"sensor:{unique_id}"
         device_class = item.get(CONF_DEVICE_CLASS)
         unit_of_measurement = item.get(CONF_UNIT_OF_MEASUREMENT)
         state_class = item.get(CONF_STATE_CLASS)

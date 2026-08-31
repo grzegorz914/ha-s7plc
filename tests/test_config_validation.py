@@ -628,6 +628,157 @@ def test_toggle_mode_requires_real_feedback() -> None:
     assert item is not None
 
 
+# ============================================================================
+# Shared read addresses (issue #115): uid is the entity's real identity,
+# not the PLC address it reads. Coordinator topics are uid-keyed (see
+# cover.py/sensor.py/etc.), so two entities sharing a read address no
+# longer collide on scan_interval/real_precision bookkeeping.
+#
+# Write/command addresses (buttons, entity_sync, cover open_command_address)
+# keep their duplicate protection unchanged, since two entities writing
+# conflicting commands to the same physical output is a real footgun. The
+# same footgun applies to switches/lights/numbers/texts/position-covers
+# whenever they have no *distinct* command address configured — those
+# entity types fall back to writing their state/read address at runtime
+# (switch.py/light.py/number.py/text.py/cover.py), so two of them sharing
+# just a state address without their own command address would silently
+# fight over the same PLC output. That case is covered separately below
+# in test_shared_state_address_without_distinct_command_still_blocked;
+# here, each write-capable case gets its own distinct command address so
+# the write targets never actually collide.
+# ============================================================================
+
+
+@pytest.mark.parametrize(
+    ("entity_type", "existing", "candidate"),
+    [
+        (
+            "sensors",
+            {"address": "DB1,REAL0", "uid": "existing"},
+            {"address": "DB1,REAL0"},
+        ),
+        (
+            "binary_sensors",
+            {"address": "DB1,X0.0", "uid": "existing"},
+            {"address": "DB1,X0.0"},
+        ),
+        (
+            "switches",
+            {
+                "state_address": "DB1,X0.0",
+                "command_address": "DB1,X0.1",
+                "uid": "existing",
+            },
+            {"state_address": "DB1,X0.0", "command_address": "DB1,X0.2"},
+        ),
+        (
+            "lights",
+            {
+                "state_address": "DB1,X0.0",
+                "command_address": "DB1,X0.1",
+                "uid": "existing",
+            },
+            {"state_address": "DB1,X0.0", "command_address": "DB1,X0.2"},
+        ),
+        (
+            "covers",
+            {
+                "position_state_address": "DB1,BYTE0",
+                "position_command_address": "DB1,BYTE1",
+                "uid": "existing",
+            },
+            {
+                "position_state_address": "DB1,BYTE0",
+                "position_command_address": "DB1,BYTE2",
+            },
+        ),
+        (
+            "numbers",
+            {
+                "address": "DB1,INT0",
+                "command_address": "DB1,INT2",
+                "min_value": 0,
+                "max_value": 100,
+                "uid": "existing",
+            },
+            {
+                "address": "DB1,INT0",
+                "command_address": "DB1,INT4",
+                "min_value": 0,
+                "max_value": 100,
+            },
+        ),
+        (
+            "texts",
+            {
+                "address": "DB1,S0.10",
+                "command_address": "DB1,S20.10",
+                "uid": "existing",
+            },
+            {"address": "DB1,S0.10", "command_address": "DB1,S40.10"},
+        ),
+    ],
+)
+def test_shared_read_address_no_longer_blocked(
+    entity_type: str, existing: dict[str, Any], candidate: dict[str, Any]
+) -> None:
+    item, errors = build_entity_item(
+        entity_type, candidate, options={entity_type: [existing]}
+    )
+    assert not errors
+    assert item is not None
+
+
+@pytest.mark.parametrize(
+    ("entity_type", "existing", "candidate"),
+    [
+        (
+            "switches",
+            {"state_address": "DB1,X0.0", "uid": "existing"},
+            {"state_address": "DB1,X0.0"},
+        ),
+        (
+            "lights",
+            {"state_address": "DB1,X0.0", "uid": "existing"},
+            {"state_address": "DB1,X0.0"},
+        ),
+        (
+            "covers",
+            {"position_state_address": "DB1,BYTE0", "uid": "existing"},
+            {"position_state_address": "DB1,BYTE0"},
+        ),
+        (
+            "numbers",
+            {
+                "address": "DB1,INT0",
+                "min_value": 0,
+                "max_value": 100,
+                "uid": "existing",
+            },
+            {"address": "DB1,INT0", "min_value": 0, "max_value": 100},
+        ),
+        (
+            "texts",
+            {"address": "DB1,S0.10", "uid": "existing"},
+            {"address": "DB1,S0.10"},
+        ),
+    ],
+)
+def test_shared_state_address_without_distinct_command_still_blocked(
+    entity_type: str, existing: dict[str, Any], candidate: dict[str, Any]
+) -> None:
+    """Without a distinct command address, the state address IS the write
+    target (switch.py/light.py/number.py/text.py/cover.py all fall back to
+    it). Two entities sharing it here would silently fight over the same
+    PLC output, so this must stay a duplicate_entry even though the plain
+    read-only case above is allowed."""
+    item, errors = build_entity_item(
+        entity_type, candidate, options={entity_type: [existing]}
+    )
+    assert item is None
+    assert errors == {"base": "duplicate_entry"}
+
+
 def test_toggle_mode_with_status_address_requires_stopped_mapping() -> None:
     """A status-word toggle_mode setup must map "stopped" explicitly, so a
     genuine mid-travel stop can be told apart from a missing/unmatched
@@ -928,3 +1079,42 @@ def test_cover_toggle_pulse_duration_uses_shared_validation_helper() -> None:
     )
     assert not errors
     assert item["toggle_pulse_duration"] == 2.3  # rounded to 1 decimal
+@pytest.mark.parametrize(
+    ("entity_type", "existing", "candidate"),
+    [
+        (
+            "buttons",
+            {"address": "DB1,X0.0", "uid": "existing"},
+            {"address": "DB1,X0.0"},
+        ),
+        (
+            "entity_sync",
+            {
+                "source_entity": "sensor.source_1",
+                "address": "DB1,X0.0",
+                "uid": "existing",
+            },
+            {"source_entity": "sensor.source_2", "address": "DB1,X0.0"},
+        ),
+        (
+            "covers",
+            {
+                "open_command_address": "DB1,X0.0",
+                "close_command_address": "DB1,X0.1",
+                "uid": "existing",
+            },
+            {
+                "open_command_address": "DB1,X0.0",
+                "close_command_address": "DB1,X0.2",
+            },
+        ),
+    ],
+)
+def test_shared_write_address_still_blocked(
+    entity_type: str, existing: dict[str, Any], candidate: dict[str, Any]
+) -> None:
+    item, errors = build_entity_item(
+        entity_type, candidate, options={entity_type: [existing]}
+    )
+    assert item is None
+    assert errors == {"base": "duplicate_entry"}

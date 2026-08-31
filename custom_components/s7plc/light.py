@@ -65,8 +65,8 @@ async def async_setup_entry(
         area = item.get(CONF_AREA)
         scan_interval = item.get(CONF_SCAN_INTERVAL)
 
-        topic = f"light:{state_address}"
         unique_id = item[CONF_UID]
+        topic = f"light:{unique_id}"
 
         # Always register the boolean on/off topic
         await coord.add_item(topic, state_address, scan_interval)

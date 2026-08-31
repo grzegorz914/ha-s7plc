@@ -840,8 +840,8 @@ async def test_setup_entry_setpoint_control_shared_temperature_address(
     fake_hass, mock_coordinator
 ):
     """Two setpoint climates sharing one current_temperature_address get
-    distinct coordinator topics (via make_unique_topic) and are both set
-    up as independent entities with their own unique_id."""
+    distinct coordinator topics (derived from their own unique_id) and are
+    both set up as independent entities."""
     config_entry = MagicMock()
     config_entry.options = {
         CONF_CLIMATES: [

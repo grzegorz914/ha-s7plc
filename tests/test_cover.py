@@ -1136,9 +1136,9 @@ async def test_async_setup_entry_position_status_with_movement_bits(
     assert cover._cover_opening_address == "db1,x2.0"
     assert cover._cover_closing_address == "db1,x2.1"
     add_item_topics = {c.args[0] for c in mock_coordinator.add_item.call_args_list}
-    assert "cover:status:db1,b10" in add_item_topics
-    assert "cover:opening:db1,x2.0" in add_item_topics
-    assert "cover:closing:db1,x2.1" in add_item_topics
+    assert "cover:status:uid-mixed" in add_item_topics
+    assert "cover:opening:uid-mixed" in add_item_topics
+    assert "cover:closing:uid-mixed" in add_item_topics
 
 
 @pytest.mark.asyncio
@@ -1183,9 +1183,9 @@ async def test_async_setup_entry_traditional_status_still_drops_movement_bits(
     assert cover._cover_opening_address is None
     assert cover._cover_closing_address is None
     add_item_topics = {c.args[0] for c in mock_coordinator.add_item.call_args_list}
-    assert "cover:status:db1,b10" in add_item_topics
-    assert "cover:opening:db1,x2.0" not in add_item_topics
-    assert "cover:closing:db1,x2.1" not in add_item_topics
+    assert "cover:status:uid-mixed-traditional" in add_item_topics
+    assert "cover:opening:uid-mixed-traditional" not in add_item_topics
+    assert "cover:closing:uid-mixed-traditional" not in add_item_topics
 
 
 # ============================================================================
@@ -1540,6 +1540,7 @@ async def test_position_cover_current_position(fake_hass, mock_coordinator, devi
         device_info,
         "db1,b0",
         "db1,b1",
+        position_topic="cover:position:db1,b0",
     )
     
     # Test with no data
@@ -1569,6 +1570,7 @@ async def test_position_cover_is_closed(fake_hass, mock_coordinator, device_info
         device_info,
         "db1,b0",
         None,
+        position_topic="cover:position:db1,b0",
     )
     
     # Closed when position is 0
@@ -1602,6 +1604,7 @@ async def test_position_cover_open(fake_hass, mock_coordinator, device_info):
         device_info,
         "db1,b0",
         "db1,b1",
+        position_topic="cover:position:db1,b0",
     )
     cover.hass = fake_hass
     mock_coordinator.data = {}
@@ -1624,6 +1627,7 @@ async def test_position_cover_close(fake_hass, mock_coordinator, device_info):
         device_info,
         "db1,b0",
         "db1,b1",
+        position_topic="cover:position:db1,b0",
     )
     cover.hass = fake_hass
     mock_coordinator.data = {}
@@ -1646,6 +1650,7 @@ async def test_position_cover_set_position(fake_hass, mock_coordinator, device_i
         device_info,
         "db1,b0",
         "db1,b1",
+        position_topic="cover:position:db1,b0",
     )
     cover.hass = fake_hass
     mock_coordinator.data = {}
@@ -1668,6 +1673,7 @@ async def test_position_cover_features(fake_hass, mock_coordinator, device_info)
         device_info,
         "db1,b0",
         None,
+        position_topic="cover:position:db1,b0",
     )
     
     features = cover._attr_supported_features
@@ -1689,6 +1695,7 @@ async def test_position_cover_extra_state_attributes(fake_hass, mock_coordinator
         device_info,
         "db1,b0",
         "db1,b1",
+        position_topic="cover:position:db1,b0",
     )
     
     attrs = cover.extra_state_attributes
@@ -1716,6 +1723,7 @@ async def test_position_cover_inverted_current_position(fake_hass, mock_coordina
         "db1,b0",
         "db1,b1",
         invert_position=True,
+        position_topic="cover:position:db1,b0",
     )
     
     # Set up mock data: PLC reports 0, should appear as 100 (fully open)
@@ -1749,6 +1757,7 @@ async def test_position_cover_inverted_is_closed(fake_hass, mock_coordinator, de
         "db1,b0",
         "db1,b1",
         invert_position=True,
+        position_topic="cover:position:db1,b0",
     )
     
     # PLC reports 100 -> appears as 0 -> closed
@@ -1778,6 +1787,7 @@ async def test_position_cover_inverted_set_position(fake_hass, mock_coordinator,
         "db1,b0",
         "db1,b1",
         invert_position=True,
+        position_topic="cover:position:db1,b0",
     )
     cover.hass = fake_hass
     
@@ -1812,6 +1822,7 @@ async def test_position_cover_inverted_open_close(fake_hass, mock_coordinator, d
         "db1,b0",
         "db1,b1",
         invert_position=True,
+        position_topic="cover:position:db1,b0",
     )
     cover.hass = fake_hass
     
@@ -1837,6 +1848,7 @@ async def test_position_cover_normal_mode_backward_compatibility(fake_hass, mock
         device_info,
         "db1,b0",
         "db1,b1",
+        position_topic="cover:position:db1,b0",
     )
     cover.hass = fake_hass
     
@@ -1871,6 +1883,7 @@ async def test_position_cover_stop_writes_current_position(fake_hass, mock_coord
         device_info,
         "db1,b0",
         "db1,b1",
+        position_topic="cover:position:db1,b0",
     )
     cover.hass = fake_hass
 
@@ -1896,6 +1909,7 @@ async def test_position_cover_stop_inverted(fake_hass, mock_coordinator, device_
         "db1,b0",
         "db1,b1",
         invert_position=True,
+        position_topic="cover:position:db1,b0",
     )
     cover.hass = fake_hass
 
@@ -1920,6 +1934,7 @@ async def test_position_cover_stop_unknown_position(fake_hass, mock_coordinator,
         device_info,
         "db1,b0",
         "db1,b1",
+        position_topic="cover:position:db1,b0",
     )
     cover.hass = fake_hass
 
@@ -1946,6 +1961,7 @@ async def test_position_cover_stop_with_stop_address(fake_hass, mock_coordinator
         "db1,b1",
         stop_command="db1,x1.0",
         stop_pulse_duration=0.1,
+        position_topic="cover:position:db1,b0",
     )
     cover.hass = fake_hass
     mock_coordinator.data = {"cover:position:db1,b0": 42}
@@ -1975,6 +1991,7 @@ async def test_position_cover_stop_with_stop_address_does_not_write_position(
         "db1,b1",
         stop_command="db1,x1.0",
         stop_pulse_duration=0.1,
+        position_topic="cover:position:db1,b0",
     )
     cover.hass = fake_hass
     mock_coordinator.data = {"cover:position:db1,b0": 42}
@@ -2000,6 +2017,7 @@ async def test_position_cover_stop_without_stop_address_fallback(
         device_info,
         "db1,b0",
         "db1,b1",
+        position_topic="cover:position:db1,b0",
     )
     cover.hass = fake_hass
     mock_coordinator.data = {"cover:position:db1,b0": 55}
@@ -2026,6 +2044,7 @@ async def test_position_cover_extra_state_attributes_with_stop(
         "db1,b1",
         stop_command="db1,x1.0",
         stop_pulse_duration=1.5,
+        position_topic="cover:position:db1,b0",
     )
 
     attrs = cover.extra_state_attributes
@@ -2048,6 +2067,7 @@ async def test_position_cover_extra_state_attributes_without_stop(
         device_info,
         "db1,b0",
         "db1,b1",
+        position_topic="cover:position:db1,b0",
     )
 
     attrs = cover.extra_state_attributes
@@ -2107,7 +2127,7 @@ def test_position_cover_status_unconfigured_is_never_opening_or_closing(
     from custom_components.s7plc.cover import S7PositionCover
 
     cover = S7PositionCover(
-        mock_coordinator, "Test Cover", "test_id", device_info, "db1,b0", "db1,b1"
+        mock_coordinator, "Test Cover", "test_id", device_info, "db1,b0", "db1,b1", position_topic="cover:position:db1,b0"
     )
     assert cover.is_opening is False
     assert cover.is_closing is False
@@ -2129,6 +2149,7 @@ def test_position_cover_status_opening_value_drives_is_opening(
         cover_status_topic="cover:status:db1,b10",
         cover_status_address="db1,b10",
         cover_status_opening_values="1",
+        position_topic="cover:position:db1,b0",
     )
     mock_coordinator.data = {"cover:status:db1,b10": 1}
     assert cover.is_opening is True
@@ -2151,6 +2172,7 @@ def test_position_cover_status_closing_value_drives_is_closing(
         cover_status_topic="cover:status:db1,b10",
         cover_status_address="db1,b10",
         cover_status_closing_values="2",
+        position_topic="cover:position:db1,b0",
     )
     mock_coordinator.data = {"cover:status:db1,b10": 2}
     assert cover.is_closing is True
@@ -2173,6 +2195,7 @@ def test_position_cover_status_unmatched_value_forces_false(
         cover_status_topic="cover:status:db1,b10",
         cover_status_address="db1,b10",
         cover_status_opening_values="1",
+        position_topic="cover:position:db1,b0",
     )
     mock_coordinator.data = {"cover:status:db1,b10": 99}
     assert cover.is_opening is False
@@ -2198,6 +2221,7 @@ def test_position_cover_status_does_not_affect_is_closed_when_unconfigured(
         cover_status_topic="cover:status:db1,b10",
         cover_status_address="db1,b10",
         cover_status_closing_values="2",
+        position_topic="cover:position:db1,b0",
     )
     mock_coordinator.data = {
         "cover:position:db1,b0": 50,
@@ -2224,6 +2248,7 @@ def test_position_cover_status_closed_value_overrides_is_closed(
         cover_status_topic="cover:status:db1,b10",
         cover_status_address="db1,b10",
         cover_status_closed_values="1",
+        position_topic="cover:position:db1,b0",
         position_feedback="status",
     )
     mock_coordinator.data = {
@@ -2250,6 +2275,7 @@ def test_position_cover_status_open_value_overrides_is_closed(
         cover_status_topic="cover:status:db1,b10",
         cover_status_address="db1,b10",
         cover_status_open_values="1",
+        position_topic="cover:position:db1,b0",
         position_feedback="status",
     )
     mock_coordinator.data = {
@@ -2279,6 +2305,7 @@ def test_position_cover_status_extra_state_attributes(
         cover_status_closed_values="3",
         cover_status_opening_values="1",
         cover_status_closing_values="2",
+        position_topic="cover:position:db1,b0",
     )
     attrs = cover.extra_state_attributes
     assert attrs["s7_cover_status_address"] == "DB1,B10"
@@ -2295,7 +2322,7 @@ def test_position_cover_status_absent_from_attrs_when_unconfigured(
     from custom_components.s7plc.cover import S7PositionCover
 
     cover = S7PositionCover(
-        mock_coordinator, "Test Cover", "test_id", device_info, "db1,b0", "db1,b1"
+        mock_coordinator, "Test Cover", "test_id", device_info, "db1,b0", "db1,b1", position_topic="cover:position:db1,b0"
     )
     attrs = cover.extra_state_attributes
     assert "s7_cover_status_address" not in attrs
@@ -2529,6 +2556,7 @@ def test_position_cover_is_closed_uses_end_stop_bits_opening_mode(
         device_info,
         "db1,b0",
         "db1,b1",
+        position_topic="cover:position:db1,b0",
         position_feedback="opening",
         opening_state_address="db1,x1.0",
         opening_topic="cover:opened:db1,x1.0",
@@ -2554,6 +2582,7 @@ def test_position_cover_is_closed_uses_end_stop_bits_both_mode(
         device_info,
         "db1,b0",
         "db1,b1",
+        position_topic="cover:position:db1,b0",
         position_feedback="both",
         opening_state_address="db1,x1.0",
         opening_topic="cover:opened:db1,x1.0",
@@ -2584,6 +2613,7 @@ def test_position_cover_is_closed_ignores_status_when_feedback_position(
         device_info,
         "db1,b0",
         "db1,b1",
+        position_topic="cover:position:db1,b0",
         position_feedback="position",
         cover_status_topic="cover:status:db1,b10",
         cover_status_address="db1,b10",
@@ -2610,6 +2640,7 @@ def test_position_cover_movement_bits_drive_is_opening_is_closing(
         device_info,
         "db1,b0",
         "db1,b1",
+        position_topic="cover:position:db1,b0",
         position_feedback="status",
         cover_status_topic="cover:status:db1,b10",
         cover_status_address="db1,b10",
@@ -2642,6 +2673,7 @@ def test_position_cover_movement_status_wins_over_bits(
         device_info,
         "db1,b0",
         "db1,b1",
+        position_topic="cover:position:db1,b0",
         cover_status_topic="cover:status:db1,b10",
         cover_status_address="db1,b10",
         cover_status_closing_values="2",
@@ -2722,7 +2754,7 @@ def test_position_cover_tilt_unconfigured_no_features(fake_hass, mock_coordinato
     from custom_components.s7plc.cover import S7PositionCover
 
     cover = S7PositionCover(
-        mock_coordinator, "Test Cover", "test_id", device_info, "db1,b0", "db1,b1"
+        mock_coordinator, "Test Cover", "test_id", device_info, "db1,b0", "db1,b1", position_topic="cover:position:db1,b0"
     )
 
     assert not (cover._attr_supported_features & CoverEntityFeature.OPEN_TILT)
@@ -2745,7 +2777,9 @@ def test_position_cover_tilt_configured_features(fake_hass, mock_coordinator, de
         "db1,b0",
         "db1,b1",
         tilt_state_address="db1,b2",
+        tilt_topic="cover:tilt:db1,b2",
         tilt_command_address="db1,b3",
+        position_topic="cover:position:db1,b0",
     )
 
     features = cover._attr_supported_features
@@ -2774,6 +2808,8 @@ def test_position_cover_current_tilt_position(fake_hass, mock_coordinator, devic
         "db1,b0",
         "db1,b1",
         tilt_state_address="db1,b2",
+        tilt_topic="cover:tilt:db1,b2",
+        position_topic="cover:position:db1,b0",
     )
 
     mock_coordinator.data = {"cover:tilt:db1,b2": 50}
@@ -2802,8 +2838,10 @@ def test_position_cover_tilt_invert(fake_hass, mock_coordinator, device_info):
         "db1,b0",
         "db1,b1",
         tilt_state_address="db1,b2",
+        tilt_topic="cover:tilt:db1,b2",
         tilt_command_address="db1,b3",
         invert_tilt=True,
+        position_topic="cover:position:db1,b0",
     )
     cover.hass = fake_hass
 
@@ -2824,7 +2862,9 @@ async def test_position_cover_open_close_tilt(fake_hass, mock_coordinator, devic
         "db1,b0",
         "db1,b1",
         tilt_state_address="db1,b2",
+        tilt_topic="cover:tilt:db1,b2",
         tilt_command_address="db1,b3",
+        position_topic="cover:position:db1,b0",
     )
     cover.hass = fake_hass
     mock_coordinator.data = {}
@@ -2853,6 +2893,8 @@ async def test_position_cover_tilt_command_falls_back_to_state_address(
         "db1,b0",
         "db1,b1",
         tilt_state_address="db1,b2",
+        tilt_topic="cover:tilt:db1,b2",
+        position_topic="cover:position:db1,b0",
     )
     cover.hass = fake_hass
     mock_coordinator.data = {}
@@ -2870,7 +2912,7 @@ async def test_position_cover_set_tilt_position_not_configured(
     from custom_components.s7plc.cover import S7PositionCover
 
     cover = S7PositionCover(
-        mock_coordinator, "Test Cover", "test_id", device_info, "db1,b0", "db1,b1"
+        mock_coordinator, "Test Cover", "test_id", device_info, "db1,b0", "db1,b1", position_topic="cover:position:db1,b0"
     )
     cover.hass = fake_hass
 
@@ -2896,7 +2938,9 @@ async def test_position_cover_stop_tilt_with_stop_address(
         stop_command="db1,x1.0",
         stop_pulse_duration=0.01,
         tilt_state_address="db1,b2",
+        tilt_topic="cover:tilt:db1,b2",
         tilt_command_address="db1,b3",
+        position_topic="cover:position:db1,b0",
     )
     cover.hass = fake_hass
     mock_coordinator.data = {}
@@ -2924,7 +2968,9 @@ async def test_position_cover_stop_tilt_without_stop_address(
         "db1,b0",
         "db1,b1",
         tilt_state_address="db1,b2",
+        tilt_topic="cover:tilt:db1,b2",
         tilt_command_address="db1,b3",
+        position_topic="cover:position:db1,b0",
     )
     cover.hass = fake_hass
     mock_coordinator.data = {"cover:tilt:db1,b2": 42}
@@ -2945,7 +2991,9 @@ def test_position_cover_tilt_extra_state_attributes(fake_hass, mock_coordinator,
         "db1,b0",
         "db1,b1",
         tilt_state_address="db1,b2",
+        tilt_topic="cover:tilt:db1,b2",
         tilt_command_address="db1,b3",
+        position_topic="cover:position:db1,b0",
     )
 
     attrs = cover.extra_state_attributes
@@ -2960,7 +3008,7 @@ def test_position_cover_tilt_absent_from_attrs_when_unconfigured(
     from custom_components.s7plc.cover import S7PositionCover
 
     cover = S7PositionCover(
-        mock_coordinator, "Test Cover", "test_id", device_info, "db1,b0", "db1,b1"
+        mock_coordinator, "Test Cover", "test_id", device_info, "db1,b0", "db1,b1", position_topic="cover:position:db1,b0"
     )
 
     attrs = cover.extra_state_attributes

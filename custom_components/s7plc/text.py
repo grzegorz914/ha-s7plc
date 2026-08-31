@@ -71,8 +71,8 @@ async def async_setup_entry(
         min_length = 0
         max_length = tag.length if tag.length is not None else 254
 
-        topic = f"text:{address}"
         unique_id = text_config[CONF_UID]
+        topic = f"text:{unique_id}"
         await coordinator.add_item(topic, address, scan_interval, None)
 
         entities.append(
