@@ -1228,7 +1228,7 @@
         "bidirectional_distinct": "Odczyt z obu adresów stanu i zapisu.",
         "bidirectional_same": "Konwersja dla tego samego adresu działa w obu kierunkach."
       },
-      "clamp_description": "Wartości poniżej lub powyżej ustawionych limitów są ograniczane do tych limitów.",
+      "clamp_description": "Limitowanie ogranicza wynik do wartości ustawionych dla HA min i HA max.",
       "clamp_preview": "Limitowanie jest aktywne dla odczytu i zapisu podgląd jest tylko lokalny.",
       "result_clamped": "Wynik z limitem",
       "clamped_min": "Wartość limitowana do skonfigurowanego minimum",
