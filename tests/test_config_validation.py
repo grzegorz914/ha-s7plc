@@ -1079,6 +1079,8 @@ def test_cover_toggle_pulse_duration_uses_shared_validation_helper() -> None:
     )
     assert not errors
     assert item["toggle_pulse_duration"] == 2.3  # rounded to 1 decimal
+
+
 @pytest.mark.parametrize(
     ("entity_type", "existing", "candidate"),
     [
@@ -1118,3 +1120,46 @@ def test_shared_write_address_still_blocked(
     )
     assert item is None
     assert errors == {"base": "duplicate_entry"}
+
+
+def test_sensor_enum_map_normalizes_metadata() -> None:
+    entity = {
+        "uid": "enum-sensor",
+        "address": "DB1,INT0",
+        "device_class": "temperature",
+        "unit_of_measurement": "°C",
+        "state_class": "measurement",
+        "real_precision": 2,
+        "value_conversions": {
+            "value": {
+                "type": "enum_map",
+                "mappings": [
+                    {"value": 2, "label": "Open"},
+                    {"value": 0, "label": "Closed"},
+                ],
+            }
+        },
+    }
+    item, errors = build_entity_item("sensors", entity, options={})
+    assert not errors
+    assert item["device_class"] == "enum"
+    assert [row["label"] for row in item["value_conversions"]["value"]["mappings"]] == [
+        "Open",
+        "Closed",
+    ]
+    assert not {"unit_of_measurement", "state_class", "real_precision"} & item.keys()
+
+
+@pytest.mark.parametrize("conversions", [{}, {"value": {}}, {"value": None}])
+def test_empty_value_conversions_are_omitted(conversions) -> None:
+    entity = {
+        "uid": "empty-conversion",
+        "address": "DB1,INT0",
+        "value_conversions": conversions,
+    }
+    item, errors = build_entity_item("sensors", entity, options={})
+    assert not errors
+    assert "value_conversions" not in item
+    again, errors = build_entity_item("sensors", item, options={})
+    assert not errors
+    assert again == item
