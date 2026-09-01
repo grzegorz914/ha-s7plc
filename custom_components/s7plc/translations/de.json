@@ -655,6 +655,10 @@
             "label": "Befehlsadresse",
             "description": "SPS-Adresse zum Schreiben des gewählten Wertes (optional). Wenn leer, wird die Statusadresse verwendet."
           },
+          "sync_state": {
+            "label": "Befehl mit Status synchronisieren",
+            "description": "Wenn sich der SPS-Status extern ändert, wird der von der Statusadresse gelesene Wert auch auf die separate Befehlsadresse geschrieben. Der Anfangsstatus wird niemals geschrieben."
+          },
           "options_map": {
             "label": "Optionszuordnung",
             "description": "Jeder SPS-Wert wird der in Home Assistant angezeigten Option zugeordnet. TIME-Werte werden in Sekunden angegeben. In YAML wird dies als durch ';' getrennte 'Wert:Bezeichnung'-Paare gespeichert.",
@@ -927,6 +931,7 @@
     },
     "control_behavior": {
       "label": "Steuerverhalten",
+      "sync_requires_command": "Erfordert eine separate Befehlsadresse.",
       "sync_requires_different": "Erfordert unterschiedliche Status- und Befehlsadressen.",
       "options": {
         "direct": {
@@ -1246,7 +1251,24 @@
       "example_write": "Inverse Schreibkonvertierung",
       "example_clamp": "Ergebnis begrenzen",
       "example_round": "Rundung",
-      "expression_safety": "Templates, Attribute, Indizierung, Importe und Aufrufe anderer als der aufgeführten Funktionen sind nicht zulässig."
+      "expression_safety": "Templates, Attribute, Indizierung, Importe und Aufrufe anderer als der aufgeführten Funktionen sind nicht zulässig.",
+      "enum_map": "Enum-Zuordnung",
+      "plc_value": "PLC-Wert",
+      "ha_state": "Home-Assistant-Status",
+      "add_state": "Status hinzufügen",
+      "enum_states": "{count} Status",
+      "enum_help": "Ordnet diskrete ganzzahlige PLC-Codes Textstatus zu. Die Device Class enum wird automatisch gesetzt.",
+      "errors": {
+        "value_required": "PLC-Wert ist erforderlich.",
+        "value_integer": "PLC-Wert muss eine Ganzzahl sein.",
+        "value_duplicate": "PLC-Wert ist doppelt.",
+        "label_required": "Home-Assistant-Status ist erforderlich.",
+        "label_duplicate": "Home-Assistant-Status ist doppelt.",
+        "mapping_required": "Mindestens eine Zuordnung ist erforderlich.",
+        "datatype_incompatible": "Der PLC-Datentyp ist nicht mit enum_map kompatibel.",
+        "unmapped": "Der PLC-Wert ist nicht zugeordnet."
+      },
+      "action": "Aktion"
     }
   },
   "selector": {
