@@ -266,6 +266,7 @@ ENTITY_ALLOWED_FIELDS: dict[str, frozenset[str]] = {
         CONF_ADDRESS,
         CONF_COMMAND_ADDRESS,
         CONF_OPTIONS_MAP,
+        CONF_SYNC_STATE,
     },
     CONF_TEXTS: _COMMON_FIELDS | {CONF_ADDRESS, CONF_COMMAND_ADDRESS, CONF_PATTERN},
     CONF_CLIMATES: _COMMON_FIELDS
@@ -341,12 +342,9 @@ class EntityConfigBuilder:
     @staticmethod
     def _normalized_address(address: Any | None) -> str | None:
         """Return a normalized representation used for comparisons."""
+        from .address import normalize_address
 
-        sanitized = EntityConfigBuilder._sanitize_address(address)
-        if sanitized is None:
-            return None
-
-        return sanitized.upper()
+        return normalize_address(address)
 
     @staticmethod
     def _normalize_scan_interval_value(value: Any | None) -> float | None:
@@ -800,7 +798,11 @@ class EntityConfigBuilder:
         pulse_command = bool(user_input.get(CONF_PULSE_COMMAND, False))
         if sync_state and pulse_command:
             return None, {"base": "sync_pulse_conflict"}
-        if sync_state and (not command_address or command_address == state_address):
+        if sync_state and (
+            not command_address
+            or self._normalized_address(command_address)
+            == self._normalized_address(state_address)
+        ):
             return None, {"base": "sync_same_address"}
         item[CONF_SYNC_STATE] = sync_state
         item[CONF_PULSE_COMMAND] = pulse_command
@@ -1362,7 +1364,11 @@ class EntityConfigBuilder:
         pulse_command = bool(user_input.get(CONF_PULSE_COMMAND, False))
         if sync_state and pulse_command:
             return None, {"base": "sync_pulse_conflict"}
-        if sync_state and (not command_address or command_address == state_address):
+        if sync_state and (
+            not command_address
+            or self._normalized_address(command_address)
+            == self._normalized_address(state_address)
+        ):
             return None, {"base": "sync_same_address"}
         item[CONF_SYNC_STATE] = sync_state
         item[CONF_PULSE_COMMAND] = pulse_command
@@ -1569,6 +1575,15 @@ class EntityConfigBuilder:
 
         if command_address:
             item[CONF_COMMAND_ADDRESS] = command_address
+
+        sync_state = bool(user_input.get(CONF_SYNC_STATE, False))
+        if sync_state and (
+            not command_address
+            or self._normalized_address(command_address)
+            == self._normalized_address(address)
+        ):
+            return None, {"base": "sync_same_address"}
+        item[CONF_SYNC_STATE] = sync_state
 
         # Store the normalized string form; the platform re-parses it.
         item[CONF_OPTIONS_MAP] = ";".join(
@@ -2112,15 +2127,29 @@ def build_entity_item(
                 "base": f"unsupported_conversion_channels:{','.join(unknown_channels)}"
             }
         try:
+            canonical_conversions = {}
             for channel, conversion in conversions.items():
                 # Do not collapse state/command with ``or``: differing PLC
                 # datatypes must both support and validate the conversion.
-                normalized = normalize_value_conversion(entity, channel)
-                for context in conversion_contexts(entity_type, item, channel):
+                contexts = conversion_contexts(entity_type, item, channel)
+                normalized = normalize_value_conversion(entity, channel, contexts[0])
+                if normalized is None:
+                    continue
+                for context in contexts:
                     validate_value_conversion(normalized, context)
-            item[CONF_VALUE_CONVERSIONS] = {
-                key: dict(value) for key, value in conversions.items() if value
-            }
+                canonical_conversions[channel] = normalized
+            if canonical_conversions:
+                item[CONF_VALUE_CONVERSIONS] = canonical_conversions
+            else:
+                item.pop(CONF_VALUE_CONVERSIONS, None)
+            if (
+                entity_type == CONF_SENSORS
+                and canonical_conversions.get("value", {}).get("type") == "enum_map"
+            ):
+                item[CONF_DEVICE_CLASS] = "enum"
+                item.pop(CONF_UNIT_OF_MEASUREMENT, None)
+                item.pop(CONF_STATE_CLASS, None)
+                item.pop(CONF_REAL_PRECISION, None)
         except (ValueConversionError, ValueError, TypeError) as err:
             return None, {"base": f"invalid_value_conversion:{err}"}
 
