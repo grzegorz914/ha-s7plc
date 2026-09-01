@@ -671,6 +671,10 @@
             "label": "Adres zapisu",
             "description": "Opcjonalny adres zapisu. Jeśli pusty, użyty zostanie adres odczytu."
           },
+          "sync_state": {
+            "label": "Sterowanie synchronizacji stanu",
+            "description": "Po zewnętrznej zmianie stanu PLC wartość z adresu stanu jest zapisywana także pod osobnym adresem polecenia. Stan początkowy nigdy nie jest zapisywany."
+          },
           "options_map": {
             "label": "Mapowanie",
             "description": "Każda wartość PLC odpowiada opcji wyświetlanej w Home Assistant. Wartości TIME są wyrażone w sekundach. W YAML zapis ma postać par 'wartość:etykieta' rozdzielonych ';'.",
@@ -943,6 +947,7 @@
     },
     "control_behavior": {
       "label": "Typ",
+      "sync_requires_command": "Wymaga oddzielnego adresu polecenia.",
       "sync_requires_different": "Wymaga różnych adresów stanu i polecenia.",
       "options": {
         "direct": {
@@ -1262,7 +1267,24 @@
       "example_write": "Odwrotna konwersja zapisu",
       "example_clamp": "Ograniczenie wyniku",
       "example_round": "Zaokrąglanie",
-      "expression_safety": "Szablony, atrybuty, indeksowanie, importy i wywołania funkcji innych niż wymienione są niedozwolone."
+      "expression_safety": "Szablony, atrybuty, indeksowanie, importy i wywołania funkcji innych niż wymienione są niedozwolone.",
+      "enum_map": "Mapowanie enum",
+      "plc_value": "Wartość PLC",
+      "ha_state": "Stan Home Assistant",
+      "add_state": "Dodaj stan",
+      "enum_states": "{count} stanów",
+      "enum_help": "Mapuje dyskretne całkowite kody PLC na stany tekstowe. Klasa urządzenia enum jest ustawiana automatycznie.",
+      "errors": {
+        "value_required": "Wartość PLC jest wymagana.",
+        "value_integer": "Wartość PLC musi być liczbą całkowitą.",
+        "value_duplicate": "Wartość PLC jest zduplikowana.",
+        "label_required": "Stan Home Assistant jest wymagany.",
+        "label_duplicate": "Stan Home Assistant jest zduplikowany.",
+        "mapping_required": "Wymagane jest co najmniej jedno mapowanie.",
+        "datatype_incompatible": "Typ danych PLC nie jest zgodny z enum_map.",
+        "unmapped": "Wartość PLC nie jest zmapowana."
+      },
+      "action": "Akcja"
     }
   },
   "selector": {
