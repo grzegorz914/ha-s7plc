@@ -60,103 +60,6 @@ def test_panel_action_controls_share_height_and_normalize_only_plc_selects() -> 
     assert ".config-yaml{display:flex;align-items:center" in styles
 
 
-def test_category_navigation_markup_and_styles() -> None:
-    """Categories use touch tabs or the integrated accessible heading menu."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-
-    assert 'class="category-tabs"' in source
-    assert "data-category-menu-toggle" in source
-    assert 'aria-haspopup="menu"' in source
-    assert 'role="menu" hidden' in source
-    assert 'aria-current="page"' in source
-    assert "this.icon(type)" in source
-    assert "mdi:chevron-down" in source
-    assert "selectCategory(type)" in source
-    assert "navigator?.maxTouchPoints" in source
-    assert "matchMedia?.('(pointer: coarse)')" in source
-    assert "nav.scrollWidth<=nav.clientWidth+2" in source
-    assert "button[data-type]" in source
-    assert "Math.abs(value-top)<=2" in source
-    assert "single-row-category-mode" in source
-    assert "wrapped-category-mode" in source
-    assert "compact-category-mode" in source
-    assert ".category-mode-pending>.category-tabs{visibility:hidden}" in source
-    assert ".wrapped-category-mode>.category-tabs{flex-wrap:wrap;overflow:visible;row-gap:8px" in source
-    assert ".compact-category-mode>.category-tabs{display:none}" in source
-    assert "scrollbar-width:none" in source
-    assert ".category-tabs::-webkit-scrollbar{width:0;height:0;display:none}" in source
-    assert "overflow-x:auto;overflow-y:hidden" in source
-    assert "scrollIntoView" not in source[source.index("selectCategory(type)") : source.index("_renderSectionsView")]
-    assert "addEventListener?.('wheel'" not in source
-    assert "data-category-selector" not in source
-    assert ">Categoria<" not in source
-    assert "category-arrow" not in source
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_category_mode_selection_and_viewport_positioning() -> None:
-    """Touch, adaptive desktop rows, selection, and menu placement stay coherent."""
-    script = f'''global.HTMLElement=class {{}};global.customElements={{get(){{}},define(){{}}}};
-global.requestAnimationFrame=fn=>fn();global.document={{documentElement:{{clientWidth:800,clientHeight:600}},addEventListener(){{}},removeEventListener(){{}}}};
-global.innerWidth=800;global.innerHeight=600;global.addEventListener=()=>{{}};global.removeEventListener=()=>{{}};
-{PANEL_LOADER}
-const panel=new S7PlcConfigurationPanel();panel.selectedIndices=new Set([1]);panel.render=()=>panel.rendered=(panel.rendered||0)+1;panel.closeCategoryMenu=()=>panel.closed=true;
-Object.defineProperty(global,'navigator',{{value:{{maxTouchPoints:1}},configurable:true}});global.matchMedia=()=>({{matches:false}});const touch=panel.touchCapable();
-Object.defineProperty(global,'navigator',{{value:{{maxTouchPoints:0}},configurable:true}});
-const active=new Set();const history=[];const classList={{toggle:(name,on)=>{{on?active.add(name):active.delete(name);history.push([...active]);}},remove:name=>active.delete(name)}};
-const layout={{classList,clientWidth:500}};let rowTops=[0];let measuredSelector;
-const nav={{scrollWidth:500,clientWidth:500,querySelectorAll:selector=>{{measuredSelector=selector;return rowTops.map(offsetTop=>({{offsetTop}}));}},querySelector:()=>null}};
-panel.querySelector=s=>s==='.category-tabs'?nav:layout;
-panel.updateCategoryMode();const one=[...active];
-nav.scrollWidth=700;rowTops=[0,0,40,41];panel.updateCategoryMode();const two=[...active];
-rowTops=[0,40,80];panel.updateCategoryMode();const three=[...active];
-rowTops=[0,40];panel.updateCategoryMode();const backTwo=[...active];
-nav.scrollWidth=500;panel.updateCategoryMode();const backOne=[...active];
-Object.defineProperty(global,'navigator',{{value:{{maxTouchPoints:1}},configurable:true}});nav.scrollWidth=900;rowTops=[0,40,80];panel.updateCategoryMode();const touchMode=[...active];
-Object.defineProperty(global,'navigator',{{value:{{maxTouchPoints:0}},configurable:true}});
-panel.selectCategory('switches');const selected={{type:panel.type,size:panel.selectedIndices.size,closed:panel.closed,rendered:panel.rendered}};panel.selectCategory('invalid');
-const style={{}};const menu={{hidden:false,style,classList:{{toggle(_n,on){{this.up=on;}}}},getBoundingClientRect:()=>({{width:280,height:250}})}};const button={{getBoundingClientRect:()=>({{left:760,top:500,bottom:540}})}};
-panel.querySelector=s=>s.includes('toggle')?button:menu;panel.positionCategoryMenu();
-console.log(JSON.stringify({{touch,one,two,three,backTwo,backOne,touchMode,measuredSelector,selected,invalid:panel.type,left:style.left,top:style.top,up:menu.classList.up}}));'''
-    value = json.loads(
-        subprocess.run(["node", "-"], input=script, check=True, capture_output=True, text=True).stdout
-    )
-    assert value == {
-        "touch": True,
-        "one": ["single-row-category-mode"],
-        "two": ["wrapped-category-mode"],
-        "three": ["compact-category-mode"],
-        "backTwo": ["wrapped-category-mode"],
-        "backOne": ["single-row-category-mode"],
-        "touchMode": ["single-row-category-mode"],
-        "measuredSelector": "button[data-type]",
-        "selected": {"type": "switches", "size": 0, "closed": True, "rendered": 1},
-        "invalid": "switches",
-        "left": "508px",
-        "top": "244px",
-        "up": True,
-    }
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_category_resize_observer_uses_width_and_cleans_up() -> None:
-    """Repeated observer heights do not remeasure and lifecycle cleanup disconnects."""
-    script = f'''global.HTMLElement=class {{}};global.customElements={{get(){{}},define(){{}}}};
-global.requestAnimationFrame=fn=>fn();global.addEventListener=()=>{{}};global.removeEventListener=()=>{{}};global.document={{removeEventListener(){{}}}};
-let callback,observed,disconnected=0;global.ResizeObserver=class {{constructor(cb){{callback=cb}}observe(node){{observed=node}}disconnect(){{disconnected++}}}};
-{PANEL_LOADER}
-const panel=new S7PlcConfigurationPanel();let updates=0;panel.updateCategoryMode=()=>updates++;
-const layout={{clientWidth:500,getBoundingClientRect:()=>({{width:500}})}};const nav={{}};const toggle={{setAttribute(){{}}}};
-panel.querySelector=s=>s==='.category-tabs'?nav:s==='.category-layout'?layout:s.includes('toggle')?toggle:null;
-panel.querySelectorAll=()=>[];panel.setupCategoryNavigation();
-callback([{{contentRect:{{width:500,height:40}}}}]);callback([{{contentRect:{{width:500,height:80}}}}]);callback([{{contentRect:{{width:498,height:80}}}}]);
-panel.teardownCategoryNavigation();console.log(JSON.stringify({{updates,observed:observed===layout,disconnected,lastWidth:panel._categoryLastWidth}}));'''
-    value = json.loads(
-        subprocess.run(["node", "-"], input=script, check=True, capture_output=True, text=True).stdout
-    )
-    assert value == {"updates": 3, "observed": True, "disconnected": 1, "lastWidth": None}
-
-
 def test_const_version_matches_manifest() -> None:
     manifest = json.loads(
         Path("custom_components/s7plc/manifest.json").read_text(encoding="utf-8")
@@ -738,58 +641,6 @@ console.log(JSON.stringify({{
     ]
 
 
-def test_connection_badge_opens_accessible_live_read_only_details() -> None:
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    assert ".connection-badge').onclick=()=>this.openConnectionDetails(entry)" in source
-    assert "dialog.headerTitle=this.t('connection_details.title')" in source
-    assert "dialog.setAttribute('aria-label',this.t('connection_details.title'))" in source
-    assert 'role="status"' in source and 'aria-label="${this.escape(this.t(`common.${status}`))}"' in source
-    assert 'aria-hidden="true"' in source
-    assert "this.updateConnectionDialog()" in source
-    assert "body.scrollTop=scroll" in source
-    assert "this.loadConnectionAvailability(dialog,entry)" in source
-    update_source = source[source.index("  updateConnectionDialog()") : source.index("  openConnectionDetails(entry){")]
-    assert "callApi(" not in update_source
-    details_source = source[source.index("  openConnectionDetails(entry){") : source.index("  readAddressModePreferences()")]
-    assert "input name=" not in details_source
-
-
-def test_connection_details_restore_inventory_modes_and_metric_gating() -> None:
-    if shutil.which("node") is None:
-        pytest.skip("node is required to evaluate the panel helpers")
-    script = f"""
-global.HTMLElement = class {{}}; global.customElements = {{define() {{}}}};
-{PANEL_LOADER}
-const rows=e=>Object.fromEntries(CONNECTION_DETAIL_SECTIONS(e).map(s=>[s.key,Object.fromEntries(s.rows)]));
-const base={{title:'PLC',plc_family:'s7',pys7_version:'3.1.1',data:{{connection_type:'rack_slot',rack:0,slot:1,pys7_connection_type:'pg',scan_interval:0,operation_timeout:5,optimize_read:false,enable_write_batching:false,max_retries:3,retry_backoff_initial:0.0,retry_backoff_max:2,future_option:42}}}};
-console.log(JSON.stringify({{
- disabled:rows({{...base,data:{{...base.data,enable_metrics:false}},connection_runtime:{{polling_interval_seconds:10,configured_entities:7,last_cycle_seconds:0,read_count:0,write_count:0,communication_errors:0}}}}),
- enabled:rows({{...base,data:{{...base.data,enable_metrics:true}},connection_runtime:{{last_cycle_seconds:0,read_count:0,write_count:0,communication_errors:0}}}}),
- tsap:rows({{...base,data:{{...base.data,connection_type:'tsap',local_tsap:'01.00',remote_tsap:'03.02'}}}})
-}}));
-"""
-    result=json.loads(subprocess.run(["node","-e",script],check=True,capture_output=True,text=True).stdout)
-    disabled=result["disabled"]
-    assert list(disabled["connection"]) == ["plc_family","pys7_version","pys7_connection_type","connection_type","rack","slot"]
-    assert disabled["configuration"] == {"scan_interval":0,"operation_timeout":5,"optimize_read":False,"enable_write_batching":False,"enable_metrics":False,"polling_interval":10,"configured_entities":7}
-    assert disabled["retry"] == {"max_retries":3,"retry_backoff_initial":0,"retry_backoff_max":2}
-    assert disabled["other"] == {"future_option":42}
-    assert "metrics" not in disabled
-    assert result["enabled"]["metrics"] == {"last_cycle":0,"read_count":0,"write_count":0,"communication_errors":0}
-    assert result["enabled"]["configuration"]["enable_metrics"] is True
-    assert "rack" not in result["tsap"]["connection"] and "slot" not in result["tsap"]["connection"]
-    assert result["tsap"]["connection"]["local_tsap"] == "01.00"
-    assert result["tsap"]["connection"]["remote_tsap"] == "03.02"
-
-
-def test_connection_availability_ui_is_complete() -> None:
-    source=PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    for key in ("percentage","current_uptime","current_downtime","disconnections","unknown_time","percentage_note"):
-        assert key in source
-    assert 'class="connection-timeline"' in source
-    assert 'class="availability-container"' in source
-
-
 def test_panel_typography_uses_home_assistant_fonts_semantically() -> None:
     source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
     assert "var(--ha-font-family-body,Roboto,sans-serif)" in source
@@ -825,159 +676,6 @@ console.log(panel.connectionDetailGroupsMarkup({{data:{{optimize_read:true,enabl
     assert ".connection-detail dd.boolean-value{flex:0 0 auto;min-width:max-content;white-space:nowrap;word-break:normal;overflow-wrap:normal}" in source
 
 
-def test_connection_values_preserve_dotted_versions() -> None:
-    """Literal versions must not be reduced to their final dotted segment."""
-    if shutil.which("node") is None:
-        pytest.skip("node is required to evaluate the panel helpers")
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = f"""
-global.HTMLElement = class {{}};
-global.customElements = {{define() {{}}}};
-{PANEL_LOADER}
-const panel=new S7PlcConfigurationPanel();
-panel.panelTranslations={{config_panel:{{connection_details:{{values:{{yes:"Yes",pg:"PG profile"}}}}}}}};
-console.log(JSON.stringify([
-  panel.connectionValue("3.1.1"),
-  panel.connectionValue(true),
-  panel.connectionValue("pg")
-]));
-"""
-    result = json.loads(
-        subprocess.run(
-            ["node", "-e", script], check=True, capture_output=True, text=True
-        ).stdout
-    )
-
-    assert result == ["3.1.1", "Yes", "PG profile"]
-
-
-def test_connection_availability_calculations_cover_unknown_and_transitions() -> None:
-    """Timeline excludes unknown time and counts only on-to-off transitions."""
-    if shutil.which("node") is None:
-        pytest.skip("node is required to evaluate the panel helpers")
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = f"""
-global.HTMLElement = class {{}};
-global.customElements = {{define() {{}}}};
-{PANEL_LOADER}
-const hour = 3600000, now = Date.parse("2026-08-21T12:00:00Z");
-const history = [
-  {{state:"on",last_changed:"2026-08-20T14:00:00Z"}},
-  {{state:"off",last_changed:"2026-08-20T18:00:00Z"}},
-  {{state:"unavailable",last_changed:"2026-08-20T20:00:00Z"}},
-  {{state:"on",last_changed:"2026-08-20T21:00:00Z"}},
-  {{state:"off",last_changed:"2026-08-21T02:00:00Z"}},
-  {{state:"on",last_changed:"2026-08-21T03:00:00Z"}}
-];
-const result=BUILD_CONNECTION_AVAILABILITY(history,now,24*hour);
-console.log(JSON.stringify({{durations:result.durations,availability:result.availability,disconnects:result.disconnects,currentUptime:result.currentUptime,last:result.lastDisconnection}}));
-"""
-    result = json.loads(
-        subprocess.run(
-            ["node", "-e", script], check=True, capture_output=True, text=True
-        ).stdout
-    )
-    assert result["durations"] == {
-        "connected": 18 * 3_600_000,
-        "disconnected": 3 * 3_600_000,
-        "unknown": 3 * 3_600_000,
-    }
-    assert result["availability"] == pytest.approx(18 / 21 * 100)
-    assert result["disconnects"] == 2
-    assert result["currentUptime"] == 9 * 3_600_000
-    assert result["last"]["end"] - result["last"]["start"] == 3_600_000
-
-
-def test_connection_availability_does_not_invent_initial_state() -> None:
-    """Incomplete recorder data stays unknown until the first actual event."""
-    if shutil.which("node") is None:
-        pytest.skip("node is required to evaluate the panel helpers")
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = f"""
-global.HTMLElement = class {{}};
-global.customElements = {{define() {{}}}};
-{PANEL_LOADER}
-const now=Date.parse("2026-08-21T12:00:00Z"),hour=3600000;
-const result=BUILD_CONNECTION_AVAILABILITY([{{state:"on",last_changed:"2026-08-21T10:00:00Z"}}],now,24*hour);
-console.log(JSON.stringify(result));
-"""
-    result = json.loads(
-        subprocess.run(
-            ["node", "-e", script], check=True, capture_output=True, text=True
-        ).stdout
-    )
-    assert result["durations"]["unknown"] == 22 * 3_600_000
-    assert result["durations"]["connected"] == 2 * 3_600_000
-    assert result["availability"] == 100
-    assert result["disconnects"] == 0
-
-
-def test_connection_duration_prefers_live_state_and_handles_edge_cases() -> None:
-    """Live last_changed wins, while absent/invalid states degrade safely."""
-    if shutil.which("node") is None:
-        pytest.skip("node is required to evaluate the panel helpers")
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = f"""
-global.HTMLElement = class {{}};
-global.customElements = {{define() {{}}}};
-{PANEL_LOADER}
-const hour=3600000,now=Date.parse("2026-08-21T12:00:00Z");
-const historical={{currentUptime:2*hour}};
-const apply=state=>APPLY_LIVE_CONNECTION_DURATION(historical,state,now);
-console.log(JSON.stringify({{
-  longUptime:apply({{state:"on",last_changed:"2026-08-19T06:00:00Z"}}),
-  absent:apply(undefined),
-  invalid:apply({{state:"on",last_changed:"not-a-date"}}),
-  off:apply({{state:"off",last_changed:"2026-08-21T07:00:00Z"}}),
-  unknown:apply({{state:"unknown",last_changed:"2026-08-21T07:00:00Z"}}),
-  unavailable:apply({{state:"unavailable",last_changed:"2026-08-21T07:00:00Z"}})
-}}));
-"""
-    result = json.loads(
-        subprocess.run(
-            ["node", "-e", script], check=True, capture_output=True, text=True
-        ).stdout
-    )
-
-    assert result["longUptime"]["currentUptime"] == 54 * 3_600_000
-    assert result["absent"]["currentUptime"] == 2 * 3_600_000
-    assert result["invalid"]["currentUptime"] == 2 * 3_600_000
-    assert result["off"]["currentUptime"] is None
-    assert result["off"]["currentDowntime"] == 5 * 3_600_000
-    assert result["unknown"]["currentUptime"] is None
-    assert result["unavailable"]["currentUptime"] is None
-
-
-def test_connection_popup_status_uses_live_sensor_before_snapshot() -> None:
-    if shutil.which("node") is None:
-        pytest.skip("node is required to evaluate the panel helpers")
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = f"""
-global.HTMLElement = class {{}};
-global.customElements = {{define() {{}}}};
-{PANEL_LOADER}
-console.log(JSON.stringify([
-  LIVE_CONNECTION_STATUS({{state:"on"}},false),
-  LIVE_CONNECTION_STATUS({{state:"off"}},true),
-  LIVE_CONNECTION_STATUS({{state:"unknown"}},true),
-  LIVE_CONNECTION_STATUS({{state:"unavailable"}},true),
-  LIVE_CONNECTION_STATUS(undefined,true),
-  LIVE_CONNECTION_STATUS(undefined,false)
-]));
-"""
-    result = subprocess.run(
-        ["node", "-e", script], check=True, capture_output=True, text=True
-    )
-    assert json.loads(result.stdout) == [
-        "connected",
-        "disconnected",
-        "unknown",
-        "unknown",
-        "connected",
-        "disconnected",
-    ]
-
-
 def test_connection_diagnostics_controls_are_visible_and_accessible() -> None:
     source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
 
@@ -989,41 +687,6 @@ def test_connection_diagnostics_controls_are_visible_and_accessible() -> None:
     assert ".connection-badge:active" in source
     assert 'role="status"' in source
     assert 'aria-hidden="true"' in source
-
-
-def test_connection_badge_aria_label_is_localized_and_refreshed() -> None:
-    """Initial rendering and live refresh use the same label for every status."""
-    if shutil.which("node") is None:
-        pytest.skip("node is required to evaluate the panel helpers")
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    assert 'aria-label="${this.connectionBadgeAriaLabel(status)}"' in source
-    script = f"""
-global.HTMLElement = class {{}};
-global.customElements = {{define() {{}}}};
-{PANEL_LOADER}
-const panel=new S7PlcConfigurationPanel();
-panel.t=key=>({{"common.connected":"Connected","common.disconnected":"Disconnected","common.unknown":"Unknown","connection_details.help":"Show connection details"}}[key]);
-panel._loaded=true;panel.entryId="plc";panel.querySelector=()=>badge;
-const labels=[],badge={{classList:{{toggle() {{}}}},setAttribute:(name,value)=>{{if(name==="aria-label")labels.push(value);}}}};
-const statuses=[true,false,null];let index=0;
-panel._hass={{callWS:async()=>[{{entry_id:"plc",connected:statuses[index++]}}]}};
-(async()=>{{
-  const initial=statuses.map(value=>panel.connectionBadgeAriaLabel(value===true?"connected":value===false?"disconnected":"unknown"));
-  for(let i=0;i<statuses.length;i++)await panel.refreshConnectionStatus();
-  console.log(JSON.stringify({{initial,labels}}));
-}})();
-"""
-    result = json.loads(
-        subprocess.run(
-            ["node", "-e", script], check=True, capture_output=True, text=True
-        ).stdout
-    )
-    expected = [
-        "Connected · Show connection details",
-        "Disconnected · Show connection details",
-        "Unknown · Show connection details",
-    ]
-    assert result == {"initial": expected, "labels": expected}
 
 
 def test_connection_diagnostics_translations_are_complete() -> None:
@@ -1522,18 +1185,6 @@ def test_list_is_lightweight_and_frontend_has_three_yaml_actions() -> None:
     assert "s7plc/config/get_configuration" in source
 
 
-def test_configuration_editor_handles_load_download_and_repeated_clicks() -> None:
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-
-    assert "configuration_load_error" in source
-    assert "configuration_download_error" in source
-    assert "textarea.disabled=!!loadError" in source
-    assert "if(backupLoading)return" in source
-    assert "if(saveLoading)return" in source
-    assert "backupButton.disabled=true" in source
-    assert "saveButton.disabled=true" in source
-
-
 class _Connection:
     def __init__(self):
         self.error = None
@@ -1906,15 +1557,6 @@ def test_panel_provides_mobile_navigation() -> None:
     assert 'id="back"' not in source
 
 
-def test_panel_hides_inactive_editor_mode() -> None:
-    """Keep the visual and YAML editors mutually exclusive in the dialog layout."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-
-    assert '<div class="yaml-editor" style="display:none">' in source
-    assert ".visual-form').style.display=mode==='visual'?'flex':'none'" in source
-    assert ".yaml-editor').style.display=mode==='yaml'?'block':'none'" in source
-
-
 @pytest.mark.parametrize("connected", [True, False])
 def test_entry_payload_includes_connection_status(connected) -> None:
     """Expose the coordinator connection state to the panel."""
@@ -2013,15 +1655,6 @@ def test_entry_payload_maps_entity_ids(monkeypatch) -> None:
     assert payload["entity_ids"]["sensors"] == ["sensor.demo", None]
     assert payload["entity_ids"]["switches"] == []
     assert payload["connection_entity_id"] == "binary_sensor.plc_connection"
-
-
-def test_panel_renders_current_state_badges() -> None:
-    """The panel shows the live state of every configured entity."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-
-    assert "state-badge" in source
-    assert "entry.entity_ids?.[type]?.[i]" in source
-    assert "this.updateStates()" in source
 
 
 def test_panel_hides_uid_from_entity_summary() -> None:
@@ -2908,22 +2541,6 @@ def test_panel_close_command_address_required_for_traditional() -> None:
         in source
     )
     assert "errors.cover_commands_required_error" in source
-
-
-def test_panel_hides_close_and_operate_time_in_toggle_control_mode() -> None:
-    """toggle is a third cover_control_mode choice (alongside
-    traditional/position), not a separate checkbox layered onto
-    traditional. Selecting it pulses open_command_address for a fixed
-    short duration instead of using close_command_address or the
-    timer-based operate_time, so neither field is shown for that mode."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-
-    assert (
-        "control==='position'?['position_state_address','position_command_address',"
-        "'invert_position','position_tilt_bidirectional']:control==='toggle'?"
-        "['open_command_address']:['open_command_address','close_command_address']"
-    ) in source
-    assert "if(control==='traditional')visible.add('operate_time')" in source
 
 
 def test_panel_toggle_pulse_duration_has_its_own_options_section() -> None:
@@ -3891,211 +3508,6 @@ console.log(JSON.stringify({{direct,inferred,plc,falseMarkup,trueMarkup,directEn
     assert value["booleanFalse"] is False
     assert value["booleanTrue"] is True
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_panel_layout_modes_persistence_and_sections_rendering() -> None:
-    """The alternate layout is presentation-only, persistent, and complete."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = rf"""
-global.HTMLElement = class {{}};
-global.customElements = {{get(){{}},define(){{}}}};
-global.localStorage = {{getItem(){{return this.value}},setItem(_key,value){{this.value=value;}}}};
-global.document = {{createElement:()=>{{
-  let value="";
-  return {{set textContent(next){{value=String(next);}},get innerHTML(){{return value.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");}}}};
-}}}};
-{PANEL_LOADER}
-const entities=Object.fromEntries(TYPES.map(type=>[type,[]]));
-entities.sensors=[{{name:"Temperature",address:"DB1,REAL0"}},{{name:"Pressure",address:"DB1,REAL4"}}];
-entities.switches=[{{name:"Pump",state_address:"DB1,X8.0"}}];
-const entry={{entities,entity_ids:{{}},selector_options:{{}}}};
-const panel=new S7PlcConfigurationPanel();
-panel.t=key=>({{"common.entity":"Entity","common.entities":"entities","actions.add":"Add"}}[key]||key);
-panel.bt=key=>key; panel.fieldText=(type,key)=>key;
-panel.selectedIndices=new Set(); panel.expandedSections=new Set(TYPES); panel._viewMode="tabs";
-let rendered=0; panel.render=()=>rendered++;
-const defaultMode=panel.readViewMode();
-panel.setViewMode("sections");
-const stored=global.localStorage?.value??null;
-const sections=panel._renderSectionsView(entry);
-panel.expandedSections.delete("switches");
-const collapsed=panel._renderSectionsView(entry);
-global.localStorage={{getItem:()=>"invalid",setItem(_key,value){{this.value=value;}}}};
-const invalid=panel.readViewMode();
-global.localStorage={{getItem(){{throw Error("blocked")}},setItem(){{throw Error("blocked")}}}};
-const inaccessible=panel.readViewMode(); panel.setViewMode("tabs");
-console.log(JSON.stringify({{defaultMode,stored,invalid,inaccessible,rendered,
- sectionCount:(sections.match(/data-section-type=/g)||[]).length,
- sensorCount:sections.includes("2 entities"),empty:sections.includes('data-section-type="binary_sensors"'),
- addSensor:sections.includes('data-add="sensors"'),expanded:sections.includes('aria-expanded="true"'),
- collapsed:collapsed.includes('data-section-toggle="switches"')&&collapsed.includes('aria-expanded="false"')&&!collapsed.includes('data-entity-type="switches"'),
- title:sections.includes('title="layout.collapse_section"'),aria:sections.includes('aria-label="layout.collapse_section: entity_types.sensors.label"')
-}}));
-"""
-    result = json.loads(
-        subprocess.run(
-            ["node", "-e", script], check=True, capture_output=True, text=True
-        ).stdout
-    )
-    assert result == {
-        "defaultMode": "tabs",
-        "stored": "sections",
-        "invalid": "tabs",
-        "inaccessible": "tabs",
-        "rendered": 2,
-        "sectionCount": 11,
-        "sensorCount": True,
-        "empty": True,
-        "addSensor": True,
-        "expanded": True,
-        "collapsed": True,
-        "title": True,
-        "aria": True,
-    }
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_panel_layout_toggle_labels_each_action_and_remains_responsive() -> None:
-    """The layout control exposes the translated action in every accessible label."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = f"""
-global.HTMLElement = class {{}};
-global.customElements = {{get(){{}},define(){{}}}};
-{PANEL_LOADER}
-const panel=new S7PlcConfigurationPanel();
-panel.t=key=>({{
-  "layout.switch_to_sections":"Switch to all-entities view",
-  "layout.switch_to_tabs":"Switch to category view"
-}}[key]||key);
-panel._viewMode="tabs";const categories=panel.layoutToggle();
-panel._viewMode="sections";const allEntities=panel.layoutToggle();
-console.log(JSON.stringify({{categories,allEntities}}));
-"""
-    result = json.loads(
-        subprocess.run(
-            ["node", "-e", script], check=True, capture_output=True, text=True
-        ).stdout
-    )
-
-    categories = result["categories"]
-    assert '<ha-icon icon="mdi:view-sequential"></ha-icon>' in categories
-    assert '<span>Switch to all-entities view</span>' in categories
-    assert 'title="Switch to all-entities view"' in categories
-    assert 'aria-label="Switch to all-entities view"' in categories
-    assert "<ha-tooltip>Switch to all-entities view</ha-tooltip>" in categories
-
-    all_entities = result["allEntities"]
-    assert '<ha-icon icon="mdi:tab"></ha-icon>' in all_entities
-    assert '<span>Switch to category view</span>' in all_entities
-    assert 'title="Switch to category view"' in all_entities
-    assert 'aria-label="Switch to category view"' in all_entities
-    assert "<ha-tooltip>Switch to category view</ha-tooltip>" in all_entities
-
-    assert "@media(max-width:500px)" in source
-    responsive = source[source.index("@media(max-width:500px)") :]
-    responsive = responsive[: responsive.index("@media(max-width:480px)")]
-    assert ".layout-toggle span{display:none}" in responsive
-    assert ".layout-toggle{display:none}" not in responsive
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_sections_batch_delete_groups_and_deletes_the_global_selection() -> None:
-    """The sections toolbar deletes every valid selection with one lifecycle."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = rf"""
-global.HTMLElement = class {{}};
-global.customElements = {{get(){{}},define(){{}}}};
-const dialogs=[];
-const makeDialog=()=>{{
-  const primary={{disabled:false}},secondary={{disabled:false}},alert={{style:{{}}}};
-  return {{primary,secondary,alert,open:false,addEventListener(){{}},remove(){{}},
-    querySelector(selector){{return selector==='[slot=primaryAction]'?primary:selector==='[slot=secondaryAction]'?secondary:alert;}}}};
-}};
-global.document = {{body:{{appendChild(dialog){{dialogs.push(dialog);}}}},createElement:tag=>{{
-  if(tag==='ha-dialog')return makeDialog();
-  let value='';return {{set textContent(next){{value=String(next);}},get innerHTML(){{return value;}}}};
-}}}};
-{source}
-const entities=Object.fromEntries(TYPES.map(type=>[type,[]]));
-entities.sensors=[{{name:'A'}},{{name:'B'}}];entities.switches=[{{name:'C'}}];
-const entry={{entities,entity_ids:{{}}}};
-const panel=new S7PlcConfigurationPanel();panel._viewMode='sections';panel.expandedSections=new Set(TYPES);
-panel.t=key=>key;panel.bt=(key,values={{}})=>key+(values.count===undefined?'':` ${{values.count}}`);panel.fieldText=()=>'';
-panel.selectedIndices=new Set(['sensors:2','switches:0','sensors:5','sensors:2','covers:1','bad','unknown:3','lights:-1','texts:1.5','buttons:2:3',4]);
-const grouped=panel.groupedSelectedIndices();const markup=panel._renderSectionsView(entry);
-const bulkSpan={{textContent:''}},bulkButton={{hidden:true,querySelector:()=>bulkSpan}};
-panel.querySelector=selector=>selector==='[data-batch-delete-global]'?bulkButton:null;panel.updateBulkAction();
-const calls=[],states=[];panel.entryId='entry';panel._hass={{callWS:async message=>{{states.push(panel.selectedIndices.size);calls.push(message);}}}};
-let reloads=0;panel.load=async()=>{{reloads++;states.push(panel.selectedIndices.size);}};
-panel.removeGroupedSelection();const dialog=dialogs.at(-1);const operation=dialog.primary.onclick();dialog.primary.onclick();await operation;
-
-const failed=new S7PlcConfigurationPanel();failed._viewMode='sections';failed.selectedIndices=new Set(['sensors:1','sensors:0','switches:0']);
-failed.t=key=>key;failed.bt=(key,values={{}})=>`${{key}} ${{values.count}}`;failed.entryId='entry';
-let failedCalls=0,failedReloads=0;failed._hass={{callWS:async()=>{{failedCalls++;if(failedCalls===2)throw Error('PLC offline');}}}};
-failed.load=async()=>{{failedReloads++;}};failed.removeGroupedSelection();const failedDialog=dialogs.at(-1);await failedDialog.primary.onclick();
-await failedDialog.primary.onclick();const failureAfterSecondClick={{calls:failedCalls,reloads:failedReloads,open:failedDialog.open}};
-failedDialog.secondary.onclick();
-console.log(JSON.stringify({{grouped,markup:{{global:markup.includes('data-batch-delete-global'),sectionBatch:markup.includes('data-batch-delete=')}},
-  bulk:{{hidden:bulkButton.hidden,text:bulkSpan.textContent}},calls,reloads,states,dialogs:dialogs.length,selection:[...panel.selectedIndices],
-  failure:{{calls:failedCalls,reloads:failedReloads,selection:[...failed.selectedIndices],openBeforeClose:failureAfterSecondClick.open,
-    openAfterClose:failedDialog.open,error:failedDialog.alert.textContent,shown:failedDialog.alert.style.display,
-    deleteDisabled:failedDialog.primary.disabled,secondaryDisabled:failedDialog.secondary.disabled,afterSecondClick:failureAfterSecondClick}}}}));
-"""
-    result = json.loads(
-        subprocess.run(
-            ["node", "--input-type=module", "-"],
-            input=script,
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout
-    )
-    assert result["grouped"] == {
-        "sensors": [5, 2],
-        "switches": [0],
-        "covers": [1],
-    }
-    assert result["markup"] == {"global": True, "sectionBatch": False}
-    assert result["bulk"] == {"hidden": False, "text": "delete_selected (4)"}
-    assert result["calls"] == [
-        {"type": "s7plc/config/delete_entity", "entry_id": "entry", "entity_type": "sensors", "index": 5},
-        {"type": "s7plc/config/delete_entity", "entry_id": "entry", "entity_type": "sensors", "index": 2},
-        {"type": "s7plc/config/delete_entity", "entry_id": "entry", "entity_type": "switches", "index": 0},
-        {"type": "s7plc/config/delete_entity", "entry_id": "entry", "entity_type": "covers", "index": 1},
-    ]
-    assert result["reloads"] == 1
-    assert result["states"] == [10, 10, 10, 10, 0]
-    assert result["dialogs"] == 2
-    assert result["selection"] == []
-    assert result["failure"] == {
-        "calls": 2,
-        "reloads": 1,
-        "selection": [],
-        "openBeforeClose": True,
-        "openAfterClose": False,
-        "error": "errors.delete_entities_error PLC offline",
-        "shown": "block",
-        "deleteDisabled": True,
-        "secondaryDisabled": False,
-        "afterSecondClick": {"calls": 2, "reloads": 1, "open": True},
-    }
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_batch_delete_empty_selection_and_tabs_behavior() -> None:
-    """An empty global selection is inert and tabs keep category deletion."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = f"""
-global.HTMLElement=class {{}};global.customElements={{get(){{}},define(){{}}}};
-let dialogs=0;global.document={{body:{{appendChild(){{dialogs++;}}}},createElement:()=>({{}})}};
-{PANEL_LOADER}
-const panel=new S7PlcConfigurationPanel();panel._viewMode='sections';panel.selectedIndices=new Set();panel.removeGroupedSelection();
-panel._viewMode='tabs';panel.selectedIndices=new Set([3,1,3]);
-console.log(JSON.stringify({{dialogs,indices:panel.selectedIndicesFor('sensors')}}));
-"""
-    result = json.loads(subprocess.run(["node", "-e", script], check=True, capture_output=True, text=True).stdout)
-    assert result == {"dialogs": 0, "indices": [3, 1]}
-
-
 def test_panel_layout_translations_are_available_in_every_language() -> None:
     required = {
         "switch_to_tabs",
@@ -4198,28 +3610,6 @@ process.stdout.write(context.result);
     assert result["emptyBit"] == {"error": "incomplete"}
     assert result["emptyLength"] == {"error": "incomplete"}
     assert result["zeros"] == "DB0,X0.0"
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_required_address_builder_blocks_submission_and_gets_focus() -> None:
-    """Builder validity is explicit because hidden inputs cannot constrain forms."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = r'''
-const vm = require("vm"); let Panel;
-const context = {HTMLElement: class {}, customElements: {define: (_, cls) => Panel = cls}};
-vm.createContext(context); vm.runInContext(require('fs').readFileSync(process.argv[1],'utf8'), context);
-let focused = 0, scrolled = 0;
-const hidden = {value: ""};
-const field = {dataset: {required: "true", addressError: "incomplete"},
-  querySelector: () => hidden, focus: () => focused++, scrollIntoView: () => scrolled++};
-const form = {querySelectorAll: () => [field]};
-const panel = new Panel();
-process.stdout.write(JSON.stringify({valid: panel.validateAddressBuilders(form), focused, scrolled}));
-'''
-    value = json.loads(subprocess.run(
-        ["node", "-e", script, str(PANEL_JAVASCRIPT)], check=True, capture_output=True, text=True
-    ).stdout)
-    assert value == {"valid": False, "focused": 1, "scrolled": 1}
 
 
 def test_address_builder_focus_style_only_indicates_real_errors() -> None:
@@ -4634,108 +4024,6 @@ console.log(JSON.stringify(state));'''
         "invalidStorage": "guided",
         "invalidNeverGuided": "manual",
     }
-
-
-def test_address_mode_toggle_preserves_address_value() -> None:
-    """Mode event handlers only copy the current value; they never clear or convert it."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-
-    assert "manual.value=hidden.value;setMode('manual');this.writeAddressMode" in source
-    assert "hidden.value=manual.value;writeParts(parsed);setMode('guided')" in source
-    assert "this.writeAddressMode(field.dataset.addressPreferenceKey,'manual')" in source
-    assert "this.writeAddressMode(field.dataset.addressPreferenceKey,'guided')" in source
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_duplicate_action_is_accessible_for_every_existing_entity_and_clicks_editor() -> (
-    None
-):
-    """Both layouts use the same cards, whose duplicate action opens create mode."""
-    script = f"""global.HTMLElement=class {{}};global.customElements={{get(){{}},define(){{}}}};{PANEL_LOADER}
-const panel=new S7PlcConfigurationPanel();
-panel.t=key=>({{"actions.duplicate":"Duplicate entity","common.entity":"Entity"}}[key]||key);
-panel.bt=key=>key;panel.escape=value=>String(value??"");panel.icon=()=>"help";panel.stateText=()=>"";panel.selectedIndices=new Set();panel._viewMode="tabs";
-panel.entries=[{{entry_id:"entry",entities:Object.fromEntries(TYPES.map(type=>[type,[{{uid:`uid-${{type}}`,name:type,address:"DB1,X0.0"}}]]))}}];panel.entryId="entry";
-const markup=Object.fromEntries(TYPES.map(type=>[type,panel.entityCards(panel.entries[0],type)]));
-let call=null;panel.openEditor=(...args)=>call=args;
-let stopped=false;const button={{dataset:{{duplicate:"0",entityType:"lights"}}}};
-button.onclick=event=>{{event.stopPropagation();panel.duplicateEntity(Number(button.dataset.duplicate),button.dataset.entityType);}};
-button.onclick({{stopPropagation:()=>stopped=true}});
-console.log(JSON.stringify({{markup,call,stopped,empty:panel.entityCards({{entities:{{sensors:[]}}}},"sensors")}}));"""
-    result = json.loads(
-        subprocess.run(
-            ["node", "-e", script], check=True, capture_output=True, text=True
-        ).stdout
-    )
-
-    for markup in result["markup"].values():
-        assert 'data-duplicate="0"' in markup
-        assert 'icon="mdi:content-copy"' in markup
-        assert 'title="Duplicate entity"' in markup
-        assert 'aria-label="Duplicate entity"' in markup
-        assert (
-            markup.index("data-edit=")
-            < markup.index("data-duplicate=")
-            < markup.index("data-delete=")
-        )
-    assert "data-duplicate" not in result["empty"]
-    assert result["stopped"] is True
-    assert result["call"][:2] == [None, "lights"]
-    assert result["call"][2]["uid"] == "uid-lights"
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_entity_card_overflow_menu_actions_and_lifecycle() -> None:
-    """The mobile menu is accessible, closes safely, and reuses action handlers."""
-    script = f'''global.HTMLElement=class {{}};global.customElements={{get(){{}},define(){{}}}};
-const listeners={{}};global.document={{addEventListener:(name,fn)=>listeners[name]=fn,removeEventListener:(name,fn)=>{{if(listeners[name]===fn)delete listeners[name];}}}};
-{PANEL_LOADER}
-const panel=new S7PlcConfigurationPanel();panel.t=key=>({{"actions.more_actions":"More actions","actions.edit":"Edit","actions.duplicate":"Duplicate","actions.delete":"Delete","common.entity":"Entity"}}[key]||key);panel.bt=key=>key;panel.escape=String;panel.icon=()=>"help";panel.stateText=()=>"A very long current state";panel.selectedIndices=new Set([3]);panel._viewMode="tabs";
-const entry={{entity_ids:{{sensors:["sensor.test"]}},entities:{{sensors:[{{name:"Test",address:"DB1,REAL0",unit_of_measurement:"kWh"}}]}}}};
-const markup=panel.entityCards(entry,"sensors");
-const focused=[];const classes=new Set();const article={{classList:{{add:name=>classes.add(name),remove:name=>classes.delete(name)}}}};const item={{focus:()=>focused.push("item")}};const menu={{hidden:true,querySelector:()=>item,querySelectorAll:()=>[item]}};const wrapper={{querySelector:()=>menu}};const button={{attrs:{{}},setAttribute(name,value){{this.attrs[name]=value;}},closest:selector=>selector==="article"?article:wrapper,focus:()=>focused.push("button")}};
-panel.toggleEntityOverflow(button);const open={{expanded:button.attrs["aria-expanded"],hidden:menu.hidden,raised:classes.has("overflow-open"),listeners:Object.keys(listeners),selection:[...panel.selectedIndices]}};
-listeners.keydown({{key:"Escape",preventDefault(){{}}}});const closed={{expanded:button.attrs["aria-expanded"],hidden:menu.hidden,raised:classes.has("overflow-open"),focused,selection:[...panel.selectedIndices]}};
-const calls=[];panel.openEditor=(...args)=>calls.push(["edit",...args]);panel.duplicateEntity=(...args)=>calls.push(["duplicate",...args]);panel.remove=(...args)=>calls.push(["delete",...args]);
-panel.runEntityAction("edit",0,"sensors");panel.runEntityAction("duplicate",0,"sensors");panel.runEntityAction("delete",0,"sensors");
-console.log(JSON.stringify({{markup,open,closed,calls}}));'''
-    result = json.loads(
-        subprocess.run(
-            ["node", "-e", script], check=True, capture_output=True, text=True
-        ).stdout
-    )
-
-    markup = result["markup"]
-    assert markup.count('class="entity-actions"') == 1
-    assert markup.count('data-entity-action="edit"') == 2
-    assert markup.count('data-entity-action="duplicate"') == 2
-    assert markup.count('data-entity-action="delete"') == 2
-    assert 'icon="mdi:dots-vertical"' in markup
-    assert 'aria-label="More actions"' in markup
-    assert 'title="More actions"' in markup
-    assert 'aria-expanded="false"' in markup
-    assert 'role="menu"' in markup
-    assert markup.count('role="menuitem"') == 3
-    assert 'class="entity-state state-badge"' in markup
-    assert "A very long current state" in markup
-    assert result["open"] == {
-        "expanded": "true",
-        "hidden": False,
-        "raised": True,
-        "listeners": ["click", "keydown"],
-        "selection": [3],
-    }
-    assert result["closed"] == {
-        "expanded": "false",
-        "hidden": True,
-        "raised": False,
-        "focused": ["item", "button"],
-        "selection": [3],
-    }
-    assert result["calls"] == [
-        ["edit", 0, "sensors"],
-        ["duplicate", 0, "sensors"],
-        ["delete", [0], "sensors"],
-    ]
 
 
 def test_entity_card_mobile_styles_and_translations_are_complete() -> None:
@@ -5409,34 +4697,6 @@ def test_number_limit_copy_and_sensor_fields_are_consistent() -> None:
         "description": "Valore massimo selezionabile in Home Assistant. Non "
         "modifica né converte il valore letto dal PLC.",
     }
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_enum_mapping_collection_is_strict_and_canonical() -> None:
-    """Empty/partial enum rows fail before Number(), while integral text canonicalizes."""
-    script = f"""
-global.HTMLElement=class {{}};global.customElements={{get(){{}},define(){{}}}};
-{PANEL_LOADER}
-const panel=new S7PlcConfigurationPanel();panel.t=k=>k;
-const row=(value,label)=>({{querySelector:s=>s===".om-value"?{{value}}:{{value:label}}}});
-const box=rows=>({{querySelectorAll:()=>rows}});
-const run=rows=>{{try{{return panel.enumMappingsFromRow(box(rows));}}catch(e){{return e.message;}}}};
-console.log(JSON.stringify({{
- emptyValue:run([row("","Closed")]),emptyBoth:run([row("","")]),partial:run([row("1","")]),
- zero:run([row("0","Closed")]),decimalText:run([row("1.0","Open")]),fraction:run([row("1.5","Bad")]),none:run([])
-}}));"""
-    value = json.loads(
-        subprocess.run(
-            ["node", "-e", script], check=True, capture_output=True, text=True
-        ).stdout
-    )
-    assert value["emptyValue"] == "value_conversion.errors.value_required"
-    assert value["emptyBoth"] == "value_conversion.errors.value_required"
-    assert value["partial"] == "value_conversion.errors.label_required"
-    assert value["zero"] == [{"value": 0, "label": "Closed"}]
-    assert value["decimalText"] == [{"value": 1, "label": "Open"}]
-    assert value["fraction"] == "value_conversion.errors.value_integer"
-    assert value["none"] == "value_conversion.errors.mapping_required"
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not available")

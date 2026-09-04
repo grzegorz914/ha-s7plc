@@ -81,7 +81,7 @@ const COVER_POSITION_FIELDS=["position_state_address","position_command_address"
 const COVER_STATUS_POSITION_VALUE_FIELDS=["cover_status_open_values","cover_status_closed_values"];
 const COVER_STATUS_MOVEMENT_VALUE_FIELDS=["cover_status_opening_values","cover_status_closing_values","cover_status_stopped_values"];
 const MAIN_ENTITY_ADDRESS=(item,type)=>type==="covers"?(item.position_state_address||item.open_command_address):(item.address||item.state_address||item.current_temperature_address||item.source_entity);
-const CLEAN_COVER_ENTITY=(source,ui)=>{const entity={...source};COVER_VIRTUAL_FIELDS.forEach(key=>delete entity[key]);const isTraditionalLike=ui.cover_control_mode==="traditional"||ui.cover_control_mode==="toggle";const isToggle=ui.cover_control_mode==="toggle";const isPosition=ui.cover_control_mode==="position";if(ui.preserve_legacy&&isTraditionalLike){COVER_POSITION_FIELDS.forEach(key=>delete entity[key]);delete entity.cover_position_feedback;return entity;}
+const CLEAN_COVER_ENTITY=(source,ui)=>{const entity={...source};COVER_VIRTUAL_FIELDS.forEach(key=>delete entity[key]);const isTraditionalLike=ui.cover_control_mode==="traditional"||ui.cover_control_mode==="toggle";const isToggle=ui.cover_control_mode==="toggle";const isPosition=ui.cover_control_mode==="position";if(isToggle)delete entity.operate_time;if(ui.preserve_legacy&&isTraditionalLike){COVER_POSITION_FIELDS.forEach(key=>delete entity[key]);delete entity.cover_position_feedback;return entity;}
 if(isTraditionalLike)COVER_POSITION_FIELDS.forEach(key=>delete entity[key]);
 else if(!isPosition){COVER_TRADITIONAL_FIELDS.forEach(key=>delete entity[key]);delete entity.cover_position_feedback;}
 if(isTraditionalLike||isPosition){
