@@ -2,7 +2,7 @@
 
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
-import { createEntry, createPanel, installPanel } from "./panel-fixture.js";
+import { createEntry, createPanel, getTranslations, installPanel } from "./panel-fixture.js";
 
 beforeAll(() => {
   globalThis.requestAnimationFrame = (callback) => callback();
@@ -232,6 +232,23 @@ describe("entity editor", () => {
     expect(alert.textContent).toContain("PLC rejected the entity");
   });
 
+  test("translates known backend validation failures in the rendered dialog", async () => {
+    const panel = createPanel();
+    panel.panelTranslations = getTranslations("it");
+    panel.openEditor(0, "sensors");
+    const dialog = currentDialog();
+    panel._hass.callWS = vi.fn(async () => {
+      throw new Error("invalid_address");
+    });
+
+    await dialog.querySelector('[slot="primaryAction"]').onclick();
+
+    const alert = dialog.querySelector(".editor-error");
+    expect(dialog.open).toBe(true);
+    expect(alert.style.display).toBe("block");
+    expect(alert.textContent).toBe("Formato indirizzo non valido.");
+  });
+
   test("duplicates into an independent sanitized create draft", () => {
     const entry = createEntry();
     entry.entities.selects = [{
@@ -240,6 +257,9 @@ describe("entity editor", () => {
       address: "DB1,BYTE0",
       command_address: "DB1,BYTE2",
       options_map: { nested: [{ value: 1, label: "One" }] },
+      area: "kitchen",
+      availability_mode: "bit",
+      availability_address: "DB1,X4.0",
     }];
     const panel = createPanel(entry);
 
@@ -249,7 +269,11 @@ describe("entity editor", () => {
     expect(dialog.headerTitle).toBe("Duplicate entity");
     expect(dialog.querySelector("textarea").value).not.toContain("original-uid");
     expect(dialog.querySelector("form").elements.name.value).toBe("Copy me");
+    expect(dialog.querySelector("form").elements.area.value).toBe("kitchen");
+    expect(dialog.querySelector("form").elements.availability_address.value).toBe("DB1,X4.0");
+    dialog.querySelector("form").elements.name.value = "Changed only in draft";
     expect(entry.entities.selects[0].uid).toBe("original-uid");
+    expect(entry.entities.selects[0].name).toBe("Copy me");
     expect(entry.entities.selects[0].options_map.nested[0].label).toBe("One");
   });
 
