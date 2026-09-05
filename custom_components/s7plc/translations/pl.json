@@ -1303,7 +1303,7 @@
       "ha_range": "Zakres Home Assistant",
       "ha_fixed_range": "0–255 (stały)",
       "brightness_range_description": "Jasność w Home Assistant ma zakres 0–255.",
-      "brightness_value_clamped": "Jasność poza 0–255 jest ograniczana.",
+      "brightness_value_clamped": "Jasność poza zakresem 0–255 jest ograniczana.",
       "brightness_incompatible": "Jasność Home Assistant ma zakres 0–255 i jest limitowana.",
       "channels": {
         "sensor_value": "Wartość",
@@ -1339,7 +1339,7 @@
       "errors": {
         "value_required": "Wartość jest wymagana.",
         "value_integer": "Wartość musi być liczbą całkowitą.",
-        "value_duplicate": "Wartość PLC jest zduplikowana.",
+        "value_duplicate": "Wartość jest zduplikowana.",
         "label_required": "Tekst jest wymagany.",
         "label_duplicate": "Tekst jest zduplikowany.",
         "mapping_required": "Wymagane jest co najmniej jedno mapowanie.",
