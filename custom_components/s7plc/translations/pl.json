@@ -1337,14 +1337,14 @@
       "enum_help": "Mapowanie zamienia wartości liczbowe na tekst. Klasa urządzenia jest ustawiana automatycznie.",
       "enum_unavailable": "Mapowanie jest niedostępne, ponieważ ten adres nie używa całkowitego typu danych.",
       "errors": {
-        "value_required": "Wartość PLC jest wymagana.",
-        "value_integer": "Wartość PLC musi być liczbą całkowitą.",
+        "value_required": "Wartość jest wymagana.",
+        "value_integer": "Wartość musi być liczbą całkowitą.",
         "value_duplicate": "Wartość PLC jest zduplikowana.",
         "label_required": "Tekst jest wymagany.",
         "label_duplicate": "Tekst jest zduplikowany.",
         "mapping_required": "Wymagane jest co najmniej jedno mapowanie.",
-        "datatype_incompatible": "Typ danych PLC jest niezgodny z mapą.",
-        "unmapped": "Wartość PLC nie jest zmapowana."
+        "datatype_incompatible": "Typ danych jest niezgodny z mapą.",
+        "unmapped": "Wartość nie jest zmapowana."
       },
       "action": "Akcja"
     },
