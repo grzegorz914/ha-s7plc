@@ -63,6 +63,35 @@ describe("connection details dialog", () => {
     expect(dialog.querySelector('.connection-status[role="status"]')).not.toBeNull();
     expect(dialog.querySelector("input, select, textarea")).toBeNull();
     expect(dialog.querySelector(".availability-container")).not.toBeNull();
+    const expectedWidth = "min(760px,96vw)";
+    expect(dialog.getAttribute("width")).toBe("large");
+    expect(dialog.style.getPropertyValue("--ha-dialog-width-lg")).toBe("760px");
+    expect(dialog.style.getPropertyValue("--ha-dialog-max-width")).toBe(expectedWidth);
+    expect(dialog.style.getPropertyValue("--mdc-dialog-max-width")).toBe(expectedWidth);
+    expect(dialog.style.getPropertyValue("--mdc-dialog-min-width")).toBe(expectedWidth);
+  });
+
+  test("keeps semantic detail groups and uses container-responsive rows", () => {
+    const panel = createPanel();
+    panel.querySelector(".connection-badge").click();
+    const dialog = document.body.querySelector("ha-dialog");
+    const groups = dialog.querySelector(".connection-detail-groups");
+    const sections = [...groups.querySelectorAll(":scope > .connection-detail-group")];
+    const rows = sections.flatMap((section) => [...section.querySelectorAll(":scope > dl > .connection-detail")]);
+    const styles = dialog.querySelector("style").textContent;
+
+    expect(sections.length).toBeGreaterThan(1);
+    expect(rows.length).toBeGreaterThan(1);
+    expect(rows.every((row) => row.children.length === 2
+      && row.children[0].tagName === "DT"
+      && row.children[1].tagName === "DD")).toBe(true);
+    expect(styles).toContain("repeat(auto-fit,minmax(min(100%,320px),1fr))");
+    expect(styles).toContain(".connection-detail-group:first-child{grid-column:1/-1}");
+    expect(styles).toContain(".connection-detail-group{min-width:0;container-type:inline-size}");
+    expect(styles).toContain(".connection-detail{display:grid;grid-template-columns:minmax(0,max-content) minmax(0,1fr)");
+    expect(styles).toContain("word-break:normal;overflow-wrap:break-word");
+    expect(styles).toContain("@container (max-width:300px)");
+    expect(styles).not.toContain(".connection-detail dd{min-width:0;max-width:65%");
   });
 
   test("shows performance metrics only when they are enabled", () => {
