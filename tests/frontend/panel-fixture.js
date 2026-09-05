@@ -34,19 +34,40 @@ const entityTypes = [
 
 export function installPanel() {
   if (!customElements.get("s7plc-configuration-panel")) {
-    window.eval(`${panelSource}\nwindow.__s7plcPanelTestHelpers = {
-      BUILD_CONNECTION_AVAILABILITY,
-      APPLY_LIVE_CONNECTION_DURATION,
-      LIVE_CONNECTION_STATUS,
-      ENTITY_SEARCH_TEXT,
-      FILTER_ENTITY_ITEMS,
-    };`);
+    evaluatePanelSource();
   }
   globalThis.ResizeObserver ??= class {
     observe() {}
     disconnect() {}
   };
   Element.prototype.scrollIntoView ??= function scrollIntoView() {};
+}
+
+export function evaluatePanelSource() {
+  window.eval(`${panelSource}\nwindow.__s7plcPanelTestHelpers = {
+      ADDRESS_FIELD_VISIBILITY,
+      ADDRESS_TYPES_FOR_FIELD,
+      APPLY_CONTROL_MODE,
+      BUILD_CONNECTION_AVAILABILITY,
+      APPLY_LIVE_CONNECTION_DURATION,
+      LIVE_CONNECTION_STATUS,
+      ENTITY_SEARCH_TEXT,
+      FILTER_ENTITY_ITEMS,
+      FIELDS,
+      LOGO_ADDRESS_CANDIDATE,
+      LOGO_TO_S7,
+      LIGHT_MODE_FROM_ENTITY,
+      PARSE_S7_ADDRESS,
+      S7_TO_LOGO,
+      SERIALIZE_S7_ADDRESS,
+      CONNECTION_DETAIL_SECTIONS,
+      CONTROL_MODE_FROM_ENTITY,
+      COVER_UI_FROM_ENTITY,
+      CLEAN_COVER_ENTITY,
+      CLIMATE_UI_FROM_ENTITY,
+      CLEAN_CLIMATE_ENTITY,
+      VALUE_CHANNEL_SPECS,
+    };`);
 }
 
 export function getPanelTestHelpers() {

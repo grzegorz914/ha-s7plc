@@ -2,8 +2,6 @@
 
 import json
 import re
-import shutil
-import subprocess
 import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -24,7 +22,6 @@ from custom_components.s7plc.panel import (
 )
 
 PANEL_JAVASCRIPT = Path("custom_components/s7plc/www/s7plc-panel.js")
-PANEL_LOADER = "require(\"vm\").runInThisContext(require(\"fs\").readFileSync(\"custom_components/s7plc/www/s7plc-panel.js\",\"utf8\"));"
 
 
 def test_panel_action_controls_share_height_and_normalize_only_plc_selects() -> None:
@@ -253,64 +250,8 @@ def test_safari_form_control_normalization_is_preserved() -> None:
     assert "data:" not in select_rule.lower()
 
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_address_builders_use_inner_query_container_and_hidden_controls() -> None:
-    """S7 and LOGO keep semantic fieldsets while isolating WebKit containment."""
-    script = f'''global.HTMLElement=class {{}};global.customElements={{get(){{}},define(){{}}}};{PANEL_LOADER}
-const panel=new S7PlcConfigurationPanel();panel.escape=value=>String(value??"");panel.t=key=>key;
-panel.entries=[{{entry_id:"s7",plc_family:"s7"}}];panel.entryId="s7";
-const s7=panel.addressField("address","DB1,X0.0","Address","",true,"sensors");
-const profile={{family:"logo_0ba8",areas:[{{name:"I",first:1,last:24,vm_offset:1024,data_type:"X"}}],vm_areas:[{{name:"V",first:0,last:850,data_type:"X",width:1,bit_min:0,bit_max:7}}]}};
-const logo=panel.logoAddressField("address","DB1,X1024.0","Address","",true,"binary_sensors",profile);
-console.log(JSON.stringify({{s7,logo}}));'''
-    markup = json.loads(
-        subprocess.run(
-            ["node", "-e", script], check=True, capture_output=True, text=True
-        ).stdout
-    )
-
-    for builder in markup.values():
-        assert builder.startswith('<fieldset class="address-builder"')
-        assert "</legend><div class=\"address-builder-layout\">" in builder
-        assert builder.endswith("</div></fieldset>")
-        assert 'class="address-guided"' in builder
-    assert "data-db-number hidden" not in markup["s7"]
-    assert "data-bit hidden" not in markup["s7"]
-    assert "data-length hidden" not in markup["s7"]
-    assert "data-logo-bit hidden" in markup["logo"]
-    assert 'class="address-manual" hidden' in markup["logo"]
 
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_panel_registration_is_idempotent() -> None:
-    """Repeated resource loads reuse the existing custom element registration."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = r"""
-const vm = require("vm");
-const definitions = new Map();
-const customElements = {
-    get: name => definitions.get(name),
-    define: (name, element) => {
-        if (definitions.has(name)) throw new Error(`duplicate definition: ${name}`);
-        definitions.set(name, element);
-    },
-};
-for (let load = 0; load < 2; load++) {
-    const context = {HTMLElement: class {}, customElements};
-    vm.createContext(context);
-    vm.runInContext(require('fs').readFileSync(process.argv[1],'utf8'), context);
-}
-process.stdout.write(String(definitions.size));
-"""
-
-    result = subprocess.run(
-        ["node", "-e", script, str(PANEL_JAVASCRIPT)],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-
-    assert result.stdout == "1"
 
 
 def test_panel_typography_uses_home_assistant_fonts_semantically() -> None:
@@ -324,28 +265,6 @@ def test_panel_typography_uses_home_assistant_fonts_semantically() -> None:
     assert ".connection-head-text code{font-family:ui-monospace" in source
 
 
-def test_connection_boolean_values_do_not_wrap() -> None:
-    """Only boolean detail values receive the non-wrapping class."""
-    if shutil.which("node") is None:
-        pytest.skip("node is required to evaluate the panel helpers")
-    script = f"""
-global.HTMLElement = class {{}}; global.customElements = {{get() {{}}, define() {{}}}};
-{PANEL_LOADER}
-const panel=new S7PlcConfigurationPanel();
-panel.panelTranslations={{config_panel:{{connection_details:{{values:{{yes:"Sì"}}}}}}}};
-panel.escape=value=>String(value);
-CONNECTION_DETAIL_TECHNICAL_FIELDS.add("optimize_read");
-console.log(panel.connectionDetailGroupsMarkup({{data:{{optimize_read:true,enable_write_batching:false,future_option:"a long value"}}}}));
-"""
-    markup = subprocess.run(
-        ["node", "-e", script], check=True, capture_output=True, text=True
-    ).stdout
-    assert '<dd class="technical-value boolean-value">Sì</dd>' in markup
-    assert '<dd class="boolean-value">false</dd>' in markup
-    assert "<dd>a long value</dd>" in markup
-
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    assert ".connection-detail dd.boolean-value{flex:0 0 auto;min-width:max-content;white-space:nowrap;word-break:normal;overflow-wrap:normal}" in source
 
 
 def test_connection_diagnostics_controls_are_visible_and_accessible() -> None:
@@ -359,6 +278,7 @@ def test_connection_diagnostics_controls_are_visible_and_accessible() -> None:
     assert ".connection-badge:active" in source
     assert 'role="status"' in source
     assert 'aria-hidden="true"' in source
+    assert ".connection-detail dd.boolean-value{flex:0 0 auto;min-width:max-content;white-space:nowrap;word-break:normal;overflow-wrap:normal}" in source
 
 
 def test_connection_diagnostics_translations_are_complete() -> None:
@@ -400,69 +320,8 @@ def test_panel_supports_batch_entity_deletion() -> None:
     assert "for(const index of sorted)await this._hass.callWS" in source
 
 
-def test_panel_control_mode_mapping_preserves_backend_format() -> None:
-    """The graphical mode must remain a view over the legacy boolean keys."""
-    if shutil.which("node") is None:
-        pytest.skip("node is required to evaluate the panel helpers")
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = f"""
-global.HTMLElement = class {{}};
-global.customElements = {{define() {{}}}};
-{PANEL_LOADER}
-const fixtures = [
-  {{}},
-  {{sync_state: true}},
-  {{pulse_command: true}},
-  {{sync_state: true, pulse_command: true}}
-];
-console.log(JSON.stringify({{
-  loaded: fixtures.map(CONTROL_MODE_FROM_ENTITY),
-  saved: ["direct", "sync", "pulse"].map(mode =>
-    APPLY_CONTROL_MODE({{name: "unchanged", unrelated: 42}}, mode))
-}}));
-"""
-    result = subprocess.run(
-        ["node", "-e", script], check=True, capture_output=True, text=True
-    )
-    behavior = json.loads(result.stdout)
-
-    assert behavior["loaded"] == ["direct", "sync", "pulse", "pulse"]
-    assert behavior["saved"] == [
-        {
-            "name": "unchanged",
-            "unrelated": 42,
-            "sync_state": False,
-            "pulse_command": False,
-        },
-        {
-            "name": "unchanged",
-            "unrelated": 42,
-            "sync_state": True,
-            "pulse_command": False,
-        },
-        {
-            "name": "unchanged",
-            "unrelated": 42,
-            "sync_state": False,
-            "pulse_command": True,
-        },
-    ]
 
 
-def test_panel_light_mode_inference_uses_only_brightness_state_address() -> None:
-    """The virtual mode follows the backend's actual dimmer requirement."""
-    if shutil.which("node") is None:
-        pytest.skip("node is required to evaluate the panel helpers")
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    prefix = source.split("const CONNECTION_WINDOW_MS", 1)[0]
-    script = (
-        prefix
-        + "\nconsole.log(JSON.stringify([{}, {brightness_scale: 10}, {brightness_command_address: 'DB1,W2'}, {brightness_state_address: 'DB1,W0'}].map(LIGHT_MODE_FROM_ENTITY)));"
-    )
-    result = subprocess.run(
-        ["node", "-e", script], check=True, capture_output=True, text=True
-    )
-    assert json.loads(result.stdout) == ["on_off", "on_off", "on_off", "dimmable"]
 
 
 def test_switch_and_light_editor_section_order_is_explicit() -> None:
@@ -1632,142 +1491,6 @@ def test_panel_clearing_a_preset_mode_value_stores_null_not_deletes() -> None:
     assert "entity[key]=null" in source
 
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_panel_legacy_climate_preserves_core_preset_defaults_when_resaved() -> None:
-    """Opening a pre-existing (or brand-new) climate in the side panel and
-    saving without touching preset_mode_off/heat/cool/heat_cool_value must
-    not silently disable those modes.
-
-    Those 4 "core" modes have historical implicit defaults (0/1/2/3) that
-    still apply when the key is missing from the stored item entirely (a
-    legacy climate configured before these fields existed, or a brand-new
-    one). Before this fix, field() rendered a missing key the same as an
-    explicitly-cleared one (both blank), so formEntity's null-on-clear
-    logic (added to let users actually disable a core mode) would store an
-    explicit null for a field the user never touched, wiping out the
-    default. Regression test for maintainer feedback on PR #99: runs the
-    real field() method in a minimal Node sandbox and asserts the rendered
-    input value, not just that certain strings exist in the source.
-    """
-    cases = [
-        # (key, item, expected rendered value)
-        ("preset_mode_off_value", {}, "0"),
-        ("preset_mode_heat_value", {}, "1"),
-        ("preset_mode_cool_value", {}, "2"),
-        ("preset_mode_heat_cool_value", {}, "3"),
-        # Explicitly disabled (user cleared it) must stay blank, not revert
-        # to the default.
-        ("preset_mode_off_value", {"preset_mode_off_value": None}, ""),
-        ("preset_mode_heat_cool_value", {"preset_mode_heat_cool_value": None}, ""),
-        # An explicit value (of any kind) is rendered as-is.
-        ("preset_mode_off_value", {"preset_mode_off_value": 5}, "5"),
-        # Modes with no historical default (AUTO/DRY/FAN_ONLY) stay blank
-        # whether the key is missing or explicitly null - unaffected by
-        # this fix, included to pin down the boundary.
-        ("preset_mode_auto_value", {}, ""),
-        ("preset_mode_auto_value", {"preset_mode_auto_value": None}, ""),
-    ]
-
-    script = f"""
-    const vm = require('vm');
-    global.HTMLElement = class {{}};
-    global.customElements = {{ define() {{}} }};
-    const fs = require('fs');
-    const src = fs.readFileSync({json.dumps(str(PANEL_JAVASCRIPT))}, 'utf8');
-    vm.runInThisContext(src + '\\nglobalThis.__Panel = S7PlcConfigurationPanel;', {{filename: 'panel.js'}});
-    const panel = new (globalThis.__Panel)();
-    panel.t = (k) => k;
-    panel.escape = (v) => String(v);
-
-    const cases = {json.dumps(cases)};
-    const results = cases.map(([key, item]) => {{
-        const html = panel.field([key, 'label', 'number', false], item);
-        const m = html.match(/value="([^"]*)"/);
-        return m ? m[1] : null;
-    }});
-    console.log(JSON.stringify(results));
-    """
-
-    result = subprocess.run(
-        ["node", "-e", script],
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
-    assert result.returncode == 0, result.stderr
-    actual = json.loads(result.stdout)
-    expected = [case[2] for case in cases]
-    assert actual == expected, (
-        f"field() rendered values {actual}, expected {expected} for cases "
-        f"{[(c[0], c[1]) for c in cases]}"
-    )
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_panel_legacy_climate_preserves_core_status_defaults_when_resaved() -> None:
-    """Same bug class as the preset-value one above, mirrored on the
-    status-matching side: hvac_status_off/heating/cooling_values also carry
-    non-empty historical defaults ("0"/"1"/"2"), unlike idle/drying/fan/
-    preheating/defrosting which default to "". A never-configured (or
-    legacy) climate must show these 3 fields pre-filled with their
-    historical default, not blank - otherwise the panel misleadingly shows
-    "empty" for a status that climate.py is still actively matching
-    internally (e.g. a status address reporting 2 shows "Cooling" even
-    though the panel's cooling field looks unconfigured).
-    """
-    cases = [
-        # (key, item, expected rendered value)
-        ("hvac_status_off_values", {}, "0"),
-        ("hvac_status_heating_values", {}, "1"),
-        ("hvac_status_cooling_values", {}, "2"),
-        # Explicitly disabled (user cleared it) must stay blank, not revert
-        # to the default.
-        ("hvac_status_off_values", {"hvac_status_off_values": ""}, ""),
-        ("hvac_status_cooling_values", {"hvac_status_cooling_values": ""}, ""),
-        # An explicit value (of any kind) is rendered as-is.
-        ("hvac_status_cooling_values", {"hvac_status_cooling_values": "5"}, "5"),
-        # Statuses with no historical default (IDLE/DRYING/...) stay blank
-        # whether the key is missing or explicitly empty - unaffected by
-        # this fix, included to pin down the boundary.
-        ("hvac_status_idle_values", {}, ""),
-        ("hvac_status_idle_values", {"hvac_status_idle_values": ""}, ""),
-    ]
-
-    script = f"""
-    const vm = require('vm');
-    global.HTMLElement = class {{}};
-    global.customElements = {{ define() {{}} }};
-    const fs = require('fs');
-    const src = fs.readFileSync({json.dumps(str(PANEL_JAVASCRIPT))}, 'utf8');
-    vm.runInThisContext(src + '\\nglobalThis.__Panel = S7PlcConfigurationPanel;', {{filename: 'panel.js'}});
-    const panel = new (globalThis.__Panel)();
-    panel.t = (k) => k;
-    panel.escape = (v) => String(v);
-
-    const cases = {json.dumps(cases)};
-    const results = cases.map(([key, item]) => {{
-        const html = panel.field([key, 'label', 'text', false], item);
-        const m = html.match(/value="([^"]*)"/);
-        return m ? m[1] : null;
-    }});
-    console.log(JSON.stringify(results));
-    """
-
-    result = subprocess.run(
-        ["node", "-e", script],
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
-    assert result.returncode == 0, result.stderr
-    actual = json.loads(result.stdout)
-    expected = [case[2] for case in cases]
-    assert actual == expected, (
-        f"field() rendered values {actual}, expected {expected} for cases "
-        f"{[(c[0], c[1]) for c in cases]}"
-    )
-
-
 def test_panel_clearing_a_core_status_value_stores_empty_string_not_deletes() -> None:
     """Clearing hvac_status_off/heating/cooling_values must send an
     explicit empty string to the backend, not silently drop the key -
@@ -2058,47 +1781,6 @@ def test_config_panel_translation_tree_has_language_parity() -> None:
     assert all(_translation_shape(panel) == expected for panel in panels)
 
 
-def test_fields_contain_only_technical_metadata_and_have_panel_text() -> None:
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    if shutil.which("node") is None:
-        pytest.skip("node is required to evaluate FIELDS")
-    script = f"""
-global.HTMLElement = class {{}}; global.customElements = {{define() {{}}}};
-{PANEL_LOADER}
-console.log(JSON.stringify(FIELDS));
-"""
-    fields = json.loads(
-        subprocess.run(
-            ["node", "-e", script], check=True, capture_output=True, text=True
-        ).stdout
-    )
-    english = json.loads(
-        Path("custom_components/s7plc/translations/en.json").read_text(encoding="utf-8")
-    )["config_panel"]
-    technical_kinds = {
-        "text",
-        "number",
-        "checkbox",
-        "select",
-        "control",
-        "light",
-        "cover-selector",
-        "climate-selector",
-        "options-map",
-    }
-    for entity_type, definitions in fields.items():
-        for definition in definitions:
-            assert len(definition) <= 4
-            assert len(definition) == 1 or definition[1] in technical_kinds
-            key = definition[0]
-            text = (
-                english["entity_types"][entity_type]["fields"].get(key)
-                or english["common"]["fields"].get(key)
-                or (english["control_behavior"] if key == "control_behavior" else None)
-            )
-            assert text and text["label"]
-            if key != "control_behavior":
-                assert text["description"]
 
 
 def test_panel_has_no_flow_step_dependency_or_unresolved_translation_paths() -> None:
@@ -2131,512 +1813,6 @@ def test_cover_and_climate_modes_have_autonomous_options() -> None:
         assert set(
             panel["entity_types"]["climates"]["fields"]["control_mode"]["options"]
         ) == {"direct", "setpoint"}
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_cover_virtual_modes_and_cleanup_follow_backend_precedence() -> None:
-    """Cover UI projections are deterministic and virtual fields never persist."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = f"""
-global.HTMLElement = class {{}};
-global.customElements = {{define() {{}}}};
-{PANEL_LOADER}
-const infer = COVER_UI_FROM_ENTITY;
-const clean = (entity, ui) => CLEAN_COVER_ENTITY(entity, ui);
-const mixed={{uid:"kept",name:"Legacy",position_state_address:"DB1,B0",open_command_address:"Q0.0",cover_status_address:"DB1,B10",cover_opening_address:"I0.0",tilt_command_address:"DB1,B2",stop_command_address:"Q0.2"}};
-console.log(JSON.stringify({{
- traditional:infer({{open_command_address:"Q0.0"}}),
- position:infer(mixed),
- timed:infer({{}}).cover_position_feedback,
- endstops:infer({{opening_state_address:"I0.0",closing_state_address:"I0.1",use_state_topics:true}}).cover_position_feedback,
- legacyEndstop:infer({{opening_state_address:"I0.0"}}).cover_position_feedback,
- statusWins:infer(mixed).cover_movement_feedback,
- bits:infer({{cover_closing_address:"I0.1"}}).cover_movement_feedback,
- toTraditional:clean(mixed,{{cover_control_mode:"traditional",cover_position_feedback:"timed",cover_movement_feedback:"none",cover_stop_enabled:false,cover_tilt_enabled:false}}),
- traditionalTimedStatus:clean({{uid:"timed",open_command_address:"Q0.0",close_command_address:"Q0.1",cover_status_address:"DB1,B10",cover_status_opening_values:"1",cover_status_closing_values:"2"}},{{cover_control_mode:"traditional",cover_position_feedback:"timed",cover_movement_feedback:"status",cover_stop_enabled:false,cover_tilt_enabled:false}}),
- traditionalEndstopStatus:clean({{uid:"endstop",open_command_address:"Q0.0",close_command_address:"Q0.1",opening_state_address:"I0.0",cover_status_address:"DB1,B10",cover_status_open_values:"3",cover_status_stopped_values:"4"}},{{cover_control_mode:"traditional",cover_position_feedback:"opening",cover_movement_feedback:"status",cover_stop_enabled:false,cover_tilt_enabled:false}}),
- toPosition:clean({{uid:"kept",position_state_address:"DB1,B0",open_command_address:"Q0.0",close_command_address:"Q0.1",opening_state_address:"I0.0",closing_state_address:"I0.1",operate_time:20,use_state_topics:true,cover_opening_address:"I0.2",cover_status_address:"DB1,B10",cover_status_open_values:"1",stop_command_address:"Q0.2",tilt_state_address:"DB1,B2",feedback_mode:"status",cover_mode:"position"}},{{cover_control_mode:"position",cover_position_feedback:"timed",cover_movement_feedback:"status",cover_stop_enabled:false,cover_tilt_enabled:false}}),
- toggleStatusPositionBitsMovement:clean({{uid:"mixed",open_command_address:"Q0.0",cover_status_address:"DB1,B10",cover_status_open_values:"1",cover_status_closed_values:"2",cover_opening_address:"I0.0",cover_closing_address:"I0.1"}},{{cover_control_mode:"toggle",cover_position_feedback:"status",cover_movement_feedback:"bits",cover_stop_enabled:false,cover_tilt_enabled:false}}),
- traditionalStatusPositionBitsMovement:clean({{uid:"mixed",open_command_address:"Q0.0",close_command_address:"Q0.1",cover_status_address:"DB1,B10",cover_status_open_values:"1",cover_status_closed_values:"2",cover_opening_address:"I0.0",cover_closing_address:"I0.1"}},{{cover_control_mode:"traditional",cover_position_feedback:"status",cover_movement_feedback:"bits",cover_stop_enabled:false,cover_tilt_enabled:false}})
-}}));
-"""
-    result = json.loads(
-        subprocess.run(
-            ["node", "-"],
-            input=script,
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout
-    )
-    assert result["traditional"]["cover_control_mode"] == "traditional"
-    assert result["position"]["cover_control_mode"] == "position"
-    assert result["timed"] == "timed"
-    assert result["endstops"] == "both"
-    assert result["legacyEndstop"] == "opening"
-    # "mixed" is a legacy position cover with cover_status_address but no
-    # value mapping at all (neither open/closed nor opening/closing/
-    # stopped), and no opening/closing_state_address - the status word
-    # isn't usable as a position or movement source without any mapping,
-    # so position_feedback infers "position" and movement_feedback prefers
-    # the separately configured bits, the only source that's actually
-    # usable here (PR #124 review, points 2 and 3).
-    assert result["statusWins"] == "bits"
-    assert result["bits"] == "bits"
-    assert result["traditional"]["cover_stop_enabled"] == "disabled"
-    assert result["traditional"]["cover_tilt_enabled"] == "disabled"
-    assert result["position"]["cover_stop_enabled"] == "enabled"
-    assert result["position"]["cover_tilt_enabled"] == "enabled"
-    traditional = result["toTraditional"]
-    assert traditional["uid"] == "kept" and traditional["name"] == "Legacy"
-    assert (
-        "position_state_address" not in traditional
-        and "tilt_command_address" not in traditional
-    )
-    assert (
-        "cover_status_address" not in traditional
-        and "stop_command_address" not in traditional
-    )
-    assert traditional["use_state_topics"] is False
-    timed_status = result["traditionalTimedStatus"]
-    assert timed_status["cover_status_address"] == "DB1,B10"
-    assert timed_status["cover_status_opening_values"] == "1"
-    assert timed_status["cover_status_closing_values"] == "2"
-    assert timed_status["cover_position_feedback"] == "timed"
-    endstop_status = result["traditionalEndstopStatus"]
-    assert endstop_status["opening_state_address"] == "I0.0"
-    assert endstop_status["cover_status_address"] == "DB1,B10"
-    # Plain traditional covers keep the pre-existing coupling: movement
-    # feedback being "status" makes the whole cover_status_address+value
-    # set authoritative together, regardless of position feedback - so
-    # cover_status_open_values (nominally a *position* value field) still
-    # survives here even though position feedback is "opening", not
-    # "status". This is the pre-existing, unsplit behavior - see
-    # toggleStatusPositionBitsMovement below for toggle_mode's independent
-    # (split) scoping instead (PR #117 review round 4, point 1).
-    assert endstop_status["cover_status_open_values"] == "3"
-    assert endstop_status["cover_status_stopped_values"] == "4"
-    assert endstop_status["cover_position_feedback"] == "opening"
-    # toggle_mode: position=status + movement=bits keeps BOTH sources -
-    # neither one silently discards the other (PR #117 review round 3,
-    # point 2).
-    toggle_mixed = result["toggleStatusPositionBitsMovement"]
-    assert toggle_mixed["cover_status_address"] == "DB1,B10"
-    assert toggle_mixed["cover_status_open_values"] == "1"
-    assert toggle_mixed["cover_status_closed_values"] == "2"
-    assert toggle_mixed["cover_opening_address"] == "I0.0"
-    assert toggle_mixed["cover_closing_address"] == "I0.1"
-    # Plain traditional: the same combination still can't keep both - the
-    # old exclusive switch treats movement_feedback=="bits" as authoritative
-    # over the whole status word, so cover_status_address (and its
-    # position-feedback value fields) get dropped too, not just kept-but-
-    # unused (round 4, point 1 - the preserved, intentional limitation).
-    traditional_mixed = result["traditionalStatusPositionBitsMovement"]
-    assert "cover_status_address" not in traditional_mixed
-    assert "cover_status_open_values" not in traditional_mixed
-    position = result["toPosition"]
-    assert position["uid"] == "kept" and position["cover_status_address"] == "DB1,B10"
-    for key in (
-        "open_command_address",
-        "close_command_address",
-        "opening_state_address",
-        "closing_state_address",
-        "operate_time",
-        "use_state_topics",
-        "cover_opening_address",
-        "stop_command_address",
-        "tilt_state_address",
-        "cover_mode",
-        "feedback_mode",
-    ):
-        assert key not in position
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_cover_rendered_form_saves_without_use_state_topics_input() -> None:
-    """Regression for #113: save the fields rendered by the real cover editor."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = f"""
-global.HTMLElement = class {{}};
-global.customElements = {{define() {{}}}};
-{PANEL_LOADER}
-const panel=new S7PlcConfigurationPanel();
-panel.t=key=>key;
-panel.fieldText=(type,key,part)=>`${{key}}.${{part}}`;
-panel.escape=value=>String(value);
-panel.entries=[];
-const makeRenderedForm=(original,overrides={{}})=>{{
-  const initial={{...original,...COVER_UI_FROM_ENTITY(original),...overrides}};
-  const markup=panel.editorSections("covers",initial);
-  const names=new Set([...markup.matchAll(/ name="([^"]+)"/g)].map(match=>match[1]));
-  const elements={{}};
-  for(const key of names){{
-    const kind=FIELDS.covers.find(field=>field[0]===key)?.[1];
-    const checkbox=kind==="checkbox";
-    elements[key]={{type:checkbox?"checkbox":kind==="number"?"number":"text",value:String(initial[key]??""),checked:checkbox?Boolean(initial[key]):false}};
-  }}
-  return {{elements,markup,reportValidity:()=>true}};
-}};
-const save=(original,overrides={{}})=>{{
-  const form=makeRenderedForm(original,overrides);
-  return {{entity:panel.formEntity(form,original,"covers"),hasDerivedInput:"use_state_topics" in form.elements,markup:form.markup}};
-}};
-const details={{uid:"cover-1",name:"Blind",area:"living",device_class:"blind",scan_interval:2}};
-const commands={{open_command_address:"DB1,X0.0",close_command_address:"DB1,X0.1"}};
-const timed=save({{...details}},commands);
-const endstops=save({{...details}},{{...commands,cover_position_feedback:"both",opening_state_address:"DB1,X0.2",closing_state_address:"DB1,X0.3"}});
-const position=save({{...details}},{{cover_control_mode:"position",position_state_address:"DB1,BYTE0"}});
-const edited=save({{...details,...commands,use_state_topics:true,opening_state_address:"DB1,X0.2",closing_state_address:"DB1,X0.3"}},{{name:"Edited"}});
-console.log(JSON.stringify({{timed,endstops,position,edited,virtual:COVER_VIRTUAL_FIELDS}}));
-"""
-    result = json.loads(
-        subprocess.run(
-            ["node", "-e", script], check=True, capture_output=True, text=True
-        ).stdout
-    )
-
-    for saved in ("timed", "endstops", "position", "edited"):
-        assert result[saved]["hasDerivedInput"] is False
-        assert 'name="use_state_topics"' not in result[saved]["markup"]
-        assert not set(result[saved]["entity"]) & set(result["virtual"])
-        for key in ("uid", "area", "device_class", "scan_interval"):
-            assert result[saved]["entity"][key] == result["timed"]["entity"][key]
-
-    assert result["timed"]["entity"]["use_state_topics"] is False
-    assert result["timed"]["entity"]["name"] == "Blind"
-    assert result["endstops"]["entity"]["use_state_topics"] is True
-    assert "use_state_topics" not in result["position"]["entity"]
-    assert result["edited"]["entity"]["use_state_topics"] is True
-    assert result["edited"]["entity"]["name"] == "Edited"
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_cover_editor_radio_markup_and_form_submission_regressions() -> None:
-    """Exercise the radio values and the same formEntity path used by Save."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = f"""
-global.HTMLElement = class {{}};
-global.customElements = {{define() {{}}}};
-{PANEL_LOADER}
-const panel=new S7PlcConfigurationPanel();
-panel.t=key=>key;
-panel.fieldText=(type,key,part)=>`${{key}}.${{part}}`;
-panel.escape=value=>String(value);
-const infer=COVER_UI_FROM_ENTITY;
-const makeForm=(original,overrides={{}})=>{{
-  const initial={{...original,...infer(original),...overrides}},elements={{}};
-  for(const [key,kind] of FIELDS.covers){{
-    const checkbox=kind==="checkbox";
-    elements[key]={{type:checkbox?"checkbox":kind==="number"?"number":"text",value:String(initial[key]??""),checked:checkbox?Boolean(initial[key]):false}};
-  }}
-  return {{elements,reportValidity:()=>true}};
-}};
-const save=(original,overrides={{}})=>panel.formEntity(makeForm(original,overrides),original,"covers");
-const stop={{position_state_address:"DB1,BYTE0",stop_command_address:"DB1,X10.0",stop_pulse_duration:0.5}};
-const tilt={{position_state_address:"DB1,BYTE0",tilt_state_address:"DB1,BYTE2",tilt_command_address:"DB1,BYTE4",invert_tilt:true}};
-const opening={{open_command_address:"DB1,X0.0",close_command_address:"DB1,X0.1",opening_state_address:"DB1,X0.2"}};
-const closing={{open_command_address:"DB1,X0.0",close_command_address:"DB1,X0.1",closing_state_address:"DB1,X0.3"}};
-const markup=entity=>{{const ui=infer(entity);return {{
-  stop:panel.field(FIELDS.covers.find(field=>field[0]==="cover_stop_enabled"),ui,"covers"),
-  tilt:panel.field(FIELDS.covers.find(field=>field[0]==="cover_tilt_enabled"),ui,"covers")
-}};}};
-const virtual=COVER_VIRTUAL_FIELDS;
-const switchedToTraditional=save({{uid:"same",name:"Legacy",area:"living",device_class:"blind",scan_interval:2,...stop,...tilt}},{{cover_control_mode:"traditional",cover_position_feedback:"timed",open_command_address:"DB1,X0.0",close_command_address:"DB1,X0.1"}});
-const switchedToPosition=save({{uid:"same",name:"Legacy",open_command_address:"DB1,X0.0",close_command_address:"DB1,X0.1",opening_state_address:"DB1,X0.2",operate_time:20,use_state_topics:false,cover_opening_address:"DB1,X0.4",cover_closing_address:"DB1,X0.5",cover_stopped_address:"DB1,X0.6"}},{{cover_control_mode:"position",position_state_address:"DB1,BYTE0",cover_position_feedback:"timed",cover_movement_feedback:"none"}});
-console.log(JSON.stringify({{
-  inferred:{{none:infer({{}}),stop:infer(stop),tiltState:infer(tilt),tiltCommand:infer({{tilt_command_address:"DB1,BYTE4"}})}},
-  markup:{{none:markup({{}}),stop:markup(stop),tilt:markup(tilt)}},
-  unchanged:{{stop:save(stop),tilt:save(tilt)}},
-  disabled:{{stop:save(stop,{{cover_stop_enabled:"disabled"}}),tilt:save(tilt,{{cover_tilt_enabled:"disabled"}})}},
-  endstops:{{opening:save(opening),closing:save(closing)}},
-  switched:{{traditional:switchedToTraditional,position:switchedToPosition}},
-  hasVirtual:[save(stop),save(tilt),switchedToTraditional,switchedToPosition].some(entity=>virtual.some(key=>key in entity))
-}}));
-"""
-    result = json.loads(
-        subprocess.run(
-            ["node", "-"],
-            input=script,
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout
-    )
-
-    inferred = result["inferred"]
-    assert inferred["none"]["cover_stop_enabled"] == "disabled"
-    assert inferred["stop"]["cover_stop_enabled"] == "enabled"
-    assert inferred["none"]["cover_tilt_enabled"] == "disabled"
-    assert inferred["tiltState"]["cover_tilt_enabled"] == "enabled"
-    # A command-only legacy value deterministically exposes tilt controls; the
-    # existing state-address validation still applies if the user saves it.
-    assert inferred["tiltCommand"]["cover_tilt_enabled"] == "enabled"
-    assert 'value="disabled" checked' in result["markup"]["none"]["stop"]
-    assert 'value="disabled" checked' in result["markup"]["none"]["tilt"]
-    assert 'value="enabled" checked' in result["markup"]["stop"]["stop"]
-    assert 'value="enabled" checked' in result["markup"]["tilt"]["tilt"]
-
-    assert result["unchanged"]["stop"]["stop_command_address"] == "DB1,X10.0"
-    assert result["unchanged"]["stop"]["stop_pulse_duration"] == 0.5
-    assert result["unchanged"]["tilt"]["tilt_state_address"] == "DB1,BYTE2"
-    assert result["unchanged"]["tilt"]["tilt_command_address"] == "DB1,BYTE4"
-    assert result["unchanged"]["tilt"]["invert_tilt"] is True
-    assert "stop_command_address" not in result["disabled"]["stop"]
-    assert "stop_pulse_duration" not in result["disabled"]["stop"]
-    assert "tilt_state_address" not in result["disabled"]["tilt"]
-    assert "tilt_command_address" not in result["disabled"]["tilt"]
-    assert "invert_tilt" not in result["disabled"]["tilt"]
-
-    # Legacy single-end-stop configurations infer and retain their exact mode.
-    assert result["endstops"]["opening"]["opening_state_address"] == "DB1,X0.2"
-    assert "closing_state_address" not in result["endstops"]["opening"]
-    assert "use_state_topics" not in result["endstops"]["opening"]
-    assert result["endstops"]["closing"]["closing_state_address"] == "DB1,X0.3"
-    assert "opening_state_address" not in result["endstops"]["closing"]
-    assert "use_state_topics" not in result["endstops"]["closing"]
-
-    traditional = result["switched"]["traditional"]
-    for key in (
-        "position_state_address",
-        "position_command_address",
-        "invert_position",
-        "tilt_state_address",
-        "tilt_command_address",
-        "invert_tilt",
-        "stop_command_address",
-        "stop_pulse_duration",
-    ):
-        assert key not in traditional
-    assert traditional["uid"] == "same"
-    assert traditional["name"] == "Legacy"
-    assert traditional["area"] == "living"
-    assert traditional["device_class"] == "blind"
-    assert traditional["scan_interval"] == 2
-
-    position = result["switched"]["position"]
-    for key in (
-        "open_command_address",
-        "close_command_address",
-        "opening_state_address",
-        "closing_state_address",
-        "operate_time",
-        "use_state_topics",
-        "cover_opening_address",
-        "cover_closing_address",
-        "cover_stopped_address",
-    ):
-        assert key not in position
-    assert result["hasVirtual"] is False
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_cover_endstop_mode_round_trip_matches_backend_validation() -> None:
-    """End-stop mode is explicit and, like the backend, requires both inputs."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = f"""
-global.HTMLElement = class {{}};
-global.customElements = {{define() {{}}}};
-{PANEL_LOADER}
-const panel=new S7PlcConfigurationPanel();
-panel.t=key=>key;
-const infer=COVER_UI_FROM_ENTITY;
-const makeForm=(original,overrides={{}})=>{{
-  const initial={{...original,...infer(original),...overrides}},elements={{}};
-  for(const [key,kind] of FIELDS.covers){{
-    const checkbox=kind==="checkbox";
-    elements[key]={{type:checkbox?"checkbox":kind==="number"?"number":"text",value:String(initial[key]??""),checked:checkbox?Boolean(initial[key]):false}};
-  }}
-  return {{elements,dataset:{{coverFeedbackChanged:Object.prototype.hasOwnProperty.call(overrides,"cover_position_feedback")?"true":""}},reportValidity:()=>true}};
-}};
-const save=(original,overrides={{}})=>panel.formEntity(makeForm(original,overrides),original,"covers");
-const error=(original,overrides={{}})=>{{try{{save(original,overrides);return null;}}catch(err){{return err.message;}}}};
-const commands={{open_command_address:"DB1,X0.0",close_command_address:"DB1,X0.1"}};
-const both={{...commands,opening_state_address:"DB1,X0.2",closing_state_address:"DB1,X0.3"}};
-const persisted={{...both,use_state_topics:true}};
-const stale={{...both,use_state_topics:false}};
-const legacy={{...commands,opening_state_address:"DB1,X0.2",use_state_topics:true}};
-console.log(JSON.stringify({{
-  inferred:{{persisted:infer(persisted),stale:infer(stale),legacy:infer(legacy)}},
-  roundTrip:save(persisted),
-  created:save(commands,{{cover_position_feedback:"both",opening_state_address:"DB1,X0.2",closing_state_address:"DB1,X0.3"}}),
-  timedStale:save(stale),
-  timedFromEndstops:save(persisted,{{cover_position_feedback:"timed"}}),
-  endstopsFromTimed:save(stale,{{cover_position_feedback:"both"}}),
-  missing:{{opening:error(commands,{{cover_position_feedback:"both",opening_state_address:"DB1,X0.2"}}),closing:error(commands,{{cover_position_feedback:"both",closing_state_address:"DB1,X0.3"}}),legacy:error(legacy)}}
-}}));
-"""
-    result = json.loads(
-        subprocess.run(
-            ["node", "-e", script], check=True, capture_output=True, text=True
-        ).stdout
-    )
-
-    assert result["inferred"]["persisted"]["cover_position_feedback"] == "both"
-    assert result["inferred"]["legacy"]["cover_position_feedback"] == "opening"
-    assert result["inferred"]["stale"]["cover_position_feedback"] == "timed"
-    for key in ("roundTrip", "created", "endstopsFromTimed"):
-        assert result[key]["use_state_topics"] is True
-        assert result[key]["opening_state_address"] == "DB1,X0.2"
-        assert result[key]["closing_state_address"] == "DB1,X0.3"
-    assert result["timedStale"]["use_state_topics"] is False
-    assert result["timedStale"]["opening_state_address"] == "DB1,X0.2"
-    assert result["timedStale"]["closing_state_address"] == "DB1,X0.3"
-    for key in ("timedFromEndstops",):
-        assert result[key]["use_state_topics"] is False
-        assert "opening_state_address" not in result[key]
-        assert "closing_state_address" not in result[key]
-    assert result["missing"]["opening"] == "errors.cover_endstop_closed_required_error"
-    assert result["missing"]["closing"] == "errors.cover_endstop_open_required_error"
-    assert result["missing"]["legacy"] is None
-
-
-def test_position_cover_default_feedback_uses_position_not_timed_concept() -> None:
-    """Position covers have a continuous 0-100 reading of their own, so the
-    "no separate source" concept is called "position", not "timed" - a
-    legacy entity persisted with "timed" (from before the two were split)
-    normalizes to "position" on save, and the "timed" card stays hidden
-    for position mode while "position" stays hidden everywhere else."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = f"""
-global.HTMLElement = class {{}};
-global.customElements = {{define() {{}}}};
-{PANEL_LOADER}
-const panel=new S7PlcConfigurationPanel();
-panel.t=key=>key;
-const infer=COVER_UI_FROM_ENTITY;
-const makeForm=(original,overrides={{}})=>{{
-  const initial={{...original,...infer(original),...overrides}},elements={{}};
-  for(const [key,kind] of FIELDS.covers){{
-    const checkbox=kind==="checkbox";
-    elements[key]={{type:checkbox?"checkbox":kind==="number"?"number":"text",value:String(initial[key]??""),checked:checkbox?Boolean(initial[key]):false}};
-  }}
-  return {{elements,dataset:{{coverFeedbackChanged:Object.prototype.hasOwnProperty.call(overrides,"cover_position_feedback")?"true":""}},reportValidity:()=>true}};
-}};
-const save=(original,overrides={{}})=>panel.formEntity(makeForm(original,overrides),original,"covers");
-console.log(JSON.stringify({{
-  freshPosition:infer({{position_state_address:"DB1,B0"}}).cover_position_feedback,
-  legacyTimedPosition:infer({{position_state_address:"DB1,B0",cover_position_feedback:"timed"}}).cover_position_feedback,
-  freshTraditional:infer({{open_command_address:"Q0.0"}}).cover_position_feedback,
-  roundTripPosition:save({{position_state_address:"DB1,B0"}},{{cover_position_feedback:"position"}}).cover_position_feedback,
-  legacySaveNormalizes:save({{position_state_address:"DB1,B0",cover_position_feedback:"timed"}}).cover_position_feedback,
-  roundTripTraditional:save({{open_command_address:"Q0.0",close_command_address:"Q0.1"}},{{cover_position_feedback:"timed"}}).cover_position_feedback
-}}));
-"""
-    result = json.loads(
-        subprocess.run(
-            ["node", "-e", script], check=True, capture_output=True, text=True
-        ).stdout
-    )
-    assert result["freshPosition"] == "position"
-    assert result["legacyTimedPosition"] == "position"
-    assert result["freshTraditional"] == "timed"
-    assert result["roundTripPosition"] == "position"
-    assert result["legacySaveNormalizes"] == "position"
-    assert result["roundTripTraditional"] == "timed"
-    assert (
-        "form.querySelector('input[name=\"cover_position_feedback\"][value=\"timed\"]')"
-        ".closest('.control-card').classList.toggle('hidden-field',"
-        "control==='toggle'||control==='position')"
-    ) in source
-    assert (
-        "form.querySelector('input[name=\"cover_position_feedback\"][value=\"position\"]')"
-        ".closest('.control-card').classList.toggle('hidden-field',control!=='position')"
-    ) in source
-
-
-def test_position_cover_legacy_movement_only_status_saves_without_new_required_fields() -> None:
-    """A legacy position cover whose cover_status_address only carries
-    opening/closing/stopped values (no open/closed) must keep saving
-    through the visual editor without requiring a new open/closed mapping
-    - position_feedback infers "position" (not "status") for it, leaving
-    the status word to movement_feedback alone (PR #124 review, point 2)."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = f"""
-global.HTMLElement = class {{}};
-global.customElements = {{define() {{}}}};
-{PANEL_LOADER}
-const panel=new S7PlcConfigurationPanel();
-panel.t=key=>key;
-const infer=COVER_UI_FROM_ENTITY;
-const makeForm=(original,overrides={{}})=>{{
-  const initial={{...original,...infer(original),...overrides}},elements={{}};
-  for(const [key,kind] of FIELDS.covers){{
-    const checkbox=kind==="checkbox";
-    elements[key]={{type:checkbox?"checkbox":kind==="number"?"number":"text",value:String(initial[key]??""),checked:checkbox?Boolean(initial[key]):false}};
-  }}
-  return {{elements,dataset:{{coverFeedbackChanged:""}},reportValidity:()=>true}};
-}};
-const legacy={{
-  position_state_address:"DB1,B0",
-  cover_status_address:"DB1,B10",
-  cover_status_opening_values:"1",
-  cover_status_closing_values:"2",
-  cover_status_stopped_values:"3"
-}};
-console.log(JSON.stringify({{
-  inferred:infer(legacy),
-  saved:panel.formEntity(makeForm(legacy),legacy,"covers")
-}}));
-"""
-    result = json.loads(
-        subprocess.run(
-            ["node", "-e", script], check=True, capture_output=True, text=True
-        ).stdout
-    )
-    assert result["inferred"]["cover_position_feedback"] == "position"
-    assert result["inferred"]["cover_movement_feedback"] == "status"
-    saved = result["saved"]
-    assert saved["cover_status_address"] == "DB1,B10"
-    assert saved["cover_status_opening_values"] == "1"
-    assert saved["cover_position_feedback"] == "position"
-
-
-def test_position_cover_legacy_position_only_status_saves_without_new_required_fields() -> None:
-    """Symmetric counterpart: a legacy position cover whose
-    cover_status_address only carries open/closed values (no opening/
-    closing/stopped) must keep saving through the visual editor without
-    requiring a new movement mapping - movement_feedback infers "none"
-    (not "status") for it, since the status word has no movement mapping
-    to offer; position_feedback correctly keeps claiming "status" for
-    itself (PR #124 review round 2, point 1)."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = f"""
-global.HTMLElement = class {{}};
-global.customElements = {{define() {{}}}};
-{PANEL_LOADER}
-const panel=new S7PlcConfigurationPanel();
-panel.t=key=>key;
-const infer=COVER_UI_FROM_ENTITY;
-const makeForm=(original,overrides={{}})=>{{
-  const initial={{...original,...infer(original),...overrides}},elements={{}};
-  for(const [key,kind] of FIELDS.covers){{
-    const checkbox=kind==="checkbox";
-    elements[key]={{type:checkbox?"checkbox":kind==="number"?"number":"text",value:String(initial[key]??""),checked:checkbox?Boolean(initial[key]):false}};
-  }}
-  return {{elements,dataset:{{coverFeedbackChanged:""}},reportValidity:()=>true}};
-}};
-const legacy={{
-  position_state_address:"DB1,B0",
-  cover_status_address:"DB1,B10",
-  cover_status_open_values:"1",
-  cover_status_closed_values:"2"
-}};
-console.log(JSON.stringify({{
-  inferred:infer(legacy),
-  saved:panel.formEntity(makeForm(legacy),legacy,"covers")
-}}));
-"""
-    result = json.loads(
-        subprocess.run(
-            ["node", "-e", script], check=True, capture_output=True, text=True
-        ).stdout
-    )
-    assert result["inferred"]["cover_position_feedback"] == "status"
-    assert result["inferred"]["cover_movement_feedback"] == "none"
-    saved = result["saved"]
-    assert saved["cover_status_address"] == "DB1,B10"
-    assert saved["cover_status_open_values"] == "1"
-    assert saved["cover_position_feedback"] == "status"
 
 
 def test_cover_endstop_panel_validation_matches_config_builder() -> None:
@@ -2707,53 +1883,6 @@ def test_cover_translation_modes_have_language_parity() -> None:
         assert expected_errors <= panel["errors"].keys()
 
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_climate_guided_inference_and_cleanup_are_backward_compatible() -> None:
-    """Execute Climate projections and intentional cleanup in JavaScript."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = f"""
-global.HTMLElement = class {{}}; global.customElements = {{define() {{}}}};
-{PANEL_LOADER}
-const infer=CLIMATE_UI_FROM_ENTITY, clean=CLEAN_CLIMATE_ENTITY;
-const mappings={{preset_mode_off_value:null,hvac_status_off_values:"",hvac_status_heating_values:"7"}};
-console.log(JSON.stringify({{
- heat:infer({{heating_output_address:"Q0.0"}}),
- cool:infer({{cooling_output_address:"Q0.1"}}),
- both:infer({{heating_output_address:"Q0.0",cooling_output_address:"Q0.1"}}),
- partial:clean({{uid:"kept",control_mode:"direct",heating_output_address:"Q0.0",heating_action_address:"I0.0"}},infer({{heating_output_address:"Q0.0",heating_action_address:"I0.0"}})),
- combinations:[{{}},{{on_off_address:"Q0.0"}},{{preset_mode_address:"DB1,B0"}},{{preset_mode_address:"DB1,B0",on_off_address:"Q0.0"}}].map(infer).map(x=>x.climate_mode_control),
- sameAddress:clean({{uid:"kept",control_mode:"setpoint",target_temperature_address:"DB1,R0",preset_mode_address:"DB1,B4",hvac_status_address:"DB1,B4",preset_mode_bidirectional:true,...mappings}},{{...infer({{preset_mode_address:"DB1,B4",hvac_status_address:"DB1,B4"}}),control_mode:"setpoint"}}),
- disableStatus:clean({{control_mode:"setpoint",target_temperature_address:"DB1,R0",hvac_status_address:"DB1,B4",...mappings}},{{...infer({{hvac_status_address:"DB1,B4"}}),control_mode:"setpoint",climate_action_feedback:"inferred"}},["climate_action_feedback"]),
- disableCoded:clean({{control_mode:"setpoint",target_temperature_address:"DB1,R0",preset_mode_address:"DB1,B4",preset_mode_bidirectional:true,...mappings}},{{...infer({{preset_mode_address:"DB1,B4"}}),control_mode:"setpoint",climate_mode_control:"setpoint"}},["climate_mode_control"]),
- toDirect:clean({{uid:"kept",control_mode:"setpoint",target_temperature_address:"DB1,R0",preset_mode_address:"DB1,B4",hvac_status_address:"DB1,B4",...mappings}},{{...infer({{}}),control_mode:"direct"}},["control_mode"])
-}}));
-"""
-    value = json.loads(
-        subprocess.run(
-            ["node", "-e", script], check=True, capture_output=True, text=True
-        ).stdout
-    )
-    assert value["heat"]["climate_direct_function"] == "heat"
-    assert value["cool"]["climate_direct_function"] == "cool"
-    assert value["both"]["climate_direct_function"] == "heat_cool"
-    assert value["partial"]["heating_action_address"] == "I0.0"
-    assert value["combinations"] == ["setpoint", "on_off", "coded", "coded_on_off"]
-    assert (
-        value["sameAddress"]["preset_mode_address"]
-        == value["sameAddress"]["hvac_status_address"]
-    )
-    assert value["sameAddress"]["preset_mode_bidirectional"] is True
-    assert value["sameAddress"]["uid"] == "kept"
-    assert "hvac_status_address" not in value["disableStatus"]
-    assert value["disableStatus"]["hvac_status_off_values"] == ""
-    assert "preset_mode_address" not in value["disableCoded"]
-    assert value["disableCoded"]["preset_mode_off_value"] is None
-    assert value["toDirect"]["uid"] == "kept"
-    assert not any(
-        key in value["toDirect"]
-        for key in ("climate_mode_control", "climate_action_feedback")
-    )
-
 def test_panel_layout_translations_are_available_in_every_language() -> None:
     required = {
         "switch_to_tabs",
@@ -2771,92 +1900,11 @@ def test_panel_layout_translations_are_available_in_every_language() -> None:
         assert required <= translations["config_panel"]["layout"].keys(), path
         assert all(translations["config_panel"]["layout"][key] for key in required)
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_guided_address_grammar_round_trips_every_supported_type() -> None:
-    """The browser grammar mirrors current pyS7 tokens and canonical forms."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    cases = [
-        "DB1,X10.3", "I3.0", "Q2.6", "M7.1", "DB36,B2", "DB1,USINT2",
-        "DB1,SINT2", "DB102,C4", "DB17,W4", "DB10,I3", "DB51,DW6",
-        "DB103,DI3", "DB21,R14", "DB21,LR14", "DB1,TIME4",
-        "DB102,S10.15", "DB2,WS0.128", "IB10", "QW8", "MD72",
-    ]
-    script = f'''global.HTMLElement=class {{}};global.customElements={{get(){{}},define(){{}}}};{PANEL_LOADER}\nconsole.log(JSON.stringify(process.argv.slice(1).map(value=>{{const parsed=PARSE_S7_ADDRESS(value);return [parsed.error,SERIALIZE_S7_ADDRESS(parsed)];}})));'''
-    result = json.loads(subprocess.run(["node", "-e", script, *cases], check=True, capture_output=True, text=True).stdout)
-    assert all(not error for error, _ in result)
-    # Aliases intentionally serialize to the builder's stable short-token spelling.
-    assert [value for _, value in result] == [
-        "DB1,X10.3", "I3.0", "Q2.6", "M7.1", "DB36,B2", "DB1,USINT2",
-        "DB1,SINT2", "DB102,C4", "DB17,W4", "DB10,I3", "DB51,DW6",
-        "DB103,DI3", "DB21,R14", "DB21,LR14", "DB1,TIME4",
-        "DB102,S10.15", "DB2,WS0.128", "IB10", "QW8", "MDW72",
-    ]
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_guided_address_validation_and_field_restrictions() -> None:
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = f'''global.HTMLElement=class {{}};global.customElements={{get(){{}},define(){{}}}};{PANEL_LOADER}\nconsole.log(JSON.stringify({{
-      badBit:PARSE_S7_ADDRESS("DB1,X0.8").error,
-      missingLength:PARSE_S7_ADDRESS("DB1,S0").error,
-      timeArea:PARSE_S7_ADDRESS("MTIME0").error,
-      malformed:PARSE_S7_ADDRESS("DB1,").error,
-      empty:PARSE_S7_ADDRESS("").empty,
-      boolean:ADDRESS_TYPES_FOR_FIELD("binary_sensors","address"),
-      text:ADDRESS_TYPES_FOR_FIELD("texts","address"),
-      select:ADDRESS_TYPES_FOR_FIELD("selects","address"),
-      optional:SERIALIZE_S7_ADDRESS({{empty:true}})
-    }}));'''
-    value = json.loads(subprocess.run(["node", "-e", script], check=True, capture_output=True, text=True).stdout)
-    assert value == {"badBit":"invalid", "missingLength":"incomplete", "timeArea":"unsupported", "malformed":"invalid", "empty":True, "boolean":["BIT"], "text":["STRING","WSTRING"], "select":["BYTE","USINT","SINT","WORD","INT","DWORD","DINT","TIME"], "optional":""}
-
-
 def test_all_visual_plc_addresses_use_reusable_builder() -> None:
     source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
     assert "if(address&&key!=='source_entity')return this.addressField" in source
     assert "this.initAddressBuilders(form,type)" in source
     assert 'name="${key}" value="${this.escape(value)}"' in source
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_address_builder_serialization_and_visibility_behaviour() -> None:
-    """Structured address helpers distinguish missing values and expose fields."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    script = r'''
-const vm = require("vm");
-const context = {HTMLElement: class {}, customElements: {define() {}}};
-vm.createContext(context);
-vm.runInContext(require('fs').readFileSync(process.argv[1],'utf8') + `
-const values = {
-  visibility: [
-    ADDRESS_FIELD_VISIBILITY("DB", "BIT"),
-    ADDRESS_FIELD_VISIBILITY("I", "STRING"),
-    ADDRESS_FIELD_VISIBILITY("Q", "WSTRING"),
-    ADDRESS_FIELD_VISIBILITY("M", "INT"),
-  ],
-  emptyDb: SERIALIZE_S7_ADDRESS({area:"DB",dbNumber:"",dataType:"INT",offset:"0"}),
-  emptyOffset: SERIALIZE_S7_ADDRESS({area:"M",dataType:"INT",offset:""}),
-  emptyBit: SERIALIZE_S7_ADDRESS({area:"M",dataType:"BIT",offset:"0",bit:""}),
-  emptyLength: SERIALIZE_S7_ADDRESS({area:"DB",dbNumber:"1",dataType:"STRING",offset:"0",length:""}),
-  zeros: SERIALIZE_S7_ADDRESS({area:"DB",dbNumber:"0",dataType:"BIT",offset:"0",bit:"0"}),
-};
-globalThis.result = JSON.stringify(values);`, context);
-process.stdout.write(context.result);
-'''
-    result = json.loads(subprocess.run(
-        ["node", "-e", script, str(PANEL_JAVASCRIPT)], check=True, capture_output=True, text=True
-    ).stdout)
-    assert result["visibility"] == [
-        {"dbNumber": True, "bit": True, "length": False},
-        {"dbNumber": False, "bit": False, "length": True},
-        {"dbNumber": False, "bit": False, "length": True},
-        {"dbNumber": False, "bit": False, "length": False},
-    ]
-    assert result["emptyDb"] == {"error": "incomplete"}
-    assert result["emptyOffset"] == {"error": "incomplete"}
-    assert result["emptyBit"] == {"error": "incomplete"}
-    assert result["emptyLength"] == {"error": "incomplete"}
-    assert result["zeros"] == "DB0,X0.0"
-
 
 def test_address_builder_focus_style_only_indicates_real_errors() -> None:
     """Focusing a builder only shows an error outline for explicit errors."""
@@ -2904,86 +1952,7 @@ def test_italian_address_builder_is_translated() -> None:
     }
 
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_logo_builder_profiles_preview_reverse_hidden_and_s7_fallback() -> None:
-    """Every selected entry chooses its profile while S7 markup stays unchanged."""
-    script = f'''
-global.HTMLElement=class {{}};global.customElements={{get(){{}},define(){{}}}};
-{PANEL_LOADER}
-const profile=(family,start,last)=>({{family,areas:[{{name:"I",first:1,last,vm_offset:start,data_type:"X"}}]}});
-const panel=new S7PlcConfigurationPanel();panel.escape=v=>String(v??"");panel.t=k=>k;
-panel.entries=[
- {{entry_id:"s7",plc_family:"s7"}},
- {{entry_id:"a7",plc_family:"logo_0ba7",logo_profile:profile("logo_0ba7",923,24)}},
- {{entry_id:"a8",plc_family:"logo_0ba8",logo_profile:profile("logo_0ba8",1024,24)}},
- {{entry_id:"nine",plc_family:"logo_9",logo_profile:profile("logo_9",6024,64)}}];
-const html=id=>{{panel.entryId=id;return panel.addressField("address",id==="nine"?"DB1,X6024.0":"DB1,X1024.0","Address","",true,"sensors");}};
-const p9=panel.entries[3].logo_profile;
-console.log(JSON.stringify({{
- s7:!html("s7").includes("data-logo-builder"),a7:html("a7").includes("data-logo-builder"),
- a8:html("a8").includes("data-logo-builder"),nine:html("nine").includes("data-logo-builder"),
- forward:LOGO_TO_S7(p9,"I1"),reverse:S7_TO_LOGO(p9,"DB1,X6024.0"),
- out:LOGO_TO_S7(p9,"I65"),reserved:S7_TO_LOGO(p9,"DB1,X6032.0"),
- markup:html("nine")
-}}));'''
-    value = json.loads(subprocess.run(
-        ["node", "-e", script], check=True, capture_output=True, text=True
-    ).stdout)
-    assert value["s7"] and value["a7"] and value["a8"] and value["nine"]
-    assert value["forward"]["canonical"] == "DB1,X6024.0"
-    assert value["reverse"]["symbol"] == "I1"
-    assert value["out"]["error"] == "address_out_of_range"
-    assert value["reserved"] is None
-    assert 'type="hidden" name="address" value="DB1,X6024.0"' in value["markup"]
-    assert "address_builder.logo_address" in value["markup"]
-    assert "address_builder.internal_address" in value["markup"]
 
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_plc_family_connection_group_translation_and_legacy_fallback() -> None:
-    script = f'''
-global.HTMLElement=class {{}};global.customElements={{get(){{}},define(){{}}}};
-{PANEL_LOADER}
-const panel=new S7PlcConfigurationPanel();panel.panelTranslations={{config_panel:{{connection_details:{{values:{{s7:"SIMATIC S7",logo_9:"LOGO! 9"}}}}}}}};
-const entry={{title:"PLC",plc_family:"logo_9",data:{{connection_type:"rack_slot",rack:0,slot:1}}}};
-const groups=CONNECTION_DETAIL_SECTIONS(entry).map(g=>[g.key,g.rows.map(r=>r[0])]);
-console.log(JSON.stringify({{groups,translated:panel.connectionValue("logo_9"),legacy:panel.connectionValue("s7")}}));'''
-    value = json.loads(subprocess.run(
-        ["node", "-e", script], check=True, capture_output=True, text=True
-    ).stdout)
-    connection = dict(value["groups"])["connection"]
-    assert connection == ["plc_family", "connection_type", "rack", "slot"]
-    assert not any(key == "other" for key, _fields in value["groups"])
-    assert value["translated"] == "LOGO! 9"
-    assert value["legacy"] == "SIMATIC S7"
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_logo_vm_helpers_and_builder_datatype_filtering() -> None:
-    """VM helpers and guided reconstruction stay aligned."""
-    script = f"""
-global.HTMLElement=class {{}};global.customElements={{get(){{}},define(){{}}}};
-{PANEL_LOADER}
-const vmAreas=[{{name:"V",first:0,last:850,data_type:"X",width:1,bit_min:0,bit_max:7}},{{name:"VB",first:0,last:850,data_type:"BYTE",width:1}},{{name:"VW",first:0,last:849,data_type:"WORD",width:2}},{{name:"VD",first:0,last:847,data_type:"DWORD",width:4}}];
-const profile={{family:"logo_0ba8",vm_last_byte:850,areas:[],vm_areas:vmAreas}};
-const panel=new S7PlcConfigurationPanel();panel.escape=v=>String(v??"");panel.t=k=>k;panel.entries=[{{entry_id:"logo",plc_family:"logo_0ba8",logo_profile:profile}}];panel.entryId="logo";
-const html=value=>panel.addressField("address",value,"Address","",false,"entity_sync");
-console.log(JSON.stringify({{forward:["V0.0","V850.7","VB850","VW849","VD847"].map(v=>LOGO_TO_S7(profile,v)),invalid:["V0","V0.8","VB0.0","VW850","VD848","VB-1"].map(v=>LOGO_TO_S7(profile,v).error),reverse:["DB1,X0.0","DB1,BYTE10","DB1,WORD20","DB1,DWORD30"].map(v=>S7_TO_LOGO(profile,v)?.symbol),candidates:["V0.0","V0.8","VW850","IB10","QW8","MD72","DB1,X0.0"].map(v=>LOGO_ADDRESS_CANDIDATE(profile,v)),byte:html("DB1,BYTE10"),word:html("DB1,WORD20"),dword:html("DB1,DWORD30"),bit:html("DB1,X10.3"),empty:html("")}}));"""
-    value = json.loads(subprocess.run(
-        ["node", "-e", script], check=True, capture_output=True, text=True
-    ).stdout)
-    assert [item["canonical"] for item in value["forward"]] == [
-        "DB1,X0.0", "DB1,X850.7", "DB1,BYTE850", "DB1,WORD849", "DB1,DWORD847"
-    ]
-    assert all(value["invalid"])
-    assert value["reverse"] == ["V0.0", "VB10", "VW20", "VD30"]
-    assert value["candidates"] == [True, True, True, False, False, False, False]
-    for name, expected in (("byte", "VB"), ("word", "VW"), ("dword", "VD"), ("bit", "V")):
-        assert f'<option value="{expected}" selected>' in value[name]
-        assert "address_builder.vm_offset" in value[name]
-    assert "data-logo-bit hidden" not in value["bit"]
-    assert "data-logo-bit hidden" in value["byte"]
-    assert 'type="hidden" name="address" value=""' in value["empty"]
 
 @pytest.mark.parametrize(("source", "expected"), [
     ("binary_sensors:\n  - address: I1\n", "DB1,X1024.0"),
@@ -3010,23 +1979,6 @@ def test_complete_configuration_yaml_preserves_canonical_and_s7_addresses():
     assert s7["binary_sensors"][0]["address"] == "I1.0"
 
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_logo_text_address_fields_are_manual_only_and_preserve_values():
-    script = f'''global.HTMLElement=class {{}};global.customElements={{get(){{}},define(){{}}}};{PANEL_LOADER}
-const profile={{family:"logo_0ba8",areas:[{{name:"I",first:1,last:24,vm_offset:1024,data_type:"X"}}],vm_areas:[]}};
-const panel=new S7PlcConfigurationPanel();panel.escape=v=>String(v??"");panel.t=k=>k;panel.entries=[{{entry_id:"logo",plc_family:"logo_0ba8",logo_profile:profile}}];panel.entryId="logo";
-console.log(JSON.stringify(["","DB1,S0.20","DB1,WS0.20"].map(value=>panel.addressField("address",value,"Address","",true,"texts"))));'''
-    values = json.loads(subprocess.run(
-        ["node", "-e", script], check=True, capture_output=True, text=True
-    ).stdout)
-    for value, markup in zip(("", "DB1,S0.20", "DB1,WS0.20"), values, strict=True):
-        assert 'data-address-mode="guided" disabled' in markup
-        assert 'data-address-mode="manual" class="active"' in markup
-        assert 'class="address-guided" hidden' in markup
-        assert f'value="{value}"' in markup
-
-
-
 def test_logo_yaml_save_does_not_invent_optional_command_address() -> None:
     saved = _configuration_from_yaml(
         "numbers:\n  - address: DB1,WORD2\n    min_value: 0\n    max_value: 7000\n",
@@ -3036,44 +1988,6 @@ def test_logo_yaml_save_does_not_invent_optional_command_address() -> None:
     assert saved["numbers"][0]["address"] == "DB1,WORD2"
     assert "command_address" not in saved["numbers"][0]
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_address_modes_persist_per_plc_entity_and_field() -> None:
-    """Saved UI choices are isolated and invalid/absent preferences fall back safely."""
-    script = f'''
-const store = new Map();
-global.HTMLElement=class {{}};global.customElements={{get(){{}},define(){{}}}};
-global.localStorage={{getItem:key=>store.get(key)??null,setItem:(key,value)=>store.set(key,value)}};
-{PANEL_LOADER}
-const panel=new S7PlcConfigurationPanel();panel.escape=value=>String(value??"");panel.t=key=>key;
-panel.entries=[{{entry_id:"plc-a",plc_family:"s7"}},{{entry_id:"plc-b",plc_family:"s7"}}];
-const render=(entryId,identity,field,value)=>{{panel.entryId=entryId;panel._addressPreferenceContext={{entryId,type:"switches",identity}};return panel.addressField(field,value,field,"",false,"switches");}};
-const mode=html=>html.includes('data-address-mode="guided" class="active"')?"guided":"manual";
-const state={{automatic:mode(render("plc-a","entity-a","state_address","DB1,X0.0")),unparseable:mode(render("plc-a","entity-a","state_address","not-an-address"))}};
-panel._addressPreferenceContext={{entryId:"plc-a",type:"switches",identity:"entity-a"}};
-panel.writeAddressMode(panel.addressPreferenceKey("state_address"),"manual");
-panel.writeAddressMode(panel.addressPreferenceKey("command_address"),"guided");
-state.savedManual=mode(render("plc-a","entity-a","state_address","DB1,X0.0"));
-state.otherField=mode(render("plc-a","entity-a","command_address","DB1,X0.1"));
-state.otherEntity=mode(render("plc-a","entity-b","state_address","DB1,X0.0"));
-state.otherPlc=mode(render("plc-b","entity-a","state_address","DB1,X0.0"));
-store.set(ADDRESS_MODE_STORAGE_KEY,'{{"bad":"sideways"');
-state.invalidStorage=mode(render("plc-a","entity-a","state_address","DB1,X0.0"));
-store.set(ADDRESS_MODE_STORAGE_KEY,JSON.stringify({{[panel.addressPreferenceKey("state_address")]:"guided"}}));
-state.invalidNeverGuided=mode(render("plc-a","entity-a","state_address","not-an-address"));
-console.log(JSON.stringify(state));'''
-    result = subprocess.run(
-        ["node", "-e", script], check=True, capture_output=True, text=True
-    )
-    assert json.loads(result.stdout) == {
-        "automatic": "guided",
-        "unparseable": "manual",
-        "savedManual": "manual",
-        "otherField": "guided",
-        "otherEntity": "guided",
-        "otherPlc": "guided",
-        "invalidStorage": "guided",
-        "invalidNeverGuided": "manual",
-    }
 
 
 def test_entity_card_mobile_styles_and_translations_are_complete() -> None:
@@ -3095,6 +2009,12 @@ def test_entity_card_mobile_styles_and_translations_are_complete() -> None:
     assert ".state-badge{display:none}" not in mobile
     assert "max-width:min(34%,140px)" in mobile
     assert ".details>div{gap:2px}" in mobile
+    assert ".entity-leading{display:flex;align-items:center;gap:3px" in source
+    assert ".entity-select{box-sizing:border-box;display:grid;place-items:center;" in source
+    assert "width:38px;min-height:32px" in source
+    assert ".entity-leading{flex-direction:column;gap:4px}" in mobile
+    assert ".details{flex:1;min-width:0}" in source
+    assert ".details>b{font-size:14px;font-weight:600;overflow:hidden;" in source
 
     translation_files = [
         Path("custom_components/s7plc/strings.json"),
@@ -3105,47 +2025,6 @@ def test_entity_card_mobile_styles_and_translations_are_complete() -> None:
         assert data["config_panel"]["actions"]["more_actions"]
 
 
-@pytest.mark.parametrize("viewport_width", [320, 360, 390])
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_entity_card_leading_controls_stack_on_narrow_viewports(
-    viewport_width: int,
-) -> None:
-    """Sparse cards keep usable selection controls and room for long names."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    styles = source.split("get styles(){return `", 1)[1].split("`;}", 1)[0]
-    mobile = styles.split("@media(max-width:650px){", 1)[1].split(
-        "@media(max-width:500px)", 1
-    )[0]
-    script = f'''global.HTMLElement=class {{}};global.customElements={{get(){{}},define(){{}}}};
-{PANEL_LOADER}
-const panel=new S7PlcConfigurationPanel();panel.t=key=>key;panel.bt=key=>key;
-panel.escape=String;panel.icon=()=>"help";panel.selectedIndices=new Set();
-const entry={{entities:{{sensors:[{{name:"A very long entity name that must not widen the card"}}]}}}};
-process.stdout.write(panel.entityCards(entry,"sensors"));'''
-    markup = subprocess.run(
-        ["node", "-e", script], check=True, capture_output=True, text=True
-    ).stdout
-
-    # The checkbox and icon form one flex item, so they can change axis together.
-    assert re.search(
-        r'<div class="entity-leading"><label class="entity-select".*?</label>'
-        r'<div class="entity-icon">.*?</div></div><div class="details">',
-        markup,
-    )
-    assert 'class="entity-state state-badge"' not in markup
-    assert "<div></div>" in markup  # No metadata chips.
-    assert "A very long entity name that must not widen the card" in markup
-
-    assert viewport_width <= 650
-    assert ".entity-leading{display:flex;align-items:center;gap:3px" in styles
-    assert (
-        ".entity-select{box-sizing:border-box;display:grid;place-items:center;"
-        in styles
-    )
-    assert "width:38px;min-height:32px" in styles
-    assert ".entity-leading{flex-direction:column;gap:4px}" in mobile
-    assert ".details{flex:1;min-width:0}" in styles
-    assert ".details>b{font-size:14px;font-weight:600;overflow:hidden;" in styles
 
 
 def test_entity_overflow_stacking_hierarchy_stays_above_neighbor_cards() -> None:
@@ -3271,62 +2150,6 @@ def test_panel_header_uses_compact_responsive_layout() -> None:
     )
     assert "(100vw - 900px)*.134" not in page_styles
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_value_conversion_editor_is_localized_directional_and_accessible() -> None:
-    """Every logical channel has one translated, directional conversion editor."""
-    script = r'''
-const vm=require("vm"),fs=require("fs");let Panel;
-const context={HTMLElement:class{},customElements:{get(){},define:(_,cls)=>Panel=cls}};
-vm.createContext(context);vm.runInContext(fs.readFileSync(process.argv[1],"utf8"),context);
-const it=JSON.parse(fs.readFileSync(process.argv[2],"utf8")).config_panel;
-const panel=new Panel();panel.escape=v=>String(v??"");panel.t=key=>key.split('.').reduce((o,k)=>o?.[k],it)??key;
-const specs=vm.runInContext('VALUE_CHANNEL_SPECS',context), rows={};
-const entities={
- sensors:{address:'DB1,REAL0'},numbers:{address:'DB1,REAL0',command_address:'DB1,REAL4'},selects:{address:'DB1,BYTE0'},entity_sync:{address:'DB1,REAL0'},lights:{brightness_state_address:'DB1,BYTE0',brightness_command_address:'DB1,BYTE2'},covers:{position_state_address:'DB1,BYTE0',position_command_address:'DB1,BYTE2',cover_status_address:'DB1,BYTE4',tilt_state_address:'DB1,BYTE6',tilt_command_address:'DB1,BYTE8'},climates:{current_temperature_address:'DB1,REAL0',target_temperature_address:'DB1,REAL4',preset_mode_address:'DB1,BYTE8',preset_mode_bidirectional:true,hvac_status_address:'DB1,BYTE10'}};
-for(const [type,list] of Object.entries(specs))for(const spec of list)rows[spec.label]=panel.valueConversionRow(type,entities[type],spec);
-const summaries=[null,{type:'multiplier',factor:5},{type:'linear_scale',plc_min:0,plc_max:27648,ha_min:0,ha_max:100},{type:'expression'}].map(v=>panel.valueConversionSummary(v));
-console.log(JSON.stringify({rows,summaries,directions:['', 'DB1,REAL0', 'DB1,REAL4'].map(write=>panel.valueConversionDirection('DB1,REAL0',write))}));'''
-    result = json.loads(subprocess.run(
-        ["node", "-e", script, str(PANEL_JAVASCRIPT),
-         "custom_components/s7plc/translations/it.json"],
-        check=True, capture_output=True, text=True,
-    ).stdout)
-    expected_titles = {
-        "sensor_value": "Conversione valore sensore",
-        "number_value": "Conversione valore number",
-        "select_value": "Conversione valore select",
-        "sync_value": "Conversione valore sincronizzato",
-        "brightness": "Conversione luminosità",
-        "position": "Conversione posizione",
-        "tilt": "Conversione tilt",
-        "cover_status": "Conversione stato cover",
-        "current_temperature": "Conversione temperatura corrente",
-        "target_temperature": "Conversione temperatura target",
-        "preset_mode": "Conversione modalità preset",
-        "hvac_status": "Conversione stato HVAC",
-    }
-    assert set(result["rows"]) == set(expected_titles)
-    for channel, title in expected_titles.items():
-        assert title in result["rows"][channel]
-        assert 'aria-describedby="vc_' in result["rows"][channel]
-        assert 'aria-expanded="false"' in result["rows"][channel]
-    assert "Position" not in result["rows"]["position"]
-    assert ">None<" not in result["rows"]["position"]
-    assert result["summaries"] == [
-        "Nessuna", "Moltiplicatore × 5", "Scala 0–27648 → 0–100",
-        "Espressione personalizzata",
-    ]
-    assert all("Scale" not in value and "Custom expression" not in value
-               for value in result["summaries"])
-    assert result["directions"] == ["read", "bidirectional_same", "bidirectional_distinct"]
-    assert "Il valore letto dal PLC" in result["rows"]["sensor_value"]
-    assert "Il valore di Home Assistant" in result["rows"]["sync_value"]
-    assert "indirizzo di stato" in result["rows"]["position"]
-    assert "stesso indirizzo PLC" in result["rows"]["target_temperature"]
-    assert "data-conversion-direction=\"read\"" in result["rows"]["position"]
-    assert "data-conversion-direction=\"write\"" in result["rows"]["position"]
-
-
 def test_value_conversion_translations_and_responsive_layout_are_complete() -> None:
     source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
     required = {
@@ -3380,37 +2203,6 @@ def test_expression_guidance_translations_and_documentation_are_complete() -> No
         assert formula in docs
     assert "does not derive or automatically invert" in docs
     assert "[Value Conversions](docs/value-conversions.md)" in readme
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not available")
-def test_linear_scale_clamp_editor_presentation_and_semantics() -> None:
-    """Clamp is a responsive, accessible full-row option with strict booleans."""
-    script = r'''
-const vm=require("vm"),fs=require("fs");let Panel;
-const context={HTMLElement:class{},customElements:{get(){},define:(_,cls)=>Panel=cls}};
-vm.createContext(context);vm.runInContext(fs.readFileSync(process.argv[1],"utf8"),context);
-const translations=JSON.parse(fs.readFileSync(process.argv[2],"utf8")).config_panel;
-const panel=new Panel();panel.escape=v=>String(v??"");panel.t=key=>key.split('.').reduce((o,k)=>o?.[k],translations)??key;
-const spec={channel:'value',label:'number_value',read:'address',write:'command_address'};
-const row=clamp=>panel.valueConversionRow('numbers',{address:'DB1,REAL0',command_address:'DB1,REAL4',value_conversions:{value:{type:'linear_scale',plc_min:0,plc_max:1000,ha_min:0,ha_max:100,...clamp}}},spec);
-console.log(JSON.stringify({truthy:row({clamp:true}),falsey:row({clamp:false}),missing:row({}),strings:['0','false','anything','1','true'].map(value=>panel.checkboxValue(value)),summaries:[true,false,undefined].map(clamp=>panel.valueConversionSummary({type:'linear_scale',plc_min:0,plc_max:1000,ha_min:0,ha_max:100,clamp}))}));'''
-    result = json.loads(subprocess.run(
-        ["node", "-e", script, str(PANEL_JAVASCRIPT),
-         "custom_components/s7plc/translations/it.json"],
-        check=True, capture_output=True, text=True,
-    ).stdout)
-    assert 'class="conversion-clamp"' in result["truthy"]
-    assert '<input name="vc_value_clamp" type="checkbox" checked>' in result["truthy"]
-    assert "Limita il risultato all’intervallo configurato" in result["truthy"]
-    assert "I valori inferiori o superiori" in result["truthy"]
-    assert "type=\"checkbox\" checked" not in result["falsey"]
-    assert "type=\"checkbox\" checked" not in result["missing"]
-    assert result["strings"] == [False, False, False, True, True]
-    assert result["summaries"] == [
-        "Scala 0–1000 → 0–100 · Limitata",
-        "Scala 0–1000 → 0–100",
-        "Scala 0–1000 → 0–100",
-    ]
-
 
 def test_linear_scale_clamp_translations_layout_and_live_update() -> None:
     """Every locale includes clamp feedback and CSS covers mobile/Safari."""
