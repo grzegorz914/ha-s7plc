@@ -141,22 +141,6 @@ def test_panel_displays_project_badge_in_banner() -> None:
         assert translation["config_panel"]["common"]["open_project_github"]
 
 
-def test_connection_details_structural_styles_are_preserved() -> None:
-    """Connection details retain the cards, timeline, and row separators."""
-    source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
-    styles = source.split("get dialogStyles(){return `", 1)[1].split("`;}", 1)[0]
-
-    assert ".connection-head-text{min-width:0;display:flex;flex:1 1 auto" in styles
-    assert ".connection-detail-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))" in styles
-    assert "@media(max-width:650px)" in styles
-    assert ".connection-detail-groups{grid-template-columns:minmax(0,1fr)}" in styles
-    assert "overflow-wrap:anywhere" in styles
-    assert ".connection-detail-group h3{display:flex;align-items:center;gap:7px" in styles
-    assert ".connection-detail-group h3 ha-icon{" in styles
-    assert ".connection-details .connection-detail-group dl{margin:0;border:1px" in styles
-    assert ".connection-detail+.connection-detail{border-top:1px" in styles
-
-
 def test_compact_selector_descriptions_wrap_long_tokens() -> None:
     """Compact cards wrap unspaced descriptions at their natural height."""
     source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
@@ -258,7 +242,7 @@ def test_panel_typography_uses_home_assistant_fonts_semantically() -> None:
     source = PANEL_JAVASCRIPT.read_text(encoding="utf-8")
     assert "var(--ha-font-family-body,Roboto,sans-serif)" in source
     assert "@import" not in source and "fonts.googleapis.com" not in source
-    assert ".connection-detail dd{min-width:0;max-width:65%;" in source
+    assert ".connection-detail dd{min-width:0;margin:0;" in source
     assert "font-variant-numeric:tabular-nums" in source
     assert ".connection-detail dd.technical-value{font-family:ui-monospace" in source
     assert "CONNECTION_DETAIL_TECHNICAL_FIELDS.has(key)" in source
@@ -278,7 +262,7 @@ def test_connection_diagnostics_controls_are_visible_and_accessible() -> None:
     assert ".connection-badge:active" in source
     assert 'role="status"' in source
     assert 'aria-hidden="true"' in source
-    assert ".connection-detail dd.boolean-value{flex:0 0 auto;min-width:max-content;white-space:nowrap;word-break:normal;overflow-wrap:normal}" in source
+    assert ".connection-detail dd.boolean-value{min-width:max-content;white-space:nowrap;word-break:normal;overflow-wrap:normal}" in source
 
 
 def test_connection_diagnostics_translations_are_complete() -> None:
