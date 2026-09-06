@@ -77,7 +77,7 @@ async def test_real_setup_restores_connection_control_state(
     )
     assert coordinator.connection_enabled is expected_enabled
     assert control.is_on is expected_enabled
-    assert control._attr_available is True
+    assert control.available is True
     assert coordinator._client is None
     assert ensure_connected.await_count == expected_connects
     assert coordinator._write_batch_timer is None
@@ -158,7 +158,7 @@ async def test_control_switch_created_without_normal_switches(fake_hass):
     assert isinstance(control, S7ConnectionControlSwitch)
     assert control._attr_unique_id == "test-device:connection_enable"
     assert control._attr_device_info == device_info
-    assert control._attr_available is True
+    assert control.available is True
 
 
 @pytest.mark.asyncio
@@ -219,7 +219,7 @@ async def test_entities_availability_when_manually_disabled(fake_hass):
     control = S7ConnectionControlSwitch(
         coordinator, {}, "device:connection_enable", None
     )
-    assert control._attr_available is True
+    assert control.available is True
     assert control.is_on is False
 
 
@@ -276,15 +276,17 @@ async def test_disable_cancels_two_concurrent_inflight_flushes(fake_hass):
     await entered[1].wait()
 
     assert len(coordinator._write_batch_inflight_waiters) == 2
-    await coordinator.async_disable_connection()
+    disable = asyncio.create_task(coordinator.async_disable_connection())
     for write in (write_a, write_b):
         with pytest.raises(HomeAssistantError, match="manually disabled"):
             await asyncio.wait_for(write, timeout=0.1)
     assert not coordinator._write_batch_inflight_waiters
+    assert not disable.done()  # Disable must drain I/O, not just fail the callers.
 
     release[0].set()
     release[1].set()
     await asyncio.gather(flush_a, flush_b)
+    await disable
     await coordinator.async_enable_connection()
     await asyncio.sleep(0)
     assert calls == 2
@@ -345,9 +347,9 @@ async def test_shutdown_cleans_retry_queued_and_inflight_work(fake_hass):
     write_queued = asyncio.create_task(coordinator.write_batched("DB1.DBX0.1", True))
     await asyncio.sleep(0)
 
-    await coordinator.async_shutdown()
+    shutdown = asyncio.create_task(coordinator.async_shutdown())
     for task in (retry, write_inflight, write_queued):
-        with pytest.raises(HomeAssistantError, match="manually disabled"):
+        with pytest.raises(HomeAssistantError, match="shut down"):
             await asyncio.wait_for(task, timeout=0.1)
 
     assert coordinator._write_batch_timer is None
@@ -355,9 +357,11 @@ async def test_shutdown_cleans_retry_queued_and_inflight_work(fake_hass):
     assert not coordinator._write_batch_waiters
     assert not coordinator._write_batch_inflight_waiters
     fake_hass.services.async_call.assert_not_called()
+    assert not shutdown.done()
 
     release.set()
     await flush
+    await shutdown
     assert flush.done() and not flush.cancelled()
 
 
