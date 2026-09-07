@@ -1001,10 +1001,10 @@
           "label": "Wersja pyS7"
         },
         "rack": {
-          "label": "CPU rack"
+          "label": "Kaseta"
         },
         "slot": {
-          "label": "CPU slot"
+          "label": "Gniazdo"
         },
         "local_tsap": {
           "label": "Lokalny TSAP"
