@@ -5,7 +5,6 @@ from typing import Any
 
 from homeassistant.const import CONF_NAME
 
-from .address import DataType, get_numeric_limits, is_time_data_type, parse_tag
 from .const import (
     AVAILABILITY_MODE_BIT,
     AVAILABILITY_MODE_CONNECTION,
@@ -138,6 +137,7 @@ from .const import (
     DEFAULT_TOGGLE_MODE,
 )
 from .helpers import parse_pulse_duration
+from .plc.address import DataType, get_numeric_limits, is_time_data_type, parse_tag
 
 
 def _select_value_limits(tag) -> tuple[float, float] | None:
@@ -344,7 +344,7 @@ class EntityConfigBuilder:
     @staticmethod
     def _normalized_address(address: Any | None) -> str | None:
         """Return a normalized representation used for comparisons."""
-        from .address import normalize_address
+        from .plc.address import normalize_address
 
         return normalize_address(address)
 
@@ -1574,7 +1574,7 @@ class EntityConfigBuilder:
 
         # Parse tag to validate it's a STRING or WSTRING type
         address_tag = parse_tag(address)
-        from .address import DataType
+        from .plc.address import DataType
 
         if address_tag.data_type not in (DataType.STRING, DataType.WSTRING):
             return None, {"base": "text_requires_string_type"}

@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from custom_components.s7plc import coordinator as coordinator_module
-from custom_components.s7plc.address import DataType, MemoryArea, S7Tag
+from custom_components.s7plc.plc.address import DataType, MemoryArea, S7Tag
 from custom_components.s7plc.coordinator import S7Coordinator
 
 pytestmark = pytest.mark.asyncio
@@ -73,7 +73,7 @@ async def make_reader():
             HomeAssistant(), host="plc.local", max_retries=0, **kwargs
         )
         client = ReadClient(responses)
-        coord._client = client
+        coord._connection.client = client
         coordinators.append(coord)
         return coord, client
 

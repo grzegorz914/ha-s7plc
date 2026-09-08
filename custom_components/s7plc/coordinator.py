@@ -4,7 +4,6 @@ import asyncio
 import logging
 import struct
 import time
-from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from typing import Any, Callable, TypeVar
 
@@ -14,9 +13,10 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from pyS7.constants import ConnectionType
 from pyS7.errors import S7CommunicationError, S7ConnectionError, S7ReadResponseError
 
-from .address import DataType, S7Tag, parse_tag, pyS7
-from .plans import StringPlan, TagPlan, build_plans
-from .read_executor import S7ReadExecutor
+from .plc.address import DataType, S7Tag, parse_tag
+from .plc.connection_manager import S7ConnectionManager
+from .plc.plans import StringPlan, TagPlan, build_plans
+from .plc.read_executor import S7ReadError, S7ReadExecutor
 from .write_manager import S7WriteManager
 
 _LOGGER = logging.getLogger(__name__)
@@ -88,24 +88,22 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._optimize_read = bool(optimize_read)
         self._enable_write_batching = bool(enable_write_batching)
         self._enable_metrics = bool(enable_metrics)
-        self._connection_enabled = bool(connection_enabled)
-        self._shutdown = False
         self._shutdown_task: asyncio.Task[None] | None = None
         self._lifecycle_lock = asyncio.Lock()
-        # Unlike pyS7's packet lock, this covers the complete write/retry and
-        # cancellation cleanup, so the next write cannot reuse an aborted stream.
-        self._write_io_lock = asyncio.Lock()
-        self._io_stopping = False
-        # Track operation scopes, including reads, probes and connections, so
-        # shutdown can release pyS7's shared I/O lock before disconnecting.
-        self._io_tasks: dict[asyncio.Task, int] = {}
-        self._io_completions: dict[asyncio.Task, asyncio.Future[None]] = {}
-        self._io_generation = 0
-        # Wakes retry backoffs immediately when manual control is changed.
-        self._connection_state_changed = asyncio.Event()
-        # Lock for async operations (state management)
         self._async_lock = asyncio.Lock()
-        self._client: Any | None = None  # pyS7.AsyncS7Client when available
+        self._connection = S7ConnectionManager(
+            host=self._host,
+            rack=self._rack,
+            slot=self._slot,
+            local_tsap=self._local_tsap,
+            remote_tsap=self._remote_tsap,
+            port=self._port,
+            pys7_connection_type=self._pys7_connection_type,
+            enable_metrics=self._enable_metrics,
+            op_timeout=self._op_timeout,
+            connection_enabled=bool(connection_enabled),
+            error_type=HomeAssistantError,
+        )
 
         # Address configuration: topic -> address string
         self._items: dict[str, str] = {}
@@ -143,7 +141,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         self._read_executor = S7ReadExecutor(
             read_tags=lambda tags: self._retry(
-                lambda: self._client.read(tags, optimize=self._optimize_read)
+                lambda: self._connection.client.read(tags, optimize=self._optimize_read)
             ),
             optimize_read=self._optimize_read,
             op_timeout=self._op_timeout,
@@ -156,9 +154,9 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             op_timeout=self._op_timeout,
             state_lock=self._async_lock,
             write_multi=lambda writes: self.write_multi(writes),
-            operation=self._io_operation,
-            check_connection=self._raise_if_connection_disabled,
-            get_generation=lambda: self._io_generation,
+            operation=self._connection.operation,
+            check_connection=self._connection.check_available,
+            get_generation=lambda: self._connection.generation,
         )
 
     @property
@@ -226,152 +224,44 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
     @property
     def connection_enabled(self) -> bool:
         """Return whether communication with this PLC is allowed."""
-        return self._connection_enabled
-
-    def _raise_if_connection_disabled(self) -> None:
-        """Reject PLC I/O without allowing it to reconnect."""
-        if self._shutdown:
-            raise HomeAssistantError("PLC coordinator is shut down")
-        if not self._connection_enabled:
-            raise HomeAssistantError("PLC connection is manually disabled")
-        if (
-            self._io_stopping
-            or self._io_tasks.get(asyncio.current_task(), self._io_generation)
-            != self._io_generation
-        ):
-            raise HomeAssistantError("PLC connection was disconnected")
+        return self._connection.enabled
 
     async def async_enable_connection(self) -> None:
         """Allow communication and immediately request a connection attempt."""
         async with self._lifecycle_lock:
-            if self._shutdown:
-                raise HomeAssistantError("PLC coordinator is shut down")
-            if self._io_stopping:
-                raise HomeAssistantError("PLC I/O has not finished stopping")
-            if self._connection_enabled:
+            if not self._connection.enable():
                 return
-            self._connection_enabled = True
-            self._connection_state_changed.set()
-            self._connection_state_changed.clear()
             self.async_set_updated_data(dict(self._data_cache))
         await self.async_request_refresh()
 
     async def async_disable_connection(self) -> None:
         """Stop retries, pending writes and the active PLC connection."""
-        self._connection_enabled = False
-        self._connection_state_changed.set()
+        self._connection.disable()
         async with self._lifecycle_lock:
             # Reassert after acquiring the lock: an enable may have preceded us.
-            self._connection_enabled = False
-            self._connection_state_changed.set()
+            self._connection.disable()
             await self._stop_io(
                 HomeAssistantError("PLC connection is manually disabled")
             )
             self._last_health_ok = False
             self.async_set_updated_data(dict(self._data_cache))
 
-    async def _drop_connection(self) -> None:
-        """Safely close PLC connection, tolerant of concurrent disconnects.
-
-        The pyS7 library may concurrently set socket=None when the peer closes
-        the connection (race condition in _recv_exact / __send), so we catch
-        AttributeError alongside OSError/RuntimeError.  We skip the
-        is_connected guard because pyS7.disconnect() already returns early
-        when the state is DISCONNECTED.
-        """
-        if self._client:
-            try:
-                await self._client.disconnect()
-            except (OSError, RuntimeError, AttributeError) as err:
-                _LOGGER.debug("Error during PLC disconnect: %s", err)
-
-    async def _ensure_connected(self) -> None:
-        """Ensure PLC connection is established, with proper cleanup on failure.
-
-        Creates AsyncS7Client if needed and establishes connection using either
-        TSAP or rack/slot addressing.
-
-        Raises:
-            RuntimeError: If connection fails
-        """
-        async with self._io_operation():
-            self._raise_if_connection_disabled()
-            if self._client is None:
-                # Create client based on connection type
-                if self._local_tsap and self._remote_tsap:
-                    self._client = pyS7.AsyncS7Client(
-                        address=self._host,
-                        local_tsap=self._local_tsap,
-                        remote_tsap=self._remote_tsap,
-                        port=self._port,
-                        connection_type=self._pys7_connection_type,
-                        enable_metrics=self._enable_metrics,
-                    )
-                else:
-                    self._client = pyS7.AsyncS7Client(
-                        self._host,
-                        self._rack,
-                        self._slot,
-                        port=self._port,
-                        connection_type=self._pys7_connection_type,
-                        enable_metrics=self._enable_metrics,
-                    )
-
-            if not self._client.is_connected:
-                try:
-                    await self._client.connect()
-                    try:
-                        self._raise_if_connection_disabled()
-                    except HomeAssistantError:
-                        await self._drop_connection()
-                        raise
-                    if self._local_tsap and self._remote_tsap:
-                        _LOGGER.info(
-                            "Connected to S7 PLC %s (TSAP %s/%s)",
-                            self._host,
-                            self._local_tsap,
-                            self._remote_tsap,
-                        )
-                    else:
-                        _LOGGER.info(
-                            "Connected to S7 PLC %s (rack=%s slot=%s)",
-                            self._host,
-                            self._rack,
-                            self._slot,
-                        )
-                except (
-                    OSError,
-                    RuntimeError,
-                    S7CommunicationError,
-                    S7ConnectionError,
-                ) as err:
-                    # Ensure cleanup if connection failed
-                    await self._drop_connection()
-                    raise RuntimeError(f"Connection to PLC {self._host} failed: {err}")
-
     def is_connected(self) -> bool:
-        """Check if PLC connection is active.
-
-        Note:
-            Requires pyS7 >= 2.3.0 for is_connected property support.
-
-        Returns:
-            True if client exists and is connected
-        """
-        return bool(self._client and self._client.is_connected)
+        """Check if the PLC connection is active."""
+        return self._connection.is_connected()
 
     async def async_health_check(self) -> dict[str, Any]:
         """Run a lightweight health check against the PLC.
 
         Updates internal health bookkeeping and returns a summary dict.
         """
-        async with self._io_operation():
+        async with self._connection.operation():
             start = time.monotonic()
             ok = False
             error: str | None = None
             try:
-                await self._ensure_connected()
-                client = self._client
+                await self._connection.ensure_connected()
+                client = self._connection.client
                 if client is None:
                     raise RuntimeError("Client not initialized")
 
@@ -379,7 +269,9 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                 # otherwise rely on connection flag
                 if hasattr(client, "get_cpu_info"):
                     try:
-                        await client.get_cpu_info()
+                        await self._connection.perform_io(
+                            lambda: self._connection.client.get_cpu_info()
+                        )
                     except Exception as err:
                         # Catch all exceptions from pyS7 library
                         # calls which may raise various undocumented exception types
@@ -402,7 +294,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                 latency = time.monotonic() - start
 
             # A probe completed during stop must not publish a healthy state.
-            self._raise_if_connection_disabled()
+            self._connection.check_available()
             # Record state
             self._last_health_ok = ok
             self._last_health_latency = round(latency, 2)
@@ -422,9 +314,9 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         collected by the pyS7 library (requires pyS7 >= 2.7.0 with
         ``enable_metrics=True``, which is the default).
         """
-        if self._client is None:
+        if self._connection.client is None:
             return None
-        return getattr(self._client, "metrics", None)
+        return getattr(self._connection.client, "metrics", None)
 
     @property
     def pys7_metrics_dict(self) -> dict[str, Any]:
@@ -478,7 +370,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def connect(self) -> None:
         """Establish the connection if needed."""
-        await self._ensure_connected()
+        await self._connection.ensure_connected()
 
     async def disconnect(self) -> None:
         """Close the PLC connection and cancel pending writes."""
@@ -486,84 +378,12 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             await self._stop_io(HomeAssistantError("PLC connection was disconnected"))
 
     async def _stop_io(self, error: HomeAssistantError) -> None:
-        """Drain invalidated PLC operations; caller holds only the lifecycle lock."""
-        self._io_stopping = True
-        self._connection_state_changed.set()
-        async with self._async_lock:
-            self._io_generation += 1
-            self._write_manager.cancel_batches(error)
-        operations = {
-            task: done
-            for task, done in self._io_completions.items()
-            if task is not asyncio.current_task()
-        }
-        # For entity/service callers, wait for the I/O scope, not their whole
-        # task: a caller may continue unrelated work after handling a write error.
-        owned_tasks = self._write_manager.tasks - {asyncio.current_task()}
-        completions = set(operations.values()) | owned_tasks
-        completions = {done for done in completions if not done.done()}
-        if completions:
-            _, pending = await asyncio.wait(completions, timeout=self._op_timeout)
-            if pending:
-                # pyS7.disconnect also needs the I/O lock. Cancel and drain its
-                # owners before trying to close the connection.
-                cancellable = owned_tasks | {
-                    task for task, done in operations.items() if not done.done()
-                }
-                for task in cancellable:
-                    if not task.done():
-                        task.cancel()
-                _, pending = await asyncio.wait(pending, timeout=self._op_timeout)
-                if pending:
-                    # Do not reopen or report successful unload with live I/O.
-                    raise HomeAssistantError("PLC I/O tasks did not stop")
-            await asyncio.gather(*completions, return_exceptions=True)
-        await asyncio.wait_for(self._drop_connection(), self._op_timeout)
-        self._io_stopping = False
-        if self._connection_enabled and not self._shutdown:
-            self._connection_state_changed.clear()
-
-    @asynccontextmanager
-    async def _io_operation(self):
-        """Track active PLC work without owning the caller's later work."""
-        self._raise_if_connection_disabled()
-        task = asyncio.current_task()
-        owner = task not in self._io_tasks
-        if owner:
-            self._io_tasks[task] = self._io_generation
-            self._io_completions[task] = asyncio.get_running_loop().create_future()
-        try:
-            yield
-        finally:
-            if owner:
-                self._io_tasks.pop(task, None)
-                self._io_completions.pop(task).set_result(None)
-
-    @asynccontextmanager
-    async def _write_operation(self, *, serialize: bool = False):
-        """Serialize complete writes, including retry and cancellation cleanup."""
-        async with self._io_operation():
-            if serialize:
-                async with self._write_io_lock:
-                    self._raise_if_connection_disabled()
-                    try:
-                        yield
-                    except asyncio.CancelledError:
-                        if not self._io_stopping:
-                            # A direct cancellation can leave a response unread.
-                            # Reset the transport before allowing another write.
-                            try:
-                                await asyncio.wait_for(
-                                    self._drop_connection(), self._op_timeout
-                                )
-                            except TimeoutError:
-                                self._io_stopping = True
-                                _LOGGER.error(
-                                    "PLC disconnect timed out after write cancellation"
-                                )
-                        raise
-            else:
-                yield
+        """Coordinate batch cancellation and PLC draining under the lifecycle lock."""
+        await self._connection.stop(
+            state_lock=self._async_lock,
+            cancel_batches=lambda: self._write_manager.cancel_batches(error),
+            batch_tasks=lambda: self._write_manager.tasks,
+        )
 
     async def async_shutdown(self) -> None:
         """Permanently stop communication, even if an unload caller is cancelled."""
@@ -572,9 +392,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             previous.done()
             and (previous.cancelled() or previous.exception() is not None)
         ):
-            self._shutdown = True
-            self._connection_enabled = False
-            self._connection_state_changed.set()
+            self._connection.begin_shutdown()
             self._shutdown_task = asyncio.create_task(self._finish_shutdown())
             self._shutdown_task.add_done_callback(self._consume_task_result)
         await asyncio.shield(self._shutdown_task)
@@ -695,20 +513,6 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
     # -------------------------
     # Retry/timeout helpers
     # -------------------------
-    async def _sleep(self, seconds: float) -> None:
-        """Async sleep for the specified duration.
-
-        Args:
-            seconds: Duration to sleep (seconds), negative values are clamped to 0
-        """
-        try:
-            await asyncio.wait_for(
-                self._connection_state_changed.wait(), timeout=max(0.0, seconds)
-            )
-        except TimeoutError:
-            return
-        self._raise_if_connection_disabled()
-
     async def _retry(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
         """Execute ``func`` with retries using exponential backoff.
 
@@ -726,22 +530,15 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         Raises:
             RuntimeError: If all retry attempts are exhausted.
         """
-        async with self._io_operation():
+        async with self._connection.operation():
             attempt = 0
             last_exc: Exception | None = None
             error_category = "unknown"
 
             while attempt <= self._max_retries:
-                self._raise_if_connection_disabled()
+                self._connection.check_available()
                 try:
-                    # Ensure connection before each attempt
-                    await self._ensure_connected()
-                    self._raise_if_connection_disabled()
-                    result = func(*args, **kwargs)
-                    if asyncio.iscoroutine(result):
-                        result = await result
-                    self._raise_if_connection_disabled()
-                    return result
+                    return await self._connection.perform_io(func, *args, **kwargs)
                 except (S7CommunicationError, S7ConnectionError) as e:
                     # S7-specific communication errors (most common)
                     last_exc = e
@@ -752,7 +549,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                         self._max_retries + 1,
                         e,
                     )
-                    await self._drop_connection()
+                    await self._connection.drop_connection()
                 except S7ReadResponseError as e:
                     # S7 response parsing errors
                     last_exc = e
@@ -763,7 +560,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                         self._max_retries + 1,
                         e,
                     )
-                    await self._drop_connection()
+                    await self._connection.drop_connection()
                 except OSError as e:
                     # Network/socket errors
                     last_exc = e
@@ -775,7 +572,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                         e,
                         getattr(e, "errno", "unknown"),
                     )
-                    await self._drop_connection()
+                    await self._connection.drop_connection()
                 except struct.error as e:
                     # Data parsing errors (usually indicates protocol mismatch)
                     last_exc = e
@@ -786,7 +583,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                         self._max_retries + 1,
                         e,
                     )
-                    await self._drop_connection()
+                    await self._connection.drop_connection()
                 except IndexError as e:
                     # Array access errors (unexpected response size)
                     last_exc = e
@@ -798,7 +595,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                         e,
                         exc_info=True,
                     )
-                    await self._drop_connection()
+                    await self._connection.drop_connection()
                 except RuntimeError as e:
                     # Generic runtime errors (catch-all for pyS7 issues)
                     last_exc = e
@@ -809,9 +606,9 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                         self._max_retries + 1,
                         e,
                     )
-                    await self._drop_connection()
+                    await self._connection.drop_connection()
 
-                self._raise_if_connection_disabled()
+                self._connection.check_available()
                 # Check if we should retry
                 if attempt == self._max_retries:
                     break
@@ -825,7 +622,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                     self._max_retries,
                     error_category,
                 )
-                await self._sleep(backoff)
+                await self._connection.sleep(backoff)
                 attempt += 1
 
             # All attempts exhausted
@@ -865,14 +662,18 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         Raises:
             UpdateFailed: On connection or read errors
         """
-        if self._shutdown or not self._connection_enabled or self._io_stopping:
+        if (
+            self._connection.shutdown
+            or not self._connection.enabled
+            or self._connection.stopping
+        ):
             return dict(self._data_cache)
-        async with self._io_operation():
+        async with self._connection.operation():
             start_time = time.monotonic()
             now = start_time
 
             async with self._async_lock:
-                self._raise_if_connection_disabled()
+                self._connection.check_available()
                 if not self._plans_batch and not self._plans_str:
                     self._build_tag_cache()
                 due_topics = [
@@ -903,7 +704,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
 
             try:
                 results = await self._read_all(plans_batch, plans_str)
-                self._raise_if_connection_disabled()
+                self._connection.check_available()
                 # Update health: read succeeded
                 latency = round(time.monotonic() - start_time, 2)
                 self._last_health_ok = True
@@ -919,7 +720,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                 raise
 
             async with self._async_lock:
-                self._raise_if_connection_disabled()
+                self._connection.check_available()
                 read_time = time.monotonic()
                 for topic in due_topics:
                     interval = self._item_scan_intervals.get(
@@ -950,7 +751,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             UpdateFailed: On connection or read failures
         """
         try:
-            await self._ensure_connected()
+            await self._connection.ensure_connected()
         except (OSError, RuntimeError) as err:
             _LOGGER.error("Connection failed: %s", err)
             raise UpdateFailed(f"Connection failed: {err}") from err
@@ -978,6 +779,10 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                     results.setdefault(plan.topic, None)
                 return results
 
+        except S7ReadError as err:
+            # Preserve the reader's message and original cause without another
+            # disconnect or the generic read-error prefix.
+            raise UpdateFailed(str(err)) from err.__cause__
         except (
             OSError,
             RuntimeError,
@@ -986,13 +791,13 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             S7ReadResponseError,
         ) as err:
             _LOGGER.exception("Read error")
-            await self._drop_connection()
+            await self._connection.drop_connection()
             raise UpdateFailed(f"Read error: {err}") from err
         except HomeAssistantError:
             raise
         except Exception as err:  # pragma: no cover - catch unexpected errors
             _LOGGER.exception("Unexpected error during read")
-            await self._drop_connection()
+            await self._connection.drop_connection()
             raise UpdateFailed(f"Unexpected read error: {err}") from err
 
         return results
@@ -1039,7 +844,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             # If batching enabled: both writes executed together in ~50ms
             # If batching disabled: each write executed immediately
         """
-        self._raise_if_connection_disabled()
+        self._connection.check_available()
         # If batching disabled, execute write immediately
         if not self._enable_write_batching:
             try:
@@ -1071,8 +876,8 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             True if write was successful, False otherwise
         """
         try:
-            await self._ensure_connected()
-            await self._retry(lambda: self._client.write([tag], [payload]))
+            await self._connection.ensure_connected()
+            await self._retry(lambda: self._connection.client.write([tag], [payload]))
             return True
         except HomeAssistantError:
             raise
@@ -1084,11 +889,11 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             S7ReadResponseError,
         ):
             _LOGGER.exception("Write error %s", address)
-            await self._drop_connection()
+            await self._connection.drop_connection()
             return False
         except Exception:  # pragma: no cover - catch unexpected errors
             _LOGGER.exception("Unexpected write error %s", address)
-            await self._drop_connection()
+            await self._connection.drop_connection()
             return False
 
     async def _read_one(self, address: str) -> Any:
@@ -1105,9 +910,9 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         Raises:
             RuntimeError: On connection or read failures
         """
-        async with self._io_operation():
+        async with self._connection.operation():
             try:
-                await self._ensure_connected()
+                await self._connection.ensure_connected()
                 tag = self._get_or_parse_tag(address)
 
                 return await self._read_executor.read_one(tag, address)
@@ -1119,13 +924,13 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                 S7ReadResponseError,
             ) as err:
                 _LOGGER.error("Read error for %s: %s", address, err)
-                await self._drop_connection()
+                await self._connection.drop_connection()
                 raise RuntimeError(f"Failed to read {address}: {err}") from err
             except HomeAssistantError:
                 raise
             except Exception as err:  # pragma: no cover - catch unexpected errors
                 _LOGGER.exception("Unexpected read error for %s", address)
-                await self._drop_connection()
+                await self._connection.drop_connection()
                 raise RuntimeError(
                     f"Unexpected error reading {address}: {err}"
                 ) from err
@@ -1148,10 +953,10 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         Raises:
             ValueError: If value type doesn't match address data type
         """
-        self._raise_if_connection_disabled()
+        self._connection.check_available()
         tag = self._get_or_parse_tag(address)
         payload = self._prepare_payload(tag, value, address)
-        async with self._write_operation(serialize=True):
+        async with self._connection.write_operation(serialize=True):
             return await self._write_with_retry(address, tag, payload)
 
     def _prepare_payload(
@@ -1253,7 +1058,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             ... ])
             {'DB1.DBX0.0': True, 'DB1.DBW10': True, 'DB1.DBD20': True}
         """
-        self._raise_if_connection_disabled()
+        self._connection.check_available()
         if not writes:
             return {}
 
@@ -1277,10 +1082,12 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # Execute batch write
         if tags:
-            async with self._write_operation(serialize=True):
+            async with self._connection.write_operation(serialize=True):
                 try:
-                    await self._ensure_connected()
-                    await self._retry(lambda: self._client.write(tags, payloads))
+                    await self._connection.ensure_connected()
+                    await self._retry(
+                        lambda: self._connection.client.write(tags, payloads)
+                    )
                     # Mark all as successful
                     for addr in addresses:
                         results[addr] = True
@@ -1294,13 +1101,13 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                     S7ReadResponseError,
                 ):
                     _LOGGER.exception("Batch write error for %d tags", len(tags))
-                    await self._drop_connection()
+                    await self._connection.drop_connection()
                     # Mark all as failed
                     for addr in addresses:
                         results[addr] = False
                 except Exception:  # pragma: no cover - catch unexpected errors
                     _LOGGER.exception("Unexpected batch write error")
-                    await self._drop_connection()
+                    await self._connection.drop_connection()
                     for addr in addresses:
                         results[addr] = False
 
