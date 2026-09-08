@@ -9,7 +9,7 @@ from conftest import DummyTag
 
 from custom_components.s7plc import coordinator
 from custom_components.s7plc.coordinator import S7Coordinator
-from custom_components.s7plc.plans import TagPlan
+from custom_components.s7plc.plc.plans import TagPlan
 
 # ============================================================================
 # Helpers
@@ -56,7 +56,7 @@ async def test_poll_waits_for_connection_and_reuses_connected_client():
         async def disconnect(self):
             self.is_connected = False
 
-    coord._client = FakeClient()
+    coord._connection.client = FakeClient()
     await coord.add_item("value", "DB1,W0")
     polling = asyncio.create_task(coord._async_update_data())
     try:
@@ -102,7 +102,7 @@ async def test_disconnect_during_read():
             # Simulate the socket being torn down mid-read
             raise OSError("Connection reset by peer")
 
-    coord._client = FakeClient()
+    coord._connection.client = FakeClient()
 
     tag = DummyTag(data_type=coordinator.DataType.WORD, start=0)
     plans = [TagPlan("topic/a", tag)]
@@ -151,7 +151,7 @@ async def test_unload_cancels_retry_sleep():
     async def real_sleep(seconds):
         await asyncio.sleep(seconds)
 
-    coord._sleep = real_sleep
+    coord._connection.sleep = real_sleep
 
     async def fake_ensure():
         pass
@@ -159,8 +159,8 @@ async def test_unload_cancels_retry_sleep():
     async def fake_drop():
         pass
 
-    coord._ensure_connected = fake_ensure
-    coord._drop_connection = fake_drop
+    coord._connection.ensure_connected = fake_ensure
+    coord._connection.drop_connection = fake_drop
 
     def always_fail():
         nonlocal attempt_count
@@ -212,10 +212,8 @@ async def test_write_and_poll_overlap_without_corrupting_results(first_kind):
             self.write_calls = []
 
         async def execute(self, kind):
-            if kind != first_kind:
-                second_requested.set()
-            # This is pyS7's shared packet lock, not a coordinator lock added
-            # by the test. Both public operations reach this client concurrently.
+            # Model pyS7's packet lock. The coordinator now gates dispatch too,
+            # so a cancelled packet can be cleaned up before the next request.
             async with self.lock:
                 operation_log.append((kind, "start"))
                 if kind == first_kind:
@@ -238,14 +236,18 @@ async def test_write_and_poll_overlap_without_corrupting_results(first_kind):
             self.is_connected = False
 
     client = FakeClient()
-    coord._client = client
+    coord._connection.client = client
     await coord.add_item("value", "DB1,W0")
 
     def start(kind):
-        operation = (
-            coord._async_update_data() if kind == "read" else coord.write("DB1,W0", 99)
-        )
-        return asyncio.create_task(operation)
+        async def operation():
+            if kind != first_kind:
+                second_requested.set()
+            if kind == "read":
+                return await coord._async_update_data()
+            return await coord.write("DB1,W0", 99)
+
+        return asyncio.create_task(operation())
 
     first = start(first_kind)
     second = None
@@ -257,6 +259,7 @@ async def test_write_and_poll_overlap_without_corrupting_results(first_kind):
         assert not first.done()
         assert not second.done()
         assert operation_log == [(first_kind, "start")]
+        assert len(client.read_calls) + len(client.write_calls) == 1
         release.set()
         results = await asyncio.wait_for(asyncio.gather(first, second), timeout=3)
         poll_result, write_result = results if first_kind == "read" else results[::-1]
@@ -323,30 +326,30 @@ async def test_stale_read_discarded_after_reconnect():
         async def disconnect(self):
             NewClient.is_connected = False
 
-    coord._client = OldClient()
+    coord._connection.client = OldClient()
 
     async def drop_and_swap():
         nonlocal reconnect_happened
-        if coord._client is not None:
+        if coord._connection.client is not None:
             try:
-                await coord._client.disconnect()
+                await coord._connection.client.disconnect()
             except Exception:
                 pass
-        coord._client = None
+        coord._connection.client = None
         reconnect_happened = True
 
-    coord._drop_connection = drop_and_swap
+    coord._connection.drop_connection = drop_and_swap
 
     async def reconnect_ensure():
-        if coord._client is None or not coord._client.is_connected:
-            coord._client = NewClient()
+        if coord._connection.client is None or not coord._connection.client.is_connected:
+            coord._connection.client = NewClient()
 
-    coord._ensure_connected = reconnect_ensure
+    coord._connection.ensure_connected = reconnect_ensure
 
     async def instant_sleep(seconds):
         pass  # skip backoff delay
 
-    coord._sleep = instant_sleep
+    coord._connection.sleep = instant_sleep
 
     # _retry will: call OldClient.read → OSError → drop (swap) →
     # sleep → ensure (NewClient) → NewClient.read → 999
@@ -389,8 +392,8 @@ async def test_overlapping_plc_polls_keep_results_and_errors_isolated(second_fai
 
     first_client = FakeClient(42)
     second_client = FakeClient(84, fail=second_fails)
-    first._client = first_client
-    second._client = second_client
+    first._connection.client = first_client
+    second._connection.client = second_client
     for coord in (first, second):
         await coord.add_item("value", "DB1,W0")
     first._data_cache = {"value": -1}
