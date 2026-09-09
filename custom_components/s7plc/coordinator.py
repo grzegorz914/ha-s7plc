@@ -13,8 +13,10 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from pyS7.constants import ConnectionType
 from pyS7.errors import S7CommunicationError, S7ConnectionError, S7ReadResponseError
 
-from .plc.address import DataType, S7Tag, parse_tag
+from .plc.address import DataType  # noqa: F401 - preserve the existing module export
+from .plc.address import S7Tag, parse_tag
 from .plc.connection_manager import S7ConnectionManager
+from .plc.payload import prepare_payload
 from .plc.plans import StringPlan, TagPlan, build_plans
 from .plc.read_executor import S7ReadError, S7ReadExecutor
 from .write_manager import S7WriteManager
@@ -539,74 +541,56 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._connection.check_available()
                 try:
                     return await self._connection.perform_io(func, *args, **kwargs)
-                except (S7CommunicationError, S7ConnectionError) as e:
-                    # S7-specific communication errors (most common)
-                    last_exc = e
-                    error_category = "s7_communication"
-                    _LOGGER.debug(
-                        "S7 communication error on attempt %s/%s: %s",
+                except (
+                    S7CommunicationError,
+                    S7ConnectionError,
+                    S7ReadResponseError,
+                    OSError,
+                    struct.error,
+                    IndexError,
+                    RuntimeError,
+                ) as error:
+                    last_exc = error
+                    log_level = logging.DEBUG
+                    log_args: tuple[Any, ...] = ()
+                    log_traceback = False
+
+                    if isinstance(error, (S7CommunicationError, S7ConnectionError)):
+                        error_category = "s7_communication"
+                        message = "S7 communication error on attempt %s/%s: %s"
+                    elif isinstance(error, S7ReadResponseError):
+                        error_category = "s7_response"
+                        message = "S7 response error on attempt %s/%s: %s"
+                    elif isinstance(error, OSError):
+                        error_category = "network"
+                        message = "Network error on attempt %s/%s: %s (errno: %s)"
+                        log_args = (getattr(error, "errno", "unknown"),)
+                    elif isinstance(error, struct.error):
+                        error_category = "data_parsing"
+                        log_level = logging.WARNING
+                        message = (
+                            "Data parsing error on attempt %s/%s: %s "
+                            "(check PLC data type)"
+                        )
+                    elif isinstance(error, IndexError):
+                        error_category = "unexpected_response"
+                        log_level = logging.WARNING
+                        log_traceback = True
+                        message = "Unexpected response size on attempt %s/%s: %s"
+                    else:  # RuntimeError
+                        error_category = "runtime"
+                        message = "Runtime error on attempt %s/%s: %s"
+
+                    _LOGGER.log(
+                        log_level,
+                        message,
                         attempt + 1,
                         self._max_retries + 1,
-                        e,
+                        error,
+                        *log_args,
+                        exc_info=log_traceback,
                     )
-                    await self._connection.drop_connection()
-                except S7ReadResponseError as e:
-                    # S7 response parsing errors
-                    last_exc = e
-                    error_category = "s7_response"
-                    _LOGGER.debug(
-                        "S7 response error on attempt %s/%s: %s",
-                        attempt + 1,
-                        self._max_retries + 1,
-                        e,
-                    )
-                    await self._connection.drop_connection()
-                except OSError as e:
-                    # Network/socket errors
-                    last_exc = e
-                    error_category = "network"
-                    _LOGGER.debug(
-                        "Network error on attempt %s/%s: %s (errno: %s)",
-                        attempt + 1,
-                        self._max_retries + 1,
-                        e,
-                        getattr(e, "errno", "unknown"),
-                    )
-                    await self._connection.drop_connection()
-                except struct.error as e:
-                    # Data parsing errors (usually indicates protocol mismatch)
-                    last_exc = e
-                    error_category = "data_parsing"
-                    _LOGGER.warning(
-                        "Data parsing error on attempt %s/%s: %s (check PLC data type)",
-                        attempt + 1,
-                        self._max_retries + 1,
-                        e,
-                    )
-                    await self._connection.drop_connection()
-                except IndexError as e:
-                    # Array access errors (unexpected response size)
-                    last_exc = e
-                    error_category = "unexpected_response"
-                    _LOGGER.warning(
-                        "Unexpected response size on attempt %s/%s: %s",
-                        attempt + 1,
-                        self._max_retries + 1,
-                        e,
-                        exc_info=True,
-                    )
-                    await self._connection.drop_connection()
-                except RuntimeError as e:
-                    # Generic runtime errors (catch-all for pyS7 issues)
-                    last_exc = e
-                    error_category = "runtime"
-                    _LOGGER.debug(
-                        "Runtime error on attempt %s/%s: %s",
-                        attempt + 1,
-                        self._max_retries + 1,
-                        e,
-                    )
-                    await self._connection.drop_connection()
+                    await self._connection.drop_connection(error=error)
 
                 self._connection.check_available()
                 # Check if we should retry
@@ -791,13 +775,13 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             S7ReadResponseError,
         ) as err:
             _LOGGER.exception("Read error")
-            await self._connection.drop_connection()
+            await self._connection.drop_connection(error=err)
             raise UpdateFailed(f"Read error: {err}") from err
         except HomeAssistantError:
             raise
         except Exception as err:  # pragma: no cover - catch unexpected errors
             _LOGGER.exception("Unexpected error during read")
-            await self._connection.drop_connection()
+            await self._connection.drop_connection(error=err)
             raise UpdateFailed(f"Unexpected read error: {err}") from err
 
         return results
@@ -887,13 +871,13 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             S7CommunicationError,
             S7ConnectionError,
             S7ReadResponseError,
-        ):
+        ) as err:
             _LOGGER.exception("Write error %s", address)
-            await self._connection.drop_connection()
+            await self._connection.drop_connection(error=err)
             return False
-        except Exception:  # pragma: no cover - catch unexpected errors
+        except Exception as err:  # pragma: no cover - catch unexpected errors
             _LOGGER.exception("Unexpected write error %s", address)
-            await self._connection.drop_connection()
+            await self._connection.drop_connection(error=err)
             return False
 
     async def _read_one(self, address: str) -> Any:
@@ -924,13 +908,13 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                 S7ReadResponseError,
             ) as err:
                 _LOGGER.error("Read error for %s: %s", address, err)
-                await self._connection.drop_connection()
+                await self._connection.drop_connection(error=err)
                 raise RuntimeError(f"Failed to read {address}: {err}") from err
             except HomeAssistantError:
                 raise
             except Exception as err:  # pragma: no cover - catch unexpected errors
                 _LOGGER.exception("Unexpected read error for %s", address)
-                await self._connection.drop_connection()
+                await self._connection.drop_connection(error=err)
                 raise RuntimeError(
                     f"Unexpected error reading {address}: {err}"
                 ) from err
@@ -955,85 +939,9 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         """
         self._connection.check_available()
         tag = self._get_or_parse_tag(address)
-        payload = self._prepare_payload(tag, value, address)
+        payload = prepare_payload(tag, value, address)
         async with self._connection.write_operation(serialize=True):
             return await self._write_with_retry(address, tag, payload)
-
-    def _prepare_payload(
-        self,
-        tag: S7Tag,
-        value: bool | int | float | str | timedelta,
-        address: str = "",
-    ) -> bool | int | float | str | timedelta:
-        """Validate and convert a Python value to the appropriate PLC payload.
-
-        Args:
-            tag: Parsed S7Tag describing the target data type.
-            value: Value to convert.
-            address: PLC address (used only in error messages).
-
-        Returns:
-            Converted payload ready for the pyS7 write call.
-
-        Raises:
-            ValueError: If value type doesn't match the tag data type.
-        """
-        if tag.data_type == DataType.BIT:
-            if not isinstance(value, bool):
-                raise ValueError(
-                    f"BIT address {address} requires bool value, "
-                    f"got {type(value).__name__}"
-                )
-            return bool(value)
-
-        if tag.data_type == getattr(DataType, "TIME", None):
-            if not isinstance(value, timedelta):
-                raise ValueError(
-                    f"TIME address {address} requires timedelta value, "
-                    f"got {type(value).__name__}"
-                )
-            return value
-
-        if tag.data_type in (DataType.STRING, DataType.WSTRING):
-            if not isinstance(value, str):
-                raise ValueError(
-                    f"STRING/WSTRING address {address} requires str value, "
-                    f"got {type(value).__name__}"
-                )
-            return str(value)
-
-        if tag.data_type in (DataType.REAL, DataType.LREAL):
-            if not isinstance(value, (int, float)):
-                raise ValueError(
-                    f"{tag.data_type.name} address {address} requires numeric value, "
-                    f"got {type(value).__name__}"
-                )
-            return float(value)
-
-        if tag.data_type in (
-            DataType.BYTE,
-            DataType.WORD,
-            DataType.DWORD,
-            DataType.INT,
-            DataType.DINT,
-            DataType.USINT,
-            DataType.SINT,
-        ):
-            if not isinstance(value, (int, float)):
-                raise ValueError(
-                    f"{tag.data_type.name} address {address} requires "
-                    f"numeric value, got {type(value).__name__}"
-                )
-            return int(round(float(value)))
-
-        if tag.data_type == DataType.CHAR:
-            raise ValueError(
-                f"CHAR arrays not supported for write at {address}, use STRING instead"
-            )
-
-        raise ValueError(
-            f"Unsupported data type for write at {address}: {tag.data_type}"
-        )
 
     async def write_multi(
         self, writes: list[tuple[str, bool | int | float | str | timedelta]]
@@ -1071,8 +979,8 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         for address, value in writes:
             try:
                 tag = self._get_or_parse_tag(address)
+                payload = prepare_payload(tag, value, address)
                 addresses.append(address)
-                payload = self._prepare_payload(tag, value, address)
                 tags.append(tag)
                 payloads.append(payload)
 
@@ -1099,15 +1007,15 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                     S7CommunicationError,
                     S7ConnectionError,
                     S7ReadResponseError,
-                ):
+                ) as err:
                     _LOGGER.exception("Batch write error for %d tags", len(tags))
-                    await self._connection.drop_connection()
+                    await self._connection.drop_connection(error=err)
                     # Mark all as failed
                     for addr in addresses:
                         results[addr] = False
-                except Exception:  # pragma: no cover - catch unexpected errors
+                except Exception as err:  # pragma: no cover - catch unexpected errors
                     _LOGGER.exception("Unexpected batch write error")
-                    await self._connection.drop_connection()
+                    await self._connection.drop_connection(error=err)
                     for addr in addresses:
                         results[addr] = False
 
