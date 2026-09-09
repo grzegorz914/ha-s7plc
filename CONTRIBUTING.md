@@ -90,7 +90,78 @@ Frontend tests live in `tests/frontend/` and use Vitest with jsdom.
 
 When changing `custom_components/s7plc/www/s7plc-panel.js`, add or update a DOM test in the closest matching frontend test file. Prefer testing rendered behavior and user interactions over checking source-code strings.
 
+Before removing a source-string check, identify its behavioral replacement and
+extend that DOM test if any scenario is missing. Keep catalog parity, asset and
+backend/frontend field-contract checks. CSS source checks are not evidence of
+actual browser layout; retain them until an equivalent layout check exists.
+
 Backend and integration tests remain under `tests/test_*.py`.
+
+Shared Python helpers live in `tests/support/`. Import reusable helpers from
+there instead of importing another `test_*.py` module:
+
+- `support.write_batching` supplies the controlled scheduler and batch enqueue
+  helpers used by write behavior and lifecycle tests.
+- `support.retry` supplies the `rig` fixture, operation entry points and cleanup
+  assertions used by retry and error-cleanup tests. Import the fixture explicitly
+  (`from support.retry import rig as rig`) in each test module that uses it.
+
+Keep scenario-specific clients local to their tests. When consolidating tests,
+preserve distinct inputs and execution paths, including synchronous callbacks,
+and identify the retained test for every removed regression case.
+
+Python schema tests use the installed `voluptuous` package. Apply the actual
+`data_schema` returned by a flow or the schema registered by a service to test
+required fields, defaults, types, coercion, ranges and nested payloads. Calling a
+flow step or service handler directly does not exercise that schema validation.
+
+Home Assistant is stubbed in `tests/`. Selector doubles retain their configuration
+and accept values unchanged; they do not cover HA selector validation or the real
+flow manager. Runtime lifecycle and service dispatch have separate tests below.
+
+## Real Home Assistant runtime tests
+
+`tests_homeassistant/` is a small, separate suite using the installed Home Assistant
+runtime, config-entry manager, platforms, entity registry, state machine, storage
+and service dispatcher. Only the external pyS7 client is mocked; no PLC is needed.
+The integration's frontend/HTTP dependencies and panel registration also run,
+but these tests do not verify browser rendering or PLC protocol behavior.
+
+Use a **separate Python 3.14 virtual environment**. The pinned test plugin selects
+Home Assistant 2026.9.1; the frontend version matches that HA release. Update the
+plugin and frontend pins together when intentionally upgrading this test baseline.
+This baseline does not establish compatibility with older HA versions.
+
+```bash
+python3.14 -m venv .venv-ha
+.venv-ha/bin/python -m pip install -r requirements_test_homeassistant.txt
+.venv-ha/bin/python -m pip check
+.venv-ha/bin/python -m pytest -c tests_homeassistant/pytest.ini tests_homeassistant -v
+```
+
+On Windows, use `py -3.14 -m venv .venv-ha` and
+`.venv-ha\Scripts\python.exe` for the following commands.
+
+Do not install these dependencies in the stub suite's environment or collect both
+suites in one pytest process: `tests/conftest.py` replaces HA modules globally.
+The root `pytest.ini` defaults to `tests/`; the runtime suite has its own config
+and an explicit command. CI runs each suite in a separate job, keeping the existing
+coverage gate and lightweight dependencies unchanged.
+
+The runtime suite covers:
+
+- Setup, reload and unload through HA, including stable entity registration,
+  fresh runtime data, PLC disconnect and service cleanup.
+- A real failed coordinator refresh: the data sensor becomes unavailable while
+  the connection switch remains usable through `switch.turn_off`; its disabled
+  state survives reload without new PLC I/O.
+- `health_check` and `write_multi` through HA's dispatcher, including rejection
+  of invalid required fields and nested write payloads before PLC access.
+
+Platforms add read tags concurrently, so the fixtures explicitly await a real
+coordinator refresh after setup rather than relying on debounce timer timing.
+The offline test advances the fixture clock to make sensor reads due; it does not
+sleep or replace coordinator availability behavior.
 
 ## Python module boundaries
 
