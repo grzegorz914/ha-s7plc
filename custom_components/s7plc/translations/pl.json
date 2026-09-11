@@ -1171,7 +1171,7 @@
       "select_requires_integer_type": "Adres odczytu i zapisu listy musi być dyskretnym typem danych PLC (BYTE, WORD, DWORD, SINT, USINT, INT, DINT lub TIME).",
       "select_command_type_mismatch": "Adres zapisu musi używać TIME tylko i wyłącznie gdy adres stanu używa TIME.",
       "value_conversions_must_be_mapping": "Konwersje wartości muszą być mapą.",
-      "scale_requires_both_raw_endpoints": "Both legacy raw scale endpoints are required."
+      "scale_requires_both_raw_endpoints": "Obie wartości PLC min i PLC max są wymagane."
     },
     "editor": {
       "configuration_yaml": "Konfiguracja YAML",
