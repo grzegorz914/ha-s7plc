@@ -42,7 +42,7 @@ async def test_logo_number_setup_reads_and_writes_hhmm(
     assert entity.extra_state_attributes["s7_raw_word"] is False
 
     # Feedback always comes from the state address; reading must never write.
-    topic = "number:DB1,WORD4"
+    topic = "number:logo-clock"
     mock_coordinator.data = {topic: 0x0830}
     assert entity.native_value == 830
     mock_coordinator.data[topic] = 0x1245
