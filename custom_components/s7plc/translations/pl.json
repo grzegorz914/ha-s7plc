@@ -640,12 +640,12 @@
             "description": "Jednostka miary (np. °C, V, kW). Pozostaw puste, aby użyć domyślnej jednostki wg. klasy urządzenia."
           },
           "min_value": {
-            "label": "Dolny limit",
-            "description": "Minimalna wartość dostępna do wyboru w Home Assistant. Nie zmienia ani nie konwertuje wartości odczytanej ze sterownika PLC."
+            "label": "Limit dolny",
+            "description": "Limit dolny wartości dostępnej w Home Assistant."
           },
           "max_value": {
-            "label": "Górny limit",
-            "description": "Maksymalna wartość dostępna do wyboru w Home Assistant. Nie zmienia ani nie konwertuje wartości odczytanej ze sterownika PLC."
+            "label": "Limit górny",
+            "description": "Limit górny wartości dostępnej w Home Assistant."
           },
           "step": {
             "label": "Krok",
