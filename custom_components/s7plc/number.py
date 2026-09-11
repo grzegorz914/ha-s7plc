@@ -31,6 +31,7 @@ from .helpers import (
     get_coordinator_and_device_info,
 )
 from .plc.address import (
+    DataType,
     get_numeric_limits,
     is_time_data_type,
     parse_tag,
@@ -38,6 +39,7 @@ from .plc.address import (
     time_to_seconds,
 )
 from .value_conversion import (
+    LOGO_TIME_HHMM_LIMITS,
     ConversionContext,
     ValueConversionError,
     convert_from_plc,
@@ -136,6 +138,24 @@ class S7Number(S7BaseEntity, NumberEntity):
         )
         self._command_address = command_address
         self._value_conversion = value_conversion
+        # Dashboard metadata describes the HA value, not just the PLC datatype.
+        writable_word = False
+        if command_address:
+            try:
+                tags = (parse_tag(address), parse_tag(command_address))
+                writable_word = all(
+                    tag.data_type == DataType.WORD and tag.length == 1 for tag in tags
+                )
+            except (RuntimeError, ValueError):
+                pass
+        self._raw_word = writable_word and not value_conversion
+        self._time_format = (
+            "hhmm"
+            if writable_word
+            and value_conversion
+            and value_conversion.get("type") == "logo_time_bcd"
+            else None
+        )
         self._conversion_context = ConversionContext.from_address(
             "value", command_address or address, "bidirectional"
         )
@@ -175,9 +195,11 @@ class S7Number(S7BaseEntity, NumberEntity):
             tag = None
         if tag is not None:
             numeric_limits = get_numeric_limits(tag.data_type)
+        if value_conversion and value_conversion.get("type") == "logo_time_bcd":
+            numeric_limits = LOGO_TIME_HHMM_LIMITS
 
         # Explicit bounds are Home Assistant entity limits, not PLC datatype or
-        # conversion endpoints. Only defaults come from the PLC datatype.
+        # conversion endpoints. Defaults use HHMM for clocks, otherwise datatype.
         min_value_limit = float(min_value) if min_value is not None else None
         max_value_limit = float(max_value) if max_value is not None else None
 
@@ -257,5 +279,8 @@ class S7Number(S7BaseEntity, NumberEntity):
         if self._command_address:
             attrs["s7_command_address"] = self._command_address.upper()
         attrs["step"] = self._attr_native_step
+        attrs["s7_raw_word"] = self._raw_word
+        if self._time_format:
+            attrs["s7_time_format"] = self._time_format
         # min and max are exposed automatically by NumberEntity
         return attrs
