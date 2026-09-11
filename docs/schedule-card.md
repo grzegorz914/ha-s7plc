@@ -164,6 +164,22 @@ ordering is unrestricted to allow overnight schedules.
 
 ## Editing and confirmation
 
+On screens up to 600 px wide or devices with a coarse pointer (touch), time
+fields have 44 × 44 px touch targets and Save/Cancel buttons are at least 44 px
+high, including hybrid computers with both a touchscreen and a mouse.
+
+Only on screens up to 600 px wide, long tables scroll vertically within the card,
+up to half the viewport height (capped at 420 px). Column headings stay visible inside this scrolling
+area; the status and Save/Cancel controls remain outside it, below the table.
+You can reach the actions without scrolling through all the slots. The card
+itself follows normal dashboard scrolling. Wider screens retain the full-height
+table and desktop layout, including touchscreen and hybrid computers.
+
+Entering an hour or minute field selects its digits, both by keyboard focus
+and on the first tap/click. Type to replace the value directly. Further taps
+within the focused field position the cursor normally. Incoming HA updates
+preserve the current input and selection while editing.
+
 Changes remain local until **Save changes** is pressed. Only edited times are
 sent, through `number.set_value` or `input_number.set_value`. **Cancel** discards
 unsaved edits and displays the latest HA states. Unsaved edits do not survive
@@ -209,16 +225,6 @@ the card. `title` is optional and otherwise follows the frontend language.
 S7 formats are detected automatically; no format configuration is needed.
 `show_raw` defaults to `false` and displays the HA entity value labelled WORD or
 HHMM. `confirmation_timeout` defaults to 15 seconds and accepts 1–300 seconds.
-
-## Moving from the standalone BCD card
-
-The standalone `custom:bcd-schedule-card` and bundled
-`custom:s7plc-schedule-card` have different names and can coexist.
-
-To migrate an existing card, keep its configuration and change only `type` to
-`custom:s7plc-schedule-card`. The existing `rows`, names, entity IDs, `show_raw`
-and timeout remain supported. Remove the old `/local/bcd-schedule-card.js`
-resource only after no dashboard uses the standalone card anymore.
 
 ## Troubleshooting
 
