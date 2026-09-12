@@ -15,12 +15,25 @@
       waiting: "Waiting for HA…", sending: "Sending…", modified: "Modified", saving: "Saving…",
       saving_status: "Sending changes to Home Assistant…", hint: "Edit hours and minutes, then save.",
       saved: "Times updated in Home Assistant.", invalid_bcd: "Invalid BCD ({raw}).", invalid_hhmm: "Invalid HHMM ({raw}).",
-      write_failed: "Write failed: {error}", pending_count: "{count} times awaiting confirmation from Home Assistant…",
+      write_failed: "Write failed: {error}", pending_count: "{count} values awaiting confirmation from Home Assistant…",
       failed_count: "{sent} sends succeeded, {failed} failed. Check the highlighted fields.",
-      invalid_count: "{count} modified times. Correct the highlighted fields.",
-      dirty_count: "{count} modified times. Press Save changes to send them.",
+      invalid_count: "{count} modified values. Correct the highlighted fields.",
+      dirty_count: "{count} modified values. Press Save changes to send them.",
       incompatible: "This S7 entity is not a supported clock value. Check datatype and conversions.",
       choose_entity: "Choose an entity", configure: "Open the card editor and add your on/off entity pairs.",
+      days: "Days", editor_days: "Weekday BYTE entity (optional)", days_none: "No days selected",
+      days_all: "All", days_work: "Mon–Fri", days_weekend: "Sat–Sun", days_clear: "None",
+      copy_title: "Copy between slots", copy_source: "Copy from", copy_mode: "What to copy",
+      copy_times: "Times only", copy_days: "Days only", copy_both: "Times and days",
+      copy_targets: "Destination slots", copy_apply: "Apply to selected slots",
+      copy_hint: "Review before/after values. Apply replaces selected local values; press Save changes to send them to HA.",
+      copy_select: "Select at least one destination slot.", copy_missing_days: "A weekday entity is required for this copy mode.",
+      copy_applied: "Copy applied locally. Press Save changes to send it to HA.", copy_no_changes: "Selected values already match.",
+      invalid_days: "Expected an integer BYTE from 0 to 255. Check the entity value.",
+      invalid_days_step: "Incompatible entity step for this weekday mask.",
+      incompatible_days: "Choose a raw writable BYTE entity without conversions.",
+      timeline_day: "Day", timeline_inactive: "No interval on this day", timeline_daily: "Every day (no weekday entity)",
+      timeline_days: "Start days: {days}",
       editor_title: "Title", editor_name: "Slot name", editor_raw: "Show entity values",
       editor_timeline: "Show daily timeline", timeline_title: "Daily timeline",
       timeline_hint: "Daily intervals from HA times. The PLC executes the schedule.",
@@ -54,12 +67,25 @@
       waiting: "In attesa di HA…", sending: "Invio…", modified: "Modificato", saving: "Salvataggio…",
       saving_status: "Invio delle modifiche a Home Assistant…", hint: "Modifica ore e minuti, poi salva.",
       saved: "Orari aggiornati in Home Assistant.", invalid_bcd: "BCD non valido ({raw}).", invalid_hhmm: "HHMM non valido ({raw}).",
-      write_failed: "Scrittura fallita: {error}", pending_count: "{count} orari in attesa di conferma da Home Assistant…",
+      write_failed: "Scrittura fallita: {error}", pending_count: "{count} valori in attesa di conferma da Home Assistant…",
       failed_count: "{sent} invii riusciti, {failed} non riusciti. Controlla i campi segnalati.",
-      invalid_count: "{count} orari modificati. Correggi i campi segnalati.",
-      dirty_count: "{count} orari modificati. Premi Salva modifiche per inviarli.",
+      invalid_count: "{count} valori modificati. Correggi i campi segnalati.",
+      dirty_count: "{count} valori modificati. Premi Salva modifiche per inviarli.",
       incompatible: "Questa entità S7 non espone un orario supportato. Verifica tipo e conversioni.",
       choose_entity: "Scegli un'entità", configure: "Apri l'editor della card e aggiungi le coppie accensione/spegnimento.",
+      days: "Giorni", editor_days: "Entità BYTE dei giorni (opzionale)", days_none: "Nessun giorno selezionato",
+      days_all: "Tutti", days_work: "Lun–Ven", days_weekend: "Sab–Dom", days_clear: "Nessuno",
+      copy_title: "Copia tra fasce", copy_source: "Copia da", copy_mode: "Cosa copiare",
+      copy_times: "Solo orari", copy_days: "Solo giorni", copy_both: "Orari e giorni",
+      copy_targets: "Fasce destinatarie", copy_apply: "Applica alle fasce selezionate",
+      copy_hint: "Controlla i valori prima/dopo. Applica sostituisce i valori locali selezionati; premi Salva modifiche per inviarli a HA.",
+      copy_select: "Seleziona almeno una fascia destinataria.", copy_missing_days: "Questa modalità richiede un’entità dei giorni.",
+      copy_applied: "Copia applicata localmente. Premi Salva modifiche per inviarla a HA.", copy_no_changes: "I valori selezionati coincidono già.",
+      invalid_days: "Serve un BYTE intero da 0 a 255. Controlla il valore dell’entità.",
+      invalid_days_step: "Passo dell’entità incompatibile con questa maschera dei giorni.",
+      incompatible_days: "Scegli un’entità BYTE scrivibile senza conversioni.",
+      timeline_day: "Giorno", timeline_inactive: "Nessun intervallo in questo giorno", timeline_daily: "Tutti i giorni (nessuna entità giorni)",
+      timeline_days: "Giorni di inizio: {days}",
       editor_title: "Titolo", editor_name: "Nome fascia", editor_raw: "Mostra valori delle entità",
       editor_timeline: "Mostra timeline giornaliera", timeline_title: "Timeline giornaliera",
       timeline_hint: "Intervalli giornalieri dagli orari di HA. La programmazione è eseguita dal PLC.",
@@ -87,6 +113,17 @@
     .replace(/\{(\w+)\}/g, (_, name) => String(values[name] ?? `{${name}}`));
 
   const pad = (n) => String(n).padStart(2, "0");
+  const entityFields = ["on_entity", "off_entity", "days_entity"];
+  // LOGO weekday mask supplied by the user: Sunday bit 0, Saturday bit 6.
+  const weekdays = [1, 2, 3, 4, 5, 6, 0];
+  const dayName = (hass, bit, short = false) => {
+    const names = language(hass) === "it" ?
+      ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"] :
+      ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    return short ? names[bit].slice(0, 3) : names[bit];
+  };
+  const daysText = (hass, value) => weekdays.filter(bit => value & (1 << bit))
+    .map(bit => dayName(hass, bit, true)).join(", ") || translate(hass, "days_none");
   const parseWord = (raw) => {
     if (typeof raw !== "number" && typeof raw !== "string") return null;
     const text = String(raw).trim();
@@ -95,6 +132,13 @@
     return Number.isInteger(n) && n >= 0 && n <= 65535 ? n : null;
   };
   const legacyFormat = config => config?.time_format ?? "bcd";
+  const parseByte = raw => { const value = parseWord(raw); return value !== null && value <= 255 ? value : null; };
+  const daysCompatible = state => {
+    const attrs = state?.attributes ?? {};
+    if (attrs.s7_time_format != null) return false;
+    if (attrs.s7_raw_byte != null) return attrs.s7_raw_byte === true;
+    return attrs.s7_raw_word == null; // External helpers have no S7 capability metadata.
+  };
   const formatKey = key => key.replace("_entity", "_format");
   const legacyFieldFormat = (config, row, key) => row?.[formatKey(key)] ?? legacyFormat(config);
   const resolveFormat = (state, legacy) => {
@@ -144,6 +188,8 @@
       super();
       this.attachShadow({ mode: "open" });
       this._cells = [];
+      this._dayCells = [];
+      this._timelineDay = 1;
       this._generation = 0;
       this._saving = false;
       this._message = "";
@@ -165,8 +211,8 @@
       const seen = new Set();
       const rows = config.rows.map((row, i) => {
         if (!row || typeof row !== "object") throw new Error(`Invalid row ${i + 1}.`);
-        for (const key of ["on_entity", "off_entity"]) {
-          if (!["auto", "bcd", "hhmm"].includes(legacyFieldFormat(config, row, key))) {
+        for (const key of entityFields) {
+          if (key !== "days_entity" && !["auto", "bcd", "hhmm"].includes(legacyFieldFormat(config, row, key))) {
             throw new Error(`Row ${i + 1}: ${formatKey(key)} must be auto, bcd or hhmm.`);
           }
           if (row[key] != null && row[key] !== "" && (typeof row[key] !== "string" || !/^(number|input_number)\.[a-z0-9_]+$/.test(row[key]))) {
@@ -182,6 +228,8 @@
         throw new Error("confirmation_timeout must be between 1 and 300 seconds.");
       }
       this._config = { ...config, rows, confirmation_timeout: timeout };
+      this._openSlots = new Set();
+      this._copyState = {source: 0, mode: "times", targets: new Set(), open: false};
       this._generation++;
       this._saving = false;
       this._message = "";
@@ -194,23 +242,30 @@
       // Rebuild labels only when idle; never replace fields or in-flight cell
       // objects while the user is editing or a service request is outstanding.
       if (language(hass) !== this._renderLanguage && this._config && !this._saving &&
-          !this._cells.some(c => c.draft || c.pending) && !this.shadowRoot.activeElement) {
+          !this._allCells().some(c => c.draft || c.pending) && !this.shadowRoot.activeElement) {
         this._build();
       }
       this._sync();
     }
     _t(key, values) { return translate(this._hass, key, values); }
+    _allCells() { return [...this._cells, ...this._dayCells]; }
+    _draftValue(cell) {
+      return cell.kind === "days" ? parseByte(cell.draft?.value) :
+        encode(cell.draft?.hours, cell.draft?.minutes, this._info(cell).format);
+    }
     static getConfigElement() { return document.createElement("s7plc-schedule-card-editor"); }
     static getStubConfig() { return { rows: [] }; }
     get hass() { return this._hass; }
     getCardSize() {
       const rows = this._config?.rows.length ?? 12;
-      return Math.ceil((rows * 66 + 170 + (this._config?.show_timeline ? rows * 65 + 180 : 0)) / 50);
+      const expandedHeight = (this._config?.rows ?? []).reduce((height, row) =>
+        height + (this._openSlots?.has(row.index) ? 66 + (row.days_entity ? 150 : 0) : 0), 0);
+      return Math.ceil((rows * 80 + expandedHeight + 170 + (rows > 1 ? 100 : 0) + (this._config?.show_timeline ? rows * 65 + 230 : 0)) / 50);
     }
     getGridOptions() { return { columns: 12, min_columns: 9 }; }
     connectedCallback() {
       if (!this._timer) this._timer = setInterval(() => {
-        if (this._cells.some((c) => c.pending)) this._sync();
+        if (this._allCells().some((c) => c.pending)) this._sync();
       }, 1000);
       this._sync();
     }
@@ -239,6 +294,22 @@
         tbody th { text-align:left; font-size:13px; font-weight:500; padding-left:20px; overflow-wrap:anywhere; }
         td { text-align:center; vertical-align:top; }
         tr:last-child th, tr:last-child td { border-bottom:0; }
+        tr[hidden] { display:none; }
+        .slot-summary th { padding:0; }
+        .slot-toggle { display:block; width:100%; min-height:44px; padding:12px 8px; border-radius:0;
+          background:transparent; color:inherit; text-align:left; }
+        .slot-top { display:grid; grid-template-columns:29% 35.5% 35.5%; align-items:center; }
+        .slot-name { padding-left:12px; overflow-wrap:anywhere; }
+        .slot-name::before { content:"▸"; display:inline-block; margin-inline-end:6px; }
+        .slot-toggle[aria-expanded=true] .slot-name::before { content:"▾"; }
+        .slot-clock { text-align:center; font-variant-numeric:tabular-nums; }
+        .slot-days, .slot-feedback { display:block; margin:6px 12px 0; font-size:12px; line-height:1.4;
+          color:var(--secondary-text-color,#647887); overflow-wrap:anywhere; }
+        .slot-feedback:empty { display:none; }
+        .slot-summary[data-error] .slot-feedback { color:var(--error-color,#c33b39); }
+        .slot-summary[data-dirty] .slot-name { color:var(--primary-color,#0288d1); }
+        .slot-actions { display:flex; flex-wrap:wrap; gap:4px; margin-top:12px; }
+        .slot-actions button { background:transparent; color:var(--primary-color,#0288d1); min-height:44px; }
         .time { display:inline-flex; align-items:center; justify-content:center; gap:3px; }
         input { width:35px; height:38px; min-width:0; padding:0 2px; text-align:center; font-weight:500;
           font-family:inherit; font-size:16px; font-variant-numeric:tabular-nums; border-radius:6px;
@@ -260,9 +331,38 @@
         button { min-height:40px; padding:8px 14px; border-radius:8px; border:0; font-weight:500;
           font-family:inherit; font-size:14px; cursor:pointer; }
         button:focus-visible { outline:2px solid var(--primary-color,#0288d1); outline-offset:2px; }
+        .slot-toggle:focus-visible { outline-offset:-2px; }
         .save { background:var(--primary-color,#0288d1); color:var(--text-primary-color,#fff); }
         .reset { background:transparent; color:var(--primary-color,#0288d1); }
         button:disabled { opacity:.45; cursor:default; }
+        .days-row td { text-align:left; padding:8px 12px 12px; }
+        .days-label, .days-summary { display:block; font-size:12px; margin-bottom:6px; }
+        .days-summary { color:var(--secondary-text-color,#647887); margin-top:6px; }
+        .days { display:flex; gap:4px; flex-wrap:wrap; }
+        .days button { flex:0 0 44px; width:44px; min-height:44px; padding:0;
+          background:var(--secondary-background-color,#f4f7f9); color:var(--primary-text-color,#182a36); }
+        .days button[aria-pressed=true] { background:var(--primary-color,#0288d1); color:var(--text-primary-color,#fff); }
+        .day-presets { display:flex; gap:4px; flex-wrap:wrap; margin-top:8px; }
+        .day-presets button { min-height:44px; background:transparent; color:var(--primary-color,#0288d1);
+          border:1px solid var(--divider-color,#e7edf0); font-size:12px; }
+        .day-presets button[aria-pressed=true] { border-color:var(--primary-color,#0288d1); }
+        .copy { border-top:1px solid var(--divider-color,#e7edf0); font-size:13px; }
+        .copy summary { cursor:pointer; padding:14px 12px; min-height:44px; }
+        .copy-content { padding:0 12px 14px; }
+        .copy label { display:block; margin:8px 0; }
+        .copy select { display:block; width:100%; min-height:44px; font:inherit; margin-top:4px;
+          background:var(--card-background-color,#fff); color:var(--primary-text-color,#182a36); }
+        .copy fieldset { min-width:0; margin:12px 0; padding:8px; border:1px solid var(--divider-color,#e7edf0); }
+        .copy .copy-target { display:flex; align-items:center; gap:8px; min-height:44px; overflow-wrap:anywhere; }
+        .copy .copy-target[hidden] { display:none; }
+        .copy input[type=checkbox] { flex:none; width:20px; height:20px; }
+        .copy small { display:block; color:var(--secondary-text-color,#647887); margin-top:4px; }
+        .copy .copy-problem { color:var(--error-color,#c33b39); }
+        .copy p { line-height:1.5; }
+        .copy-apply { background:var(--primary-color,#0288d1); color:var(--text-primary-color,#fff); }
+        .timeline-day { display:block; margin-bottom:10px; font-size:13px; }
+        .timeline-day select { font:inherit; color:var(--primary-text-color,#182a36);
+          background:var(--card-background-color,#fff); min-height:44px; margin-inline-start:8px; }
         .timeline { padding:16px 12px; border-top:1px solid var(--divider-color,#e7edf0); }
         .timeline h3 { margin:0 0 6px; font-size:16px; }
         .timeline p { margin:6px 0 12px; font-size:12px; color:var(--secondary-text-color,#647887); }
@@ -292,6 +392,7 @@
             overflow-y:auto; scroll-padding-block:48px 12px; }
           thead th { position:sticky; top:0; z-index:1; }
           thead th:first-child { width:24%; }
+          .slot-top { grid-template-columns:24% 38% 38%; }
           thead th:first-child, tbody th { padding-left:12px; }
           th, td { padding-left:4px; padding-right:4px; }
           .time { gap:2px; }
@@ -305,6 +406,18 @@
       const header = el("header");
       header.append(el("h2", "", (this._config.title ?? this._t("title"))),
         el("div", "subtitle", this._t("subtitle", {count: this._config.rows.length})));
+      if (this._config.rows.length > 1) {
+        const actions = el("div", "slot-actions");
+        for (const [key, open] of [["editor_expand", true], ["editor_collapse", false]]) {
+          const button = el("button", open ? "slots-expand" : "slots-collapse", this._t(key)); button.type = "button";
+          button.addEventListener("click", () => {
+            button.focus();
+            for (const row of this._config.rows) this._setSlotOpen(row.index, open);
+          });
+          actions.append(button);
+        }
+        header.append(actions);
+      }
       const scroll = el("div", "scroll");
       const table = el("table");
       table.setAttribute("aria-label", (this._config.title ?? this._t("title")));
@@ -315,8 +428,23 @@
       head.append(headings);
       const body = el("tbody");
       this._cells = [];
+      this._dayCells = [];
+      this._slots = [];
       for (const row of this._config.rows) {
         const tr = el("tr"), label = el("th", "", (row.name || `${this._t("row")} ${pad(row.index + 1)}`));
+        tr.id = `slot-times-${row.index}`;
+        const summaryRow = el("tr", "slot-summary"), summaryCell = el("th"); summaryCell.colSpan = 3;
+        const toggle = el("button", "slot-toggle"), top = el("span", "slot-top"); toggle.type = "button";
+        const clocks = [el("span", "slot-clock"), el("span", "slot-clock")];
+        top.append(el("span", "slot-name", label.textContent), ...clocks);
+        const days = el("span", "slot-days"), feedback = el("span", "slot-feedback");
+        toggle.append(top, days, feedback); summaryCell.append(toggle); summaryRow.append(summaryCell); body.append(summaryRow);
+        const slot = {index: row.index, summaryRow, toggle, clocks, days, feedback, rows: [tr]};
+        this._slots.push(slot);
+        toggle.addEventListener("click", () => {
+          toggle.focus(); // Finish any active time edit before hiding its fields.
+          this._setSlotOpen(row.index, !this._openSlots.has(row.index));
+        });
         label.scope = "row";
         tr.append(label);
         for (const [key, caption] of [["on_entity", this._t("on")], ["off_entity", this._t("off")]]) {
@@ -367,6 +495,33 @@
           this._cells.push(cell);
         }
         body.append(tr);
+        if (row.days_entity) {
+          const daysRow = el("tr", "days-row"), td = el("td"); td.colSpan = 3;
+          daysRow.id = `slot-days-${row.index}`; slot.rows.push(daysRow);
+          const group = el("div", "days"), note = el("span", "note"), raw = el("span", "raw");
+          const caption = `${label.textContent} — ${this._t("days")}`;
+          group.setAttribute("role", "group"); group.setAttribute("aria-label", caption);
+          const summary = el("span", "days-summary");
+          const cell = {kind: "days", index: row.index, entity: row.days_entity, td, note, raw, summary,
+            buttons: [], draft: null, pending: null, error: ""};
+          for (const bit of weekdays) {
+            const button = el("button", "", dayName(this._hass, bit, true)); button.type = "button";
+            button.dataset.bit = bit; button.setAttribute("aria-label", `${label.textContent} — ${dayName(this._hass, bit)}`);
+            button.addEventListener("click", () => this._editDays(cell, bit));
+            cell.buttons.push(button); group.append(button);
+          }
+          const presets = el("div", "day-presets"); cell.presets = [];
+          for (const [key, mask] of [["days_all", 127], ["days_work", 62], ["days_weekend", 65], ["days_clear", 0]]) {
+            const button = el("button", "", this._t(key)); button.type = "button"; button.dataset.mask = mask;
+            button.setAttribute("aria-label", `${caption} — ${this._t(key)}`);
+            button.addEventListener("click", () => this._setDaysMask(cell, mask));
+            presets.append(button); cell.presets.push(button);
+          }
+          td.append(el("span", "days-label", caption), group, presets, summary, raw, note); daysRow.append(td);
+          body.append(daysRow); this._dayCells.push(cell);
+        }
+        toggle.setAttribute("aria-controls", slot.rows.map(node => node.id).join(" "));
+        this._setSlotOpen(row.index, this._openSlots.has(row.index));
       }
       table.append(head, body); scroll.append(table);
       const footer = el("footer");
@@ -378,18 +533,30 @@
       this._save = el("button", "save", this._t("save"));
       this._reset.type = this._save.type = "button";
       this._reset.addEventListener("click", () => {
-        if (this._saving || this._cells.some((c) => c.pending)) return;
-        for (const c of this._cells) { c.draft = null; c.error = ""; }
+        if (this._saving || this._allCells().some((c) => c.pending)) return;
+        for (const c of this._allCells()) { c.draft = null; c.error = ""; }
         this._message = this._t("cancelled");
         this._sync();
       });
       this._save.addEventListener("click", () => void this._saveChanges());
       buttons.append(this._reset, this._save); footer.append(this._status, buttons);
       card.append(header, scroll, footer);
+      this._copyUI = null;
+      if (this._config.rows.length > 1) this._buildCopy(card);
       this._timeline = null; this._timelineSignature = null;
       if (this._config.show_timeline) {
         this._timeline = el("section", "timeline");
         this._timeline.setAttribute("aria-label", this._t("timeline_title"));
+        if (this._dayCells.length) {
+          const label = el("label", "timeline-day", this._t("timeline_day")), select = el("select");
+          for (const bit of weekdays) {
+            const option = el("option", "", dayName(this._hass, bit)); option.value = bit; select.append(option);
+          }
+          select.value = this._timelineDay;
+          select.addEventListener("change", () => {this._timelineDay = Number(select.value); this._syncTimeline();});
+          label.append(select); this._timeline.append(label);
+        }
+        this._timelineContent = el("div"); this._timeline.append(this._timelineContent);
         card.append(this._timeline);
       }
       this.shadowRoot.append(style, card);
@@ -399,10 +566,29 @@
       const state = this._hass?.states?.[cell.entity];
       const raw = state?.state;
       const available = Boolean(state) && raw !== "unknown" && raw !== "unavailable";
+      if (cell.kind === "days") {
+        const value = parseByte(raw);
+        return {state, raw, available, value, key: value ?? String(raw), format: "byte", compatible: daysCompatible(state)};
+      }
       const value = parseWord(raw);
       const format = resolveFormat(state, cell.legacyFormat), isCompatible = compatible(state, format);
       return { state, raw, available, value, format, compatible: isCompatible,
         time: isCompatible ? decode(raw, format) : null, key: value ?? String(raw) };
+    }
+
+    _editDays(cell, bit) {
+      const value = cell.draft?.value ?? this._info(cell).value;
+      if (value !== null) this._setDaysMask(cell, (value ^ (1 << bit)) & 127);
+    }
+
+    _setDaysMask(cell, mask) {
+      const info = this._info(cell);
+      if (this._saving || cell.pending || !info.available || !info.compatible || info.value === null) return;
+      const value = ((cell.draft?.value ?? info.value) & 128) | (mask & 127);
+      cell.draft = {base: cell.draft?.base ?? info.key, format: "byte", value};
+      cell.error = "";
+      if (value === info.value) cell.draft = null;
+      this._message = ""; this._sync();
     }
 
     _edit(cell) {
@@ -422,11 +608,11 @@
     _validate(cell) {
       if (!cell.draft) return "";
       const info = this._info(cell);
-      if (!info.compatible) return this._t("incompatible");
+      if (!info.compatible) return this._t(cell.kind === "days" ? "incompatible_days" : "incompatible");
       if (!info.available) return this._t("unavailable");
       if (info.format !== cell.draft.format) return this._t("conflict");
-      const value = encode(cell.draft.hours, cell.draft.minutes, info.format);
-      if (value === null) return this._t("invalid_time");
+      const value = this._draftValue(cell);
+      if (value === null || (cell.kind === "days" && info.value === null)) return this._t(cell.kind === "days" ? "invalid_days" : "invalid_time");
       if (info.key !== cell.draft.base && info.value !== value) {
         return this._t("conflict");
       }
@@ -436,7 +622,7 @@
       const step = Number(attrs.step);
       if (Number.isFinite(step) && step > 0) {
         const steps = (value - Number(attrs.min ?? 0)) / step;
-        if (Math.abs(steps - Math.round(steps)) > 1e-6) return this._t("invalid_step");
+        if (Math.abs(steps - Math.round(steps)) > 1e-6) return this._t(cell.kind === "days" ? "invalid_days_step" : "invalid_step");
       }
       return "";
     }
@@ -444,7 +630,7 @@
     _sync() {
       if (!this._config || !this._status) return;
       let dirty = 0, pending = 0, invalid = 0;
-      for (const c of this._cells) {
+      for (const c of this._allCells()) {
         const info = this._info(c);
         if (c.pending?.accepted && info.available && info.compatible && info.format === c.pending.format && info.value === c.pending.value) {
           c.pending = null; c.draft = null; c.error = "";
@@ -452,22 +638,30 @@
           c.pending = null;
           c.error = this._t("unconfirmed");
         }
+        const isDays = c.kind === "days";
         const focused = [c.hours, c.minutes].includes(this.shadowRoot.activeElement);
-        if (!focused) {
+        if (!isDays && !focused) {
           const value = c.draft ?? info.time;
           c.hours.value = value?.hours ?? ""; c.minutes.value = value?.minutes ?? "";
         }
-        c.hours.disabled = c.minutes.disabled = !info.available || !info.compatible || this._saving || Boolean(c.pending);
+        const controls = isDays ? [...c.buttons, ...c.presets] : [c.hours, c.minutes];
+        for (const control of controls) control.disabled = !info.available || !info.compatible || this._saving || Boolean(c.pending) || (isDays && info.value === null);
+        if (isDays) {
+          const value = c.draft?.value ?? info.value;
+          for (const button of c.buttons) button.setAttribute("aria-pressed", String(value !== null && Boolean(value & (1 << Number(button.dataset.bit)))));
+          for (const button of c.presets) button.setAttribute("aria-pressed", String(value !== null && (value & 127) === Number(button.dataset.mask)));
+          c.summary.textContent = info.available && info.compatible && value !== null ? daysText(this._hass, value) : "—";
+        }
         let problem = c.pending ? "" : (c.error || this._validate(c));
-        if (!info.compatible) problem = this._t("incompatible");
+        if (!info.compatible) problem = this._t(isDays ? "incompatible_days" : "incompatible");
         else if (!info.available) problem = !c.entity ? this._t("choose_entity") : info.state ? this._t("unavailable") : this._t("missing");
-        else if (!c.draft && !info.time) problem = this._t(info.format === "hhmm" ? "invalid_hhmm" : "invalid_bcd", {raw: String(info.raw)});
+        else if (isDays && info.value === null) problem = this._t("invalid_days");
+        else if (!isDays && !c.draft && !info.time) problem = this._t(info.format === "hhmm" ? "invalid_hhmm" : "invalid_bcd", {raw: String(info.raw)});
         c.note.textContent = problem || (c.pending ? (c.pending.accepted ? this._t("waiting") : this._t("sending")) : c.draft ? this._t("modified") : "");
         c.td.toggleAttribute("data-error", Boolean(problem));
         c.td.toggleAttribute("data-dirty", Boolean(c.draft));
-        c.hours.setAttribute("aria-invalid", String(Boolean(problem)));
-        c.minutes.setAttribute("aria-invalid", String(Boolean(problem)));
-        c.raw.textContent = this._config.show_raw && info.available ? `${info.format === "hhmm" ? "HHMM" : "WORD"} ${String(info.raw)}` : "";
+        for (const control of controls) control.setAttribute("aria-invalid", String(Boolean(problem)));
+        c.raw.textContent = this._config.show_raw && info.available ? `${isDays ? "BYTE" : info.format === "hhmm" ? "HHMM" : "WORD"} ${String(info.raw)}` : "";
         if (c.draft && !c.pending) { dirty++; if (this._validate(c)) invalid++; }
         if (c.pending) pending++;
       }
@@ -479,6 +673,163 @@
         dirty ? this._t(invalid ? "invalid_count" : "dirty_count", {count: dirty}) :
         this._message || this._t(this._config.rows.length ? "hint" : "configure");
       this._syncTimeline();
+      this._syncCopy();
+      this._syncSlots();
+    }
+
+    _setSlotOpen(index, open) {
+      if (open) this._openSlots.add(index); else this._openSlots.delete(index);
+      const slot = this._slots[index];
+      slot.toggle.setAttribute("aria-expanded", String(open));
+      for (const row of slot.rows) row.hidden = !open;
+    }
+
+    _syncSlots() {
+      for (const slot of this._slots) {
+        const times = this._cells.slice(slot.index * 2, slot.index * 2 + 2);
+        const days = this._dayCells.find(cell => cell.index === slot.index);
+        const cells = days ? [...times, days] : times;
+        times.forEach((cell, index) => {
+          const info = this._info(cell);
+          slot.clocks[index].textContent = info.available && info.compatible ? this._copyText(cell) : "—";
+        });
+        slot.days.textContent = days ? `${this._t("days")}: ${days.summary.textContent}` : this._t("timeline_daily");
+        // Keep field-specific problems and draft/write status visible while closed.
+        slot.feedback.textContent = cells.filter(cell => cell.note.textContent).map(cell =>
+          `${this._t(cell.kind === "days" ? "days" : cell === times[0] ? "on" : "off")}: ${cell.note.textContent}`).join(" · ");
+        slot.summaryRow.toggleAttribute("data-error", cells.some(cell => cell.td.hasAttribute("data-error")));
+        slot.summaryRow.toggleAttribute("data-dirty", cells.some(cell => cell.draft));
+      }
+    }
+
+    _buildCopy(card) {
+      const details = el("details", "copy"), content = el("div", "copy-content");
+      details.open = this._copyState.open;
+      details.append(el("summary", "", this._t("copy_title")));
+      details.addEventListener("toggle", () => {this._copyState.open = details.open; this._syncCopy();});
+      content.append(el("p", "", this._t("copy_hint")));
+      const field = (key, className) => {
+        const label = el("label", "", this._t(key)), select = el("select", className);
+        label.append(select); content.append(label); return select;
+      };
+      const name = i => this._config.rows[i].name || `${this._t("row")} ${pad(i + 1)}`;
+      const source = field("copy_source", "copy-source"), mode = field("copy_mode", "copy-mode");
+      this._config.rows.forEach((_, i) => {const option = el("option", "", name(i)); option.value = i; source.append(option);});
+      for (const [value, key] of [["times", "copy_times"], ["days", "copy_days"], ["both", "copy_both"]]) {
+        const option = el("option", "", this._t(key)); option.value = value; mode.append(option);
+      }
+      source.value = this._copyState.source; mode.value = this._copyState.mode;
+      source.addEventListener("change", () => {
+        this._copyState.source = Number(source.value); this._copyState.targets.delete(this._copyState.source); this._syncCopy();
+      });
+      mode.addEventListener("change", () => {this._copyState.mode = mode.value; this._syncCopy();});
+      const targets = el("fieldset"); targets.append(el("legend", "", this._t("copy_targets")));
+      const targetUI = this._config.rows.map((_, index) => {
+        const label = el("label", "copy-target"), input = el("input"), text = el("span", "", name(index));
+        input.type = "checkbox"; input.dataset.index = index;
+        const preview = el("small"); text.append(preview); label.append(input, text); targets.append(label);
+        input.addEventListener("change", () => {
+          if (input.checked) this._copyState.targets.add(index); else this._copyState.targets.delete(index);
+          this._syncCopy();
+        });
+        return {index, label, input, preview};
+      });
+      const description = el("p", "copy-description"), message = el("p", "copy-message"); message.setAttribute("role", "status");
+      const apply = el("button", "copy-apply", this._t("copy_apply")); apply.type = "button";
+      apply.addEventListener("click", () => this._applyCopy());
+      content.append(description, targets, message, apply); details.append(content); card.append(details);
+      this._copyUI = {details, source, mode, targets: targetUI, description, message, apply};
+    }
+
+    _copyCells(index) {
+      const times = this._cells.slice(index * 2, index * 2 + 2);
+      const days = this._dayCells.find(cell => cell.index === index);
+      return this._copyState.mode === "times" ? times : this._copyState.mode === "days" ? [days] : [...times, days];
+    }
+
+    _copyText(cell, draft = cell?.draft) {
+      if (!cell) return this._t("copy_missing_days");
+      const info = this._info(cell);
+      if (cell.kind === "days") {
+        const value = draft?.value ?? info.value;
+        return value === null ? "—" : daysText(this._hass, value);
+      }
+      const time = draft ?? info.time;
+      return time && encode(time.hours, time.minutes) !== null ? `${pad(time.hours)}:${pad(time.minutes)}` : "—";
+    }
+
+    _copyPlan() {
+      const source = this._copyCells(this._copyState.source);
+      const problem = cell => {
+        if (!cell) return this._t("copy_missing_days");
+        const info = this._info(cell);
+        return !info.available ? this._t("unavailable") : !info.compatible ? this._t(cell.kind === "days" ? "incompatible_days" : "incompatible") :
+          cell.pending ? this._t("waiting") : cell.error || "";
+      };
+      let error = this._saving || this._allCells().some(c => c.pending) ? this._t("waiting") : "";
+      for (const cell of source) {
+        error ||= problem(cell);
+        if (!error) error = this._validate(cell) || (this._copyText(cell) === "—" ? this._t(cell.kind === "days" ? "invalid_days" : "invalid_time") : "");
+      }
+      const changes = [], previews = new Map();
+      const sourceText = source.map(cell => this._copyText(cell)).join(" · ");
+      for (const index of this._copyState.targets) {
+        if (index === this._copyState.source) continue;
+        const cells = this._copyCells(index), proposed = [], lines = [];
+        let rowError = error;
+        cells.forEach((cell, offset) => {
+          rowError ||= problem(cell);
+          if (rowError) return;
+          const info = this._info(cell), from = source[offset], fromInfo = this._info(from);
+          const value = from.draft ?? fromInfo.time;
+          const draft = {base: cell.draft?.base ?? info.key, format: cell.draft?.format ?? info.format,
+            ...(cell.kind === "days" ? {value: ((cell.draft?.value ?? info.value) & 128) | ((from.draft?.value ?? fromInfo.value) & 127)} :
+              {hours: value.hours, minutes: value.minutes})};
+          const candidate = {...cell, draft};
+          rowError = this._validate(candidate);
+          lines.push(`${this._copyText(cell)} → ${this._copyText(cell, draft)}`);
+          proposed.push({cell, draft: this._draftValue(candidate) === info.value ? null : draft});
+        });
+        previews.set(index, {text: rowError || lines.join(" · "), error: Boolean(rowError)});
+        if (!rowError) changes.push(...proposed);
+      }
+      error ||= [...previews.values()].find(preview => preview.error)?.text || "";
+      error ||= !previews.size ? this._t("copy_select") : "";
+      const changed = changes.some(({cell, draft}) => JSON.stringify(cell.draft) !== JSON.stringify(draft));
+      return {error, changes, previews, sourceText, changed};
+    }
+
+    _syncCopy() {
+      const ui = this._copyUI;
+      if (!ui) return;
+      const busy = this._saving || this._allCells().some(c => c.pending);
+      ui.source.disabled = ui.mode.disabled = busy;
+      for (const item of ui.targets) {
+        item.label.hidden = item.index === this._copyState.source;
+        item.input.disabled = busy || item.index === this._copyState.source;
+        item.input.checked = this._copyState.targets.has(item.index);
+      }
+      if (!ui.details.open) return;
+      const plan = this._copyPlan();
+      ui.description.textContent = `${this._t("copy_source")}: ${plan.sourceText}`;
+      for (const item of ui.targets) {
+        const preview = plan.previews.get(item.index);
+        item.preview.textContent = preview?.text ?? ""; item.preview.classList.toggle("copy-problem", Boolean(preview?.error));
+      }
+      ui.message.textContent = plan.error || (plan.changed ? "" : this._t("copy_no_changes"));
+      ui.apply.disabled = Boolean(plan.error) || !plan.changed;
+    }
+
+    _applyCopy() {
+      // Finish the active time field before replacing its draft. Some click
+      // activation paths do not move focus, and a later blur would restore it.
+      this._copyUI?.apply.focus();
+      // Recompute synchronously at the final click; never partially stage a batch.
+      const plan = this._copyPlan();
+      if (plan.error || !plan.changed) {this._syncCopy(); return;}
+      for (const {cell, draft} of plan.changes) {cell.draft = draft; cell.error = "";}
+      this._message = this._t("copy_applied"); this._sync();
+      if (!this._save.disabled) this._save.focus();
     }
 
     _syncTimeline() {
@@ -492,14 +843,23 @@
           return Number(time.hours) * 60 + Number(time.minutes);
         });
         const [start, end] = times;
-        const valid = times.every(time => time !== null);
-        const ranges = !valid || start === end ? [] : start < end ? [[start, end]] :
-          [[0, end], [start, 1440]].filter(([a, b]) => a < b);
-        return {name: row.name || `${this._t("row")} ${pad(index + 1)}`, start, end, valid, ranges,
+        const daysCell = this._dayCells.find(cell => cell.index === index);
+        const daysInfo = daysCell ? this._info(daysCell) : null;
+        const days = daysCell ? daysCell.draft?.value ?? daysInfo.value : 127;
+        const validDays = !daysCell || (daysInfo.available && daysInfo.compatible && days !== null &&
+          !this._validate(daysCell) && !daysCell.error);
+        const valid = times.every(time => time !== null) && Boolean(validDays);
+        const today = Boolean(days & (1 << this._timelineDay));
+        const yesterday = Boolean(days & (1 << ((this._timelineDay + 6) % 7)));
+        const ranges = !valid || start === end ? [] : start < end ? (today ? [[start, end]] : []) :
+          [...(yesterday && end > 0 ? [[0, end]] : []), ...(today ? [[start, 1440]] : [])];
+        if (daysCell) cells.push(daysCell);
+        return {name: row.name || `${this._t("row")} ${pad(index + 1)}`, start, end, valid, ranges, days,
+          hasDays: Boolean(daysCell),
           preview: cells.some(cell => cell.draft || cell.pending),
           pending: cells.some(cell => cell.pending)};
       });
-      const signature = JSON.stringify([language(this._hass), rows]);
+      const signature = JSON.stringify([language(this._hass), this._timelineDay, rows]);
       if (signature === this._timelineSignature) return;
       this._timelineSignature = signature;
       // Half-open intervals: touching endpoints do not overlap. Split overnight
@@ -546,6 +906,10 @@
           details.push(`${clock(row.start)}–${clock(row.end)}`);
           if (row.start === row.end) details.push(this._t("timeline_equal"));
           else if (row.start > row.end) details.push(this._t("timeline_overnight"));
+          if (this._dayCells.length) {
+            details.push(row.hasDays ? this._t("timeline_days", {days: daysText(this._hass, row.days)}) : this._t("timeline_daily"));
+            if (row.start !== row.end && !row.ranges.length) details.push(this._t("timeline_inactive"));
+          }
           if (overlap) details.push(this._t("timeline_overlap"));
         }
         if (row.preview) details.push(this._t(row.pending ? "waiting" : "modified"));
@@ -557,12 +921,12 @@
         const label = `${this._t("timeline_overlap")}: ${overlaps.map(([a, b]) => `${clock(a)}–${clock(b)}`).join(", ")}`;
         const node = el("div", "timeline-overlaps"); node.append(el("p", "", label), track(overlaps, label)); nodes.push(node);
       } else nodes.push(el("p", "timeline-clear", this._t("timeline_clear")));
-      this._timeline.replaceChildren(...nodes);
+      this._timelineContent.replaceChildren(...nodes);
     }
 
     async _saveChanges() {
-      if (this._saving || !this._hass || this._cells.some((c) => c.pending)) return;
-      const changes = this._cells.filter((c) => c.draft);
+      if (this._saving || !this._hass || this._allCells().some((c) => c.pending)) return;
+      const changes = this._allCells().filter((c) => c.draft);
       if (!changes.length) return;
       if (changes.some((c) => this._validate(c))) { this._sync(); return; }
       const generation = this._generation;
@@ -576,7 +940,7 @@
         const problem = this._validate(cell);
         if (problem) { cell.error = problem; failed++; continue; }
         const format = this._info(cell).format;
-        const value = encode(cell.draft.hours, cell.draft.minutes, format);
+        const value = this._draftValue(cell);
         if (this._info(cell).value === value) { cell.draft = null; cell.error = ""; continue; }
         cell.error = "";
         cell.pending = { value, format, accepted: false };
@@ -677,12 +1041,12 @@
 
     _choices(row, key, options) {
       const used = new Set();
-      for (const other of this._config.rows) for (const field of ["on_entity", "off_entity"]) {
+      for (const other of this._config.rows) for (const field of entityFields) {
         if (other !== row || field !== key) used.add(other[field]);
       }
       return options.filter(([id]) => {
         const state = this._hass.states[id];
-        return compatible(state, resolveFormat(state, legacyFieldFormat(this._config, row, key))) &&
+        return (key === "days_entity" ? daysCompatible(state) : compatible(state, resolveFormat(state, legacyFieldFormat(this._config, row, key)))) &&
           !used.has(id) && (!this._plc || this._deviceId(id) === this._plc);
       });
     }
@@ -711,7 +1075,7 @@
       const devices = new Map();
       for (const [id] of options) {
         const attrs = this._hass.states[id].attributes;
-        if (attrs?.s7_raw_word !== true && attrs?.s7_time_format !== "hhmm") continue;
+        if (attrs?.s7_raw_word !== true && attrs?.s7_raw_byte !== true && attrs?.s7_time_format !== "hhmm") continue;
         const deviceId = this._deviceId(id), device = this._hass?.devices?.[deviceId];
         if (device) devices.set(deviceId, device.name_by_user || device.name || deviceId);
       }
@@ -734,12 +1098,17 @@
         for (const {key, caption, picker, search, note} of fields) {
           const id = row[key] ?? "", state = this._hass?.states?.[id];
           const format = resolveFormat(state, legacyFieldFormat(this._config, row, key));
-          const isCompatible = compatible(state, format);
-          const time = isCompatible ? decode(state?.state, format) : null;
+          const isCompatible = key === "days_entity" ? daysCompatible(state) : compatible(state, format);
+          const time = key !== "days_entity" && isCompatible ? decode(state?.state, format) : null;
           descriptions[key].textContent = `${this._t(caption)}: ${state?.attributes?.friendly_name || id || "—"}${time ? ` · ${time.hours}:${time.minutes}` : ""}`;
+          if (key === "days_entity") {
+            const value = isCompatible ? parseByte(state?.state) : null;
+            descriptions[key].hidden = !id;
+            if (value !== null) descriptions[key].textContent += ` · ${daysText(this._hass, value)}`;
+          }
           descriptions[key].title = id;
           const duplicate = id && this._config.rows.some(other =>
-            ["on_entity", "off_entity"].some(field => (other !== row || field !== key) && other[field] === id));
+            entityFields.some(field => (other !== row || field !== key) && other[field] === id));
           const problem = id && (!state || !isCompatible) ? this._t("editor_unavailable") :
             duplicate ? this._t("editor_in_use") : "";
           note.textContent = problem;
@@ -782,7 +1151,7 @@
       const state = this._hass?.states?.[id];
       return /^(number|input_number)\./.test(id) && Boolean(state) &&
         compatible(state, resolveFormat(state, legacyFormat(this._config))) &&
-        !this._config.rows.some(row => row.on_entity === id || row.off_entity === id);
+        !this._config.rows.some(row => entityFields.some(key => row[key] === id));
     }
 
     _bulkMatches(key, entries = this._options()) {
@@ -1009,15 +1378,15 @@
         details.open = ui.open;
         details.addEventListener("toggle", () => {ui.open = details.open;});
         const summaryTitle = el("span", "slot-title"), warning = el("span", "warning");
-        const descriptions = {on_entity: el("span", "slot-entity"), off_entity: el("span", "slot-entity")};
-        summary.append(summaryTitle, descriptions.on_entity, descriptions.off_entity, warning);
+        const descriptions = Object.fromEntries(entityFields.map(key => [key, el("span", "slot-entity")]));
+        summary.append(summaryTitle, ...Object.values(descriptions), warning);
         const group = el("fieldset");
         group.append(el("legend", "", `${this._t("row")} ${index + 1}`));
         const name = field(group, this._t("editor_name"), el("input"));
         name.value = row.name ?? "";
         name.addEventListener("input", () => {row.name = name.value; this._emit();});
         const fields = [];
-        for (const [key, caption] of [["on_entity", "on"], ["off_entity", "off"]]) {
+        for (const [key, caption] of [["on_entity", "on"], ["off_entity", "off"], ["days_entity", "editor_days"]]) {
           let picker, search;
           if (this._nativePicker) {
             picker = el("ha-entity-picker");
@@ -1032,6 +1401,7 @@
             picker = field(group, this._t(caption), el("select", "entity-select"));
             picker.addEventListener("change", () => this._select(row, key, picker.value));
           }
+          picker.dataset.field = key;
           const note = el("div", "picker-note"); note.setAttribute("role", "status"); group.append(note);
           fields.push({key, caption, picker, search, note});
         }
