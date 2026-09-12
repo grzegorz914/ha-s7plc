@@ -26,7 +26,7 @@ function setup({count = 1, delayed = false, reject = false} = {}) {
   card.hass = hass; document.body.append(card);
   return {card, hass, update};
 }
-const fields = card => [...card.shadowRoot.querySelectorAll("input")];
+const fields = card => [...card.shadowRoot.querySelectorAll(".time input")];
 const edit = (input, value) => {input.focus(); input.value = value; input.dispatchEvent(new Event("input", {bubbles: true}));};
 const clickSave = async card => {
   const button = card.shadowRoot.querySelector(".save"); button.focus(); button.click();
@@ -57,7 +57,7 @@ test("standalone module registers card/editor once; stub works without a panel",
 
 test("12 pairs display 48 fields; localization and names are rendered safely", () => {
   const {card, hass} = setup({count: 12});
-  expect(card.shadowRoot.querySelectorAll("tbody tr")).toHaveLength(12);
+  expect(card.shadowRoot.querySelectorAll("tbody tr:not(.slot-summary)")).toHaveLength(12);
   expect(fields(card)).toHaveLength(48);
   expect(fields(card)[0].value).toBe("04");
   card.hass = {...hass, language: "it-IT"};
@@ -328,7 +328,7 @@ test("native picker contract rejects stale duplicate choices and retains missing
     {on_entity: "number.on_0", off_entity: "number.off_0"},
     {on_entity: "number.missing", off_entity: "number.off_1"},
   ]);
-  const pickers = editor.shadowRoot.querySelectorAll("ha-entity-picker");
+  const pickers = editor.shadowRoot.querySelectorAll('ha-entity-picker:not([data-field="days_entity"])');
   expect(pickers[0].includeDomains).toEqual(["number", "input_number"]);
   expect(pickers[0].includeEntities).toEqual(["number.on_0", "number.on_1"]);
   expect(pickers[0].allowCustomEntity).toBe(false);
