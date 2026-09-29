@@ -653,10 +653,33 @@ class S7Cover(S7BaseEntity, CoverEntity):
             except ValueError:
                 _LOGGER.warning("Invalid device class %s", device_class)
 
+    @property
+    def _restorable_topics(self) -> set[str]:
+        return {
+            topic
+            for topic in (
+                self._opened_topic,
+                self._closed_topic,
+                self._cover_opening_topic,
+                self._cover_closing_topic,
+                self._cover_stopped_topic,
+                self._cover_status_topic,
+            )
+            if topic is not None
+        }
+
+    @property
+    def _local_restore_state(self) -> dict[str, Any]:
+        return {"assumed_closed": self._assumed_closed}
+
+    def _restore_local_state(self, state: dict[str, Any]) -> None:
+        if isinstance(closed := state.get("assumed_closed"), bool):
+            self._assumed_closed = closed
+
     def _get_topic_state(self, topic: str | None) -> bool | None:
         if topic is None:
             return None
-        data = self.coordinator.data or {}
+        data = self._state_data
         if topic not in data:
             return None
         value = data.get(topic)
@@ -669,7 +692,7 @@ class S7Cover(S7BaseEntity, CoverEntity):
         unmatched/unset."""
         if not self._cover_status_address:
             return None
-        data = self.coordinator.data or {}
+        data = self._state_data
         status = data.get(self._cover_status_topic)
         if status is None:
             return None
@@ -738,6 +761,11 @@ class S7Cover(S7BaseEntity, CoverEntity):
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
+        if self._has_restored_feedback:
+            # Saved position/movement is display-only, not feedback for a
+            # pending operation or evidence of the last toggle direction.
+            super()._handle_coordinator_update()
+            return
         completion_direction = None
 
         # If using state topics (limit switches), check if movement should stop
@@ -1502,9 +1530,26 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
             pct = 100 - pct
         return pct
 
+    @property
+    def _restorable_topics(self) -> set[str]:
+        return {
+            topic
+            for topic in (
+                self._position_topic,
+                self._tilt_topic,
+                self._opening_topic,
+                self._closing_topic,
+                self._cover_opening_topic,
+                self._cover_closing_topic,
+                self._cover_stopped_topic,
+                self._cover_status_topic,
+            )
+            if topic is not None
+        }
+
     def _get_position_value(self) -> int | None:
         """Get the current position value from coordinator data."""
-        data = self.coordinator.data or {}
+        data = self._state_data
         if self._position_topic not in data:
             return None
         value = data.get(self._position_topic)
@@ -1528,7 +1573,7 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
         """Get the current tilt value from coordinator data."""
         if self._tilt_topic is None:
             return None
-        data = self.coordinator.data or {}
+        data = self._state_data
         if self._tilt_topic not in data:
             return None
         value = data.get(self._tilt_topic)
@@ -1591,7 +1636,7 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
     def _get_topic_state(self, topic: str | None) -> bool | None:
         if topic is None:
             return None
-        data = self.coordinator.data or {}
+        data = self._state_data
         if topic not in data:
             return None
         value = data.get(topic)
@@ -1641,7 +1686,7 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
         unmatched/unset."""
         if not self._cover_status_address:
             return None
-        data = self.coordinator.data or {}
+        data = self._state_data
         status = data.get(self._cover_status_topic)
         if status is None:
             return None
