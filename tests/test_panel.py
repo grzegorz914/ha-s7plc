@@ -327,7 +327,7 @@ def test_panel_control_mode_is_context_aware() -> None:
     assert '["control_behavior","control"]' in source
     assert 'name="sync_state" type="checkbox"' not in source
     assert 'name="pulse_command" type="checkbox"' not in source
-    assert "choices||['direct','sync','pulse']" in source
+    assert "choices||['direct','sync','pulse','single_fire']" in source
     assert "sync_requires_command" in source
     assert "data-sync-reason" in source
 
@@ -527,8 +527,10 @@ async def _save_entity_handler(monkeypatch, options):
     websocket_api.async_register_command = lambda hass, func: commands.append(func)
     panel_custom = ModuleType("homeassistant.components.panel_custom")
 
+    registrations = []
+
     async def register_panel(*args, **kwargs):
-        return None
+        registrations.append(kwargs)
 
     panel_custom.async_register_panel = register_panel
     monkeypatch.setitem(
@@ -580,7 +582,20 @@ async def _save_entity_handler(monkeypatch, options):
     )
     await async_setup_panel(hass)
     hass.panel_commands = commands
+    hass.panel_registration = registrations[0]
     return commands[1], hass, entry, updates
+
+
+@pytest.mark.asyncio
+async def test_panel_passes_frontend_version_to_translation_loader(monkeypatch) -> None:
+    """Panel metadata and the JavaScript asset identify the same frontend build."""
+    from urllib.parse import parse_qs, urlsplit
+
+    _, hass, _, _ = await _save_entity_handler(monkeypatch, {})
+    registration = hass.panel_registration
+    query = parse_qs(urlsplit(registration["module_url"]).query)
+    assert query["v"] == [registration["config"]["version"]]
+    assert query["build"] == [registration["config"]["frontend_build"]]
 
 
 @pytest.mark.asyncio
