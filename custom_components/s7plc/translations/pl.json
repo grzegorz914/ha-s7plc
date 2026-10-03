@@ -969,8 +969,8 @@
           "description": "W sterowaniu impulsowym na adres zapisu wysyłany jest impuls (zał./wył.) zamiast zmiany stanu na przeciwny."
         },
         "single_fire": {
-          "title": "Polecenie jednorazowe",
-          "description": "Zapisuje ON jeden raz, tylko gdy żądany stan różni się od bieżącego. PLC resetuje bit polecenia; bez opóźnienia i zapisu OFF."
+          "title": "Sterowanie stanem",
+          "description": "W sterowaniu stanem na adres zapisu wysyłany jest tylko stan (zał.)."
         }
       }
     },
