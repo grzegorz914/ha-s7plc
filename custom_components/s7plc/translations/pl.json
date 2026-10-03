@@ -969,8 +969,8 @@
           "description": "W sterowaniu impulsowym na adres zapisu wysyłany jest impuls (zał./wył.) zamiast zmiany stanu na przeciwny."
         },
         "single_fire": {
-          "title": "Sterowanie stanem",
-          "description": "W sterowaniu stanem na adres zapisu wysyłany jest tylko stan (zał.)."
+          "title": "Sterowanie ustawieniem bitu",
+          "description": "W sterowaniu ustawieniem bitu na adres zapisu wysyłany jest tylko stan wysoki (zał.)."
         }
       }
     },
