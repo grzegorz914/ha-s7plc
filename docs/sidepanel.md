@@ -169,3 +169,38 @@ connection checks. **PLC availability bit** shows a required BIT address and onl
 makes the entity available when its normal data is valid, the PLC is connected,
 and the bit is true. Switching away from the bit policy removes its address.
 The same fields are supported by the visual and YAML editors.
+
+## Numeric comparison binary sensors
+
+In **Binary sensors**, add or edit an entity and select **Numeric comparison**
+under **Binary sensor behavior**. Enter a scalar numeric PLC address (for example
+`DB1,I10`), a comparison operator, and a numeric threshold. Supported operators are equal,
+not equal, greater than, greater than or equal, less than, and less than or equal.
+Negative and decimal thresholds are supported. The comparison uses the raw PLC
+value; equality is exact (there is no tolerance or hysteresis).
+
+For example, this entity is on above 15 and off at or below 15:
+
+```yaml
+name: Value above 15
+address: DB1,I10
+comparison_operator: gt
+comparison_value: 15
+```
+
+Supported address types: BYTE, WORD, DWORD, SINT, USINT, INT, DINT, REAL and LREAL.
+BIT, strings, TIME and arrays cannot be used for numeric comparisons. Missing or
+non-finite readings produce an unknown state, not a false comparison result;
+connection availability follows the entity's configured availability policy.
+**Invert state** inverts the comparison result. Device class and scan interval
+work as for other binary sensors. Existing sensors keep their direct-state
+behavior; switching back to **Boolean state** removes the comparison settings.
+Multiple binary sensors may compare the same PLC address using different
+operators, thresholds or inversion settings. A numeric sensor may read that
+address too. Identical comparison rules are rejected as duplicates; direct-state
+binary sensors retain the one-per-address restriction.
+
+Each comparison keeps its own polling interval and cached feedback. When several
+entities are due in the same polling cycle, the PLC tag is read once and the value
+is distributed to all of them. Different intervals may require reads in separate
+cycles. Removing or editing one comparison does not replace another's settings.
