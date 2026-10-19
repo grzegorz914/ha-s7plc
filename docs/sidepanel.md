@@ -229,16 +229,24 @@ Both endpoints must be in the same area, so a range cannot mix `M` and `DB`
 addresses. Description and exclusion rows must use addresses in that same area
 (for example `M8.1`). Input and output areas are not supported.
 
-All bits are included initially. In **Descriptions and exclusions**, add rows
+All bits are included initially. In **Alarm list**, add rows
 only for descriptions you want to customize or bits you want to exclude.
 Uncheck **Included** for reserved/unused bits. Bits without a description use
 their PLC address. Excluded bits affect neither the count nor the presence sensor.
 
-Open **Import CSV or paste from Excel** and choose **Download example CSV**
+Choose **Download example CSV** in the alarm list
 for a ready-to-edit file with two included alarms and one excluded bit. The
 example uses DB1 bits 0.0–0.2; adjust its addresses to your configured range.
 
-Import a CSV file or paste a table copied from Excel. Columns are `address`,
+Choose **Upload CSV** to read a file directly into the list, or open **Paste from
+Excel**, paste a table, and press **Import rows**. A message confirms the imported,
+added and updated row counts. The summary counts configured, included and excluded
+rows (not currently active PLC alarms). Review them with address/description search,
+the inclusion filter and 50-row pages. Editing or deleting a visible row preserves
+rows on other pages. **Save** commits the whole list; cancelling discards the edits.
+An invalid import preserves the existing list.
+
+Columns are `address`,
 `description`, and optional `enabled` (`1`/`true` to include, `0`/`false` to exclude).
 The English column header is optional. Semicolon CSV and tab-separated text allow
 unquoted PLC addresses; comma-separated CSV requires quoting the address because
@@ -259,6 +267,39 @@ is excluded from recorder history; count and presence states remain recordable.
 Missing or invalid samples are not interpreted as zero alarms. The usual
 availability settings also apply; **Always available** explicitly permits
 restoring the last sample while the PLC is offline.
+
+The count sensor also exposes `last_alarm` (description, falling back to the bit
+address), `last_alarm_address`, and `last_alarm_at` (UTC detection time). They
+start as `null`. Newly active bits are displayed one at a time for two seconds,
+in reception order; bits first observed in the same sample use ascending bit
+address order, since a sampled range cannot reveal their actual activation order.
+All alarms in that sample have the same detection timestamp. Further activations
+join the display queue, including a bit that clears and later activates again.
+Each newly activated alarm is displayed exactly once: for example A, B, C, then
+C remains visible. This is not a repeating rotation of the currently active list.
+Repeated samples of still-active bits and alarm clearances do not restart the
+sequence. Only a new activation adds an entry. The final alarm remains visible
+after the queue drains, even when all bits clear.
+The count and `active_alarms` always reflect the current sample immediately.
+
+These three small attributes are recordable. The last displayed alarm is restored
+on restart for an unchanged range; the pending display queue is not restored, and
+the first valid sample establishes a baseline without replaying already-active
+bits. For a newly added group, active bits in its first live sample are displayed.
+Invalid readings and disconnects retain the last alarm and do not clear the
+remembered active bits. The queue holds up to 8192 pending occurrences; in an
+overload it discards the oldest pending entries and logs a warning. Display timers
+are cancelled when the entity is removed. This display queue is not a permanent
+alarm journal.
+
+For example, a dashboard Markdown card can show the most recently displayed alarm:
+
+```yaml
+type: markdown
+content: >-
+  {{ state_attr('sensor.plc_profila_fermapiedi_allarmi', 'last_alarm')
+     or 'Nessun allarme ricevuto' }}
+```
 
 Both entities share the same scheduled byte-block reads. The 101-byte example
 uses one block tag. Larger ranges are split into blocks of at most 200 bytes to
