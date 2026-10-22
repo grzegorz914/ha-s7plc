@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections import Counter
 from collections.abc import Hashable
 from importlib.metadata import version as package_version
 from pathlib import Path
@@ -12,6 +13,7 @@ from typing import Any
 import voluptuous as vol
 import yaml
 
+from .bulk_edit import prepare_bulk_edit
 from .config_validation import build_entity_item
 from .const import (
     CONF_ENABLE_METRICS,
@@ -277,11 +279,13 @@ def _connection_entity_id(hass: Any, entry: Any) -> str | None:
 
 
 def _selector_options() -> dict[str, Any]:
-    """Return device/state class choices used by the panel dropdowns.
+    """Return class and unit choices used by the panel selectors.
 
     The values are shared with the options flow (see helpers) so both
     editors always offer the same choices.
     """
+    from homeassistant.components import number, sensor
+
     from .helpers import DEVICE_CLASS_ENUMS, STATE_CLASS_VALUES, device_class_values
 
     return {
@@ -290,6 +294,15 @@ def _selector_options() -> dict[str, Any]:
             for entity_type in DEVICE_CLASS_ENUMS
         },
         "state_classes": list(STATE_CLASS_VALUES),
+        "units": sorted(
+            {
+                str(unit)
+                for catalog in (sensor.DEVICE_CLASS_UNITS, number.DEVICE_CLASS_UNITS)
+                for units in catalog.values()
+                for unit in (units or ())
+                if unit is not None
+            }
+        ),
     }
 
 
@@ -583,11 +596,146 @@ async def async_setup_panel(hass: Any) -> None:
             },
         )
 
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): "s7plc/config/delete_entities",
+            vol.Required("entry_id"): str,
+            vol.Required("entities"): vol.All(
+                [
+                    {
+                        vol.Required("entity_type"): vol.In(OPTION_KEYS),
+                        vol.Required("uid"): vol.All(str, vol.Length(min=1)),
+                    }
+                ],
+                vol.Length(min=1),
+            ),
+        }
+    )
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def ws_delete_entities(hass, connection, msg):
+        """Validate every permanent identity before committing one options update."""
+        entry = hass.config_entries.async_get_entry(msg["entry_id"])
+        if entry is None or entry.domain != DOMAIN:
+            connection.send_error(
+                msg["id"], "entry_not_found", "S7 PLC entry not found"
+            )
+            return
+        options = dict(entry.options)
+        selected: dict[str, set[str]] = {}
+        for target in msg["entities"]:
+            entity_type, uid = target["entity_type"], target["uid"]
+            uids = selected.setdefault(entity_type, set())
+            if uid in uids:
+                connection.send_error(
+                    msg["id"],
+                    "invalid_selection",
+                    "Duplicate selection; refresh and select again",
+                )
+                return
+            uids.add(uid)
+        for entity_type, uids in selected.items():
+            items = options.get(entity_type, [])
+            counts = Counter(item.get(CONF_UID) for item in items)
+            if any(counts[uid] != 1 for uid in uids):
+                connection.send_error(
+                    msg["id"],
+                    "invalid_selection",
+                    "Selection changed; refresh and select again",
+                )
+                return
+            options[entity_type] = [
+                item for item in items if item.get(CONF_UID) not in uids
+            ]
+        hass.config_entries.async_update_entry(entry, options=options)
+        connection.send_result(msg["id"], {"deleted": len(msg["entities"])})
+
     websocket_api.async_register_command(hass, ws_list)
     websocket_api.async_register_command(hass, ws_save_entity)
     websocket_api.async_register_command(hass, ws_delete_entity)
     websocket_api.async_register_command(hass, ws_save_configuration)
     websocket_api.async_register_command(hass, ws_get_configuration)
+    websocket_api.async_register_command(hass, ws_delete_entities)
+
+    bulk_schema = {
+        vol.Required("entry_id"): str,
+        vol.Required("entities"): vol.All(
+            [
+                {
+                    vol.Required("entity_type"): vol.In(OPTION_KEYS),
+                    vol.Required("uid"): vol.All(str, vol.Length(min=1)),
+                }
+            ],
+            vol.Length(min=1),
+        ),
+        vol.Required("changes"): vol.All(
+            {
+                vol.Optional("area"): vol.Any(None, str),
+                vol.Optional("scan_interval"): vol.Any(None, int, float),
+                vol.Optional("value_multiplier"): vol.Any(None, int, float),
+                vol.Optional("real_precision"): vol.Any(None, int),
+                vol.Optional("device_class"): vol.Any(None, str),
+                vol.Optional("unit_of_measurement"): vol.Any(None, str),
+                vol.Optional("state_class"): vol.Any(None, str),
+            },
+            vol.Length(min=1),
+        ),
+    }
+
+    def bulk_edit_response(connection, msg, *, apply=False):
+        """Validate the complete preview before one synchronous options update."""
+        from homeassistant.helpers import area_registry as ar
+
+        entry = hass.config_entries.async_get_entry(msg["entry_id"])
+        if entry is None or entry.domain != DOMAIN:
+            connection.send_error(msg["id"], "entry_not_found", "entry_not_found")
+            return
+        try:
+            area = msg["changes"].get("area")
+            if area is not None and ar.async_get(hass).async_get_area(area) is None:
+                raise ValueError("invalid_bulk_area")
+            options, preview = prepare_bulk_edit(entry, msg["entities"], msg["changes"])
+        except ValueError as err:
+            connection.send_error(msg["id"], str(err), str(err))
+            return
+        if not apply:
+            connection.send_result(msg["id"], preview)
+            return
+        if msg["preview_token"] != preview["preview_token"]:
+            connection.send_error(msg["id"], "bulk_edit_conflict", "bulk_edit_conflict")
+            return
+        if preview["error_count"]:
+            connection.send_error(msg["id"], "bulk_edit_invalid", "bulk_edit_invalid")
+            return
+        if preview["changed_count"]:
+            hass.config_entries.async_update_entry(entry, options=options)
+        connection.send_result(msg["id"], {"updated": preview["changed_count"]})
+
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): "s7plc/config/preview_update_entities",
+            **bulk_schema,
+        }
+    )
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def ws_preview_update_entities(hass, connection, msg):
+        bulk_edit_response(connection, msg)
+
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): "s7plc/config/update_entities",
+            **bulk_schema,
+            vol.Required("preview_token"): vol.Match(r"^[a-f0-9]{64}$"),
+        }
+    )
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def ws_update_entities(hass, connection, msg):
+        bulk_edit_response(connection, msg, apply=True)
+
+    websocket_api.async_register_command(hass, ws_preview_update_entities)
+    websocket_api.async_register_command(hass, ws_update_entities)
 
     await panel_custom.async_register_panel(
         hass,
