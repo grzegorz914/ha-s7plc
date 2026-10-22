@@ -195,8 +195,39 @@ changing an address does not create a new Home Assistant entity identity.
 4. Fill in the form (**Visual**) or switch to **YAML** for advanced editing.
 5. Choose **Save changes**.
 
-Saving updates the selected config entry and Home Assistant reloads the
-integration automatically. The page then refreshes its cards and live states.
+Saving updates the selected config entry. The following edits apply immediately
+without reloading the integration or reconnecting to the PLC:
+
+| Entity | Settings applied live |
+|---|---|
+| Sensors and numbers | Numeric value conversion (including multiplier), scan interval, REAL precision, device class and unit of measurement |
+| Sensors | State class (Automatic, None or an explicit class) |
+| Binary sensors and covers | Device class |
+| Numbers | Minimum, maximum, step and display mode (auto, box or slider) |
+| All entity types | Area assignment |
+
+Numeric conversions recalculate the cached PLC sample immediately. Number writes
+use the new conversion from the next command; saving does not write to the PLC.
+REAL precision takes effect on the next reading. A manually disabled PLC
+connection stays disabled.
+
+Metadata changes preserve the entity IDs and respect compatible Home Assistant
+unit and display-precision preferences. Incompatible display units are ignored
+without deleting the saved preference. Clearing the device class removes it;
+clearing the unit restores the class default (or no unit when no class is set).
+**Automatic** derives a sensor's state class from its device class; **None**
+explicitly removes the state class. Invalid combinations are rejected before
+saving. TIME entities always use duration and seconds; enum mappings determine
+their own metadata. Changes apply to future states and do not migrate historical
+statistics. After changing a quantity or its unit, check Home Assistant's
+statistics tools if existing long-term statistics need correction.
+
+Adding or deleting entities, changing PLC addresses or connection settings,
+changing enum mappings, and edits outside the table still reload the entry.
+Changes to disabled entities also use the reload path, except for area assignment.
+If a save combines live and structural edits, the entire save uses one reload.
+These rules also apply to whole-configuration YAML saves. The page refreshes its
+cards and live states after saving.
 
 If you close the editor (**Cancel**, <kbd>Esc</kbd> or a click outside the
 dialog) after changing something, the panel asks whether to **Keep editing** or
@@ -335,7 +366,8 @@ Errors are shown in the editor and the existing configuration remains unchanged.
 Choose **Select** in the toolbar. Checkboxes appear on the cards and clicking a
 card now selects it instead of opening the editor. The bar at the bottom shows how
 many entities are selected; **Delete selected** removes them after confirmation,
-and **Cancel** (or **Done**) leaves selection mode.
+**Edit selected** opens the [bulk editor](#editing-several-entities), and
+**Cancel** (or **Done**) leaves selection mode.
 
 <p align="center">
   <img src="images/sidepanel/selection.png" alt="Selection mode with two entities selected and the bulk action bar" width="900">
@@ -369,10 +401,70 @@ Valid UIDs are retained when restoring to the same config entry. When importing
 into another config entry, or when UIDs are missing or duplicated, safe UIDs are
 generated. The YAML document backs up entities only, not connection settings.
 
+## Editing several entities
+
+1. Choose **Select**, then select the entities. In the all-entities view, the
+   selection can span categories; search filters do not add unselected entities.
+2. Choose **Edit selected**. For each setting choose **Leave unchanged**, set a
+   new value, or remove the override. Open **Values and metadata** to edit
+   multipliers, decimal places, device classes, units, and state classes.
+3. Choose **Preview changes** to see the current and proposed settings for every
+   selected entity, including unchanged rows. No configuration is saved yet.
+4. Choose **Apply changes** to save the entire selection once.
+
+Scan intervals accept fractional seconds from 0.05 to 3600. Buttons and entity
+syncs do not have a configurable scan interval: their preview says **Not
+applicable**, while area edits still apply. Areas refer to the assignments in
+this integration's configuration. Restoring the PLC default removes the entity
+scan override; the preview displays the inherited interval.
+
+The editor offers a field when at least one selected entity supports it and
+shows how many entities it applies to. Unsupported fields show **Not applicable**
+in the preview and leave that entity unchanged.
+
+| Setting | Applies to | Removing the override |
+|---|---|---|
+| Multiplier | Numeric sensors and numbers with compatible read/write addresses | Removes the numeric value conversion. |
+| Decimal places | Sensors and numbers reading REAL or LREAL values; accepts 0–6 | Restores the default of one decimal place. |
+| Device class | Numeric sensors, numbers, binary sensors, and covers | Restores the integration's automatic class, where applicable. |
+| Unit of measurement | Numeric sensors and numbers | Restores the automatic unit for the device class, shown in the preview. |
+| State class | Numeric sensors | **Automatic** restores the class-dependent default; **None (disable statistics)** explicitly disables statistics. |
+
+Enum sensors retain their conversion and metadata. LOGO! time conversions are
+also protected from multiplier edits. Replacing or removing an existing linear
+scale or expression shows the current conversion and a warning in the preview.
+Multipliers must be finite; zero is accepted for read-only sensors but rejected
+for writable numbers because their inverse conversion would be undefined.
+Changing a unit label does not convert values; set a multiplier too if needed.
+
+Device classes, units, and state classes are checked together for each entity.
+For example, a temperature class with volts as its unit prevents the entire
+selection from being saved. The preview identifies the affected entities and
+errors so you can correct the settings and preview again.
+
+The backend validates all permanent entity identities and requested settings
+before saving. Unrelated entity options are preserved. If the configuration
+changes while reviewing the preview, generate a new preview; a stale preview
+cannot overwrite those changes. Invalid selections or deleted areas leave all
+entities untouched. Repeated clicks while a request is running do not submit it
+again. Closing the dialog before applying leaves the configuration unchanged.
+
+Area updates, the supported value and metadata changes above, and supported scan
+changes use the live-update path described above. A selection containing scan
+edits that require reloading causes a single reload for the whole save. An
+unchanged selection performs no update or reload. Editing these settings does
+not issue commands to the PLC.
+
 ## Deleting entities
 
 Use **Delete** in the card's <kbd>⋮</kbd> menu, or select several cards and use
 **Delete selected**. Confirm the dialog to remove them.
+
+The panel sends the complete selection as one request, using permanent entity
+identities. The backend validates the entire selection before saving once and
+reloading once, including selections across categories. If an entity in the
+selection no longer exists, nothing is deleted: close the dialog, refresh and
+select again. Other errors remain visible in the dialog and can be retried.
 
 > [!CAUTION]
 > Deletion is immediate and cannot be undone. Export the configuration first if
