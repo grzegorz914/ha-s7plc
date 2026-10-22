@@ -511,6 +511,9 @@ class S7Cover(S7BaseEntity, CoverEntity):
 
     _attr_assumed_state = True
 
+    _live_config_fields = S7BaseEntity._live_config_fields | {"device_class"}
+    _live_device_class_type = CoverDeviceClass
+
     def __init__(
         self,
         coordinator,
@@ -1359,6 +1362,9 @@ class S7PositionCover(S7BaseEntity, CoverEntity):
     open/close/set/stop_cover_tilt) when tilt_state_address is configured,
     symmetric to the position control above.
     """
+
+    _live_config_fields = S7BaseEntity._live_config_fields | {"device_class"}
+    _live_device_class_type = CoverDeviceClass
 
     def __init__(
         self,
