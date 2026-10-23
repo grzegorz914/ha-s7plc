@@ -6,10 +6,15 @@ text=String(text).replace(/^\uFEFF/,'');if(text.length>2*1024*1024)throw Error('
 const rows=[];let row=[],cell='',quoted=false,closed=false;
 for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++;}else if(quoted){quoted=false;closed=true;}else{if(cell||closed)throw Error('csv');quoted=true;}}else if(!quoted&&(c===separator||c==='\n')){row.push(cell);cell='';closed=false;if(c==='\n'){rows.push(row);row=[];}}else if(c!=='\r'){if(closed)throw Error('csv');cell+=c;}}
 if(quoted)throw Error('csv');if(cell||row.length){row.push(cell);rows.push(row);}
-const result=[],seen=new Set();for(const values of rows){if(values.every(v=>!v.trim()))continue;if(!result.length&&values[0].trim().toLowerCase()==='address')continue;if(values.length<2||values.length>3)throw Error('csv');const address=NORMALIZE_ADDRESS(values[0]).replace(/^(DB\d+,)(?=\d+\.[0-7]$)/,'$1X');if(!/^DB\d+,X?\d+\.[0-7]$/.test(address)||seen.has(address))throw Error('csv');const enabled=(values[2]??'1').trim().toLowerCase();if(!['','0','1','true','false'].includes(enabled))throw Error('csv');seen.add(address);result.push({address,description:values[1].trim(),enabled:!['0','false'].includes(enabled)});}if(!result.length||result.length>8192)throw Error('csv');return result;
+const result=[],seen=new Set();for(const values of rows){if(values.every(v=>!v.trim()))continue;if(!result.length&&values[0].trim().toLowerCase()==='address')continue;if(values.length<2||values.length>3)throw Error('csv');const address=CANONICAL_ALARM_ADDRESS(values[0]);if(!address||seen.has(address))throw Error('csv');const enabled=(values[2]??'1').trim().toLowerCase();if(!['','0','1','true','false'].includes(enabled))throw Error('csv');seen.add(address);result.push({address,description:values[1].trim(),enabled:!['0','false'].includes(enabled)});}if(!result.length||result.length>8192)throw Error('csv');return result;
 };
 const NORMALIZE_ADDRESS=value=>String(value??'').trim().toUpperCase();
 const CANONICAL_ADDRESS=value=>NORMALIZE_ADDRESS(value).replace(/^(DB\d+,)(?=\d+\.[0-7]$)/,'$1X');
+const CANONICAL_ALARM_ADDRESS=value=>{
+const parts=PARSE_S7_ADDRESS(CANONICAL_ADDRESS(value));
+if(parts.error||parts.dataType!=='BIT'||!['DB','M'].includes(parts.area))return null;
+const address=SERIALIZE_S7_ADDRESS(parts);return typeof address==='string'?address:null;
+};
 const ADDRESS_USAGE_EXCLUDED_KEYS=new Set(['availability_address','start_address','end_address']);
 const ADDRESS_USAGES=(entities,skip=null)=>{const usages=new Map();for(const [type,items] of Object.entries(entities||{}))(items||[]).forEach((item,index)=>{if(skip?.type===type&&skip.index===index)return;for(const [key,value] of Object.entries(item||{})){if(typeof value!=='string'||!(key==='address'||key.endsWith('_address'))||ADDRESS_USAGE_EXCLUDED_KEYS.has(key))continue;const address=CANONICAL_ADDRESS(value),list=usages.get(address)||[];if(!address||list.some(usage=>usage.type===type&&usage.index===index))continue;list.push({type,index,item});usages.set(address,list);}});return usages;};
 const TYPES = ["sensors", "binary_sensors", "switches", "covers", "lights", "buttons", "numbers", "selects", "texts", "climates", "entity_sync", "alarm_groups"];
@@ -483,6 +488,8 @@ class S7PlcConfigurationPanel extends HTMLElement {
   for(const [k,value] of Object.entries(item||{})){
     if(k==='name'||k==='uid'||value==null||value===false||value===''||(typeof value==='string'&&value===main))continue;
     if(hiddenLegacy.has(k)||((k==='min_value'||k==='max_value')&&type!=='numbers'))continue;
+    // The threshold reads with its operator on one chip, e.g. "Comparison: Equal to (=) 1".
+    if(k==='comparison_value'&&item.comparison_operator)continue;
     if(k==='value_conversions'){
       if(typeof value!=='object'||Array.isArray(value))continue;
       const specs=VALUE_CHANNEL_SPECS[type]||[],known=new Map(specs.map((spec,index)=>[spec.channel,{spec,index}]));
@@ -501,7 +508,8 @@ class S7PlcConfigurationPanel extends HTMLElement {
     // Nested configuration belongs in its editor, never in a compact text chip.
     if(typeof value==='object')continue;
     // Self-describing values drop their label on the card; the full text stays in the tooltip.
-    const display=value===true?null:(k==='device_class'||k==='state_class')?pretty(value):String(value);
+    let display=value===true?null:(k==='device_class'||k==='state_class')?pretty(value):this.fieldOptionText(type,k,value)??String(value);
+    if(k==='comparison_operator'&&item.comparison_value!=null&&item.comparison_value!=='')display=`${display} ${item.comparison_value}`;
     metadata.push({label:this.fieldText(type,k,'label'),value:display,flag:value===true,short:k==='scan_interval'?`${display} s`:SELF_DESCRIBING_CHIP_KEYS.has(k)?display:null});
   }
   const allChips=[...conversions,...metadata];
@@ -520,6 +528,7 @@ class S7PlcConfigurationPanel extends HTMLElement {
   searchResultsFingerprint(){const entry=this.entries?.find(item=>item.entry_id===this.entryId);if(!entry)return '[]';const types=this._viewMode==="sections"?TYPES:[this.type||TYPES[0]];return JSON.stringify(types.flatMap(type=>this.matchingItems(entry,type).map(({index})=>[type,index])));}
   updateStates(){this.querySelectorAll("[data-alarm-live]").forEach(el=>{const html=this.alarmList(el.dataset.alarmLive);if(el.innerHTML!==html)el.innerHTML=html;});this.querySelectorAll('.state-badge[data-entity-id]').forEach(el=>{const id=el.dataset.entityId,text=this.stateText(id),tone=`tone-${STATE_TONE(id,this._hass?.states?.[id])}`;if(el.textContent!==text)el.textContent=text;if(!el.classList.contains(tone)){el.classList.remove('tone-active','tone-neutral','tone-warning','tone-error');el.classList.add(tone);}});}
   inferred(item,type){const copy={...item};if(type==='alarm_groups')copy.active_value=String(item.active_value??1);if(type==='binary_sensors'){copy.binary_sensor_mode=item.comparison_operator?'comparison':'direct';copy.comparison_operator=item.comparison_operator||'eq';}if(type==='numbers')copy.mode=item.mode||'auto';if(type==='covers'){Object.assign(copy,COVER_UI_FROM_ENTITY(item));copy.position_tilt_bidirectional=item.position_tilt_bidirectional===true;}if(type==='climates'){Object.assign(copy,CLIMATE_UI_FROM_ENTITY(item));copy.preset_mode_bidirectional=item.preset_mode_bidirectional===true;}if(type==='switches'||type==='lights'||type==='selects')copy.control_behavior=CONTROL_MODE_FROM_ENTITY(item);if(type==='lights')copy.light_mode=LIGHT_MODE_FROM_ENTITY(item);return copy;}
+  fieldOptionText(type,key,value){const path=`fields.${key}.options.${value}`,text=this.translation(`config_panel.entity_types.${type}.${path}`,this.panelTranslations)??this.translation(`config_panel.common.${path}`,this.panelTranslations);return typeof text==='string'?text:null;}
   fieldText(type,key,part){return this.translation(`config_panel.entity_types.${type}.fields.${key}.${part}`,this.panelTranslations)??this.translation(`config_panel.common.fields.${key}.${part}`,this.panelTranslations)??key.split('_').map(word=>word.charAt(0).toUpperCase()+word.slice(1)).join(' ');}
   flowError(key){return this.translation(`config_panel.errors.${key}`,this.panelTranslations)??key;}
   connectionDetailLabel(key){return this.translation(`config_panel.connection_details.fields.${key}.label`,this.panelTranslations)??key.split('_').map(word=>word.charAt(0).toUpperCase()+word.slice(1)).join(' ');}
@@ -628,7 +637,7 @@ class S7PlcConfigurationPanel extends HTMLElement {
     if(!box)return;
     const t=(key,values={})=>Object.entries(values).reduce((text,[name,value])=>text.replaceAll(`{${name}}`,String(value)),this.t(`alarms.${key}`));
     const find=selector=>box.querySelector(selector),rows=find('[data-alarm-rows]'),search=find('[data-alarm-search]'),filter=find('[data-alarm-filter]'),status=find('[data-alarm-status]'),error=find('[data-alarm-error]'),fileInput=find('[data-alarm-file]'),paste=find('[data-alarm-paste]');
-    const pageSize=50,canonical=CANONICAL_ADDRESS;
+    const pageSize=50,canonical=address=>CANONICAL_ALARM_ADDRESS(address)||CANONICAL_ADDRESS(address);
     let values=(item.alarms||[]).map(row=>({address:row.address||'',description:row.description||'',enabled:row.enabled!==false})),page=0,readVersion=0,loading=false;
     const notice=(element,text)=>{element.textContent=text;element.hidden=!text;};
     const sync=()=>{
