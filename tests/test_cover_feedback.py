@@ -83,11 +83,11 @@ async def test_cover_feedback_topic_registration(
     entity = await setup_cover(cover_kind, fields)
 
     assert mock_coordinator.add_item_calls == [
-        ((f"cover:{channel}:{address}", address, scan_interval), {})
+        ((f"cover:{channel}:test-cover", address, scan_interval), {})
         for channel, address in channels
     ]
     assert entity._restorable_topics == {
-        f"cover:{channel}:{address}" for channel, address in channels
+        f"cover:{channel}:test-cover" for channel, address in channels
     }
     assert mock_coordinator.refresh_count == 1
     assert not mock_coordinator.write_calls
@@ -110,7 +110,7 @@ async def test_empty_cover_feedback_does_not_register_topics(
         },
     )
     expected = (
-        [(("cover:position:DB1,W20", "DB1,W20", None), {})]
+        [(("cover:position:test-cover", "DB1,W20", None), {})]
         if cover_kind == "position"
         else []
     )
@@ -134,7 +134,7 @@ async def test_cover_bit_feedback_keeps_unknown_distinct_from_false(
     setup_cover, mock_coordinator, cover_kind, value, expected
 ):
     entity = await setup_cover(cover_kind, {"cover_opening_address": "DB1,X2.0"})
-    topic = "cover:opening:DB1,X2.0"
+    topic = "cover:opening:test-cover"
     assert entity._get_topic_state(None) is None
     assert entity._get_topic_state(topic) is None
     mock_coordinator.data = {topic: value}
@@ -172,7 +172,7 @@ async def test_cover_status_decoding(
         },
     )
     assert entity._get_movement_status() is None
-    mock_coordinator.data = {"cover:status:DB1,W10": value}
+    mock_coordinator.data = {"cover:status:test-cover": value}
     assert entity._get_movement_status() == expected
 
 
@@ -195,7 +195,7 @@ async def test_cover_status_conversion_and_failure(
             "value_conversions": {"status": conversion},
         },
     )
-    mock_coordinator.data = {"cover:status:DB1,W10": 20}
+    mock_coordinator.data = {"cover:status:test-cover": 20}
     assert entity._get_movement_status() == expected
 
 
@@ -214,7 +214,7 @@ async def test_cover_status_keeps_legacy_mapping_precedence(
             "cover_status_stopped_values": "",
         },
     )
-    mock_coordinator.data = {"cover:status:DB1,W10": 2}
+    mock_coordinator.data = {"cover:status:test-cover": 2}
     assert entity._get_movement_status() == "open"
     assert entity._cover_status_values["closed"] == []
     assert entity._cover_status_values["stopped"] == []
@@ -233,8 +233,8 @@ async def test_cover_feedback_restores_display_and_prefers_live_values(
             "cover_status_opening_values": "2",
         },
     )
-    bit_topic = "cover:opening:DB1,X2.0"
-    status_topic = "cover:status:DB1,W10"
+    bit_topic = "cover:opening:test-cover"
+    status_topic = "cover:status:test-cover"
     mock_coordinator.data = {bit_topic: True, status_topic: 2}
     entity.async_get_last_extra_data = AsyncMock(
         return_value=entity.extra_restore_state_data
