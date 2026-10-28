@@ -410,7 +410,18 @@ generated. The YAML document backs up entities only, not connection settings.
    multipliers, decimal places, device classes, units, and state classes.
 3. Choose **Preview changes** to see the current and proposed settings for every
    selected entity, including unchanged rows. No configuration is saved yet.
-4. Choose **Apply changes** to save the entire selection once.
+4. Check the application impact: **Apply without reload**, or **One integration
+   reload** with the entity and fields that require it. A reload affects the
+   whole PLC entry once, including the other entities in that entry.
+5. Choose **Apply changes** (or **Apply with reload**) to save the selection once.
+
+The impact uses the same preflight as the actual update listener, including
+whether the entities are currently loaded. Area-only edits can apply without
+reload even for disabled entities. Other edits to unloaded entities require a
+reload. A pending configuration update blocks Apply until you go back and
+regenerate the preview. If the impact changes after previewing (for example an
+entity is disabled), the old preview cannot be applied. Previews perform no PLC
+I/O or state updates.
 
 Scan intervals accept fractional seconds from 0.05 to 3600. Buttons and entity
 syncs do not have a configurable scan interval: their preview says **Not
@@ -429,6 +440,19 @@ in the preview and leave that entity unchanged.
 | Device class | Numeric sensors, numbers, binary sensors, and covers | Restores the integration's automatic class, where applicable. |
 | Unit of measurement | Numeric sensors and numbers | Restores the automatic unit for the device class, shown in the preview. |
 | State class | Numeric sensors | **Automatic** restores the class-dependent default; **None (disable statistics)** explicitly disables statistics. |
+| Minimum / maximum limit | Numbers | Restores the state datatype limits, or 0–2359 for LOGO! clocks. REAL/LREAL require explicit limits. |
+| Step | Numbers | Restores 1, or 0.001 seconds for TIME. |
+| Display mode | Numbers | Restores **Automatic**; **Numeric input** and **Slider** are also available. |
+
+The **Number controls** section offers **Keep**, **Set**, and **Automatic** for
+each field. Limits and step use Home Assistant units and do not change the PLC
+value or conversion. The step must be finite and positive. Each entity's final
+minimum must not exceed its final maximum, including limits left unchanged or
+restored automatically. The preview shows effective defaults and identifies
+conflicts; one invalid entity prevents the whole selection from being saved.
+These settings update loaded Number entities without reloading the integration
+or writing values to the PLC. In a mixed selection, other entity types are left
+unchanged by these four fields.
 
 Enum sensors retain their conversion and metadata. LOGO! time conversions are
 also protected from multiplier edits. Replacing or removing an existing linear
