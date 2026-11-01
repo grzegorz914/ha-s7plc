@@ -12,7 +12,7 @@ PLATFORMS = [
     "climate",
 ]
 
-VERSION = "8.0.0"
+VERSION = "8.1.0"
 # Minor 2: entities no longer persist values equal to their platform default.
 CONFIG_ENTRY_MINOR_VERSION = 2
 FRONTEND_BUILD = "20261028.3"
@@ -102,6 +102,7 @@ CONF_SYNC_STATE = "sync_state"
 # Grace period for PLC logic to reflect a newly written HA command in feedback.
 SYNC_COMMAND_SETTLE_TIME = 2.0
 CONF_BUTTON_PULSE = "button_pulse"
+CONF_OFF_COMMAND_ADDRESS = "off_command_address"
 CONF_PULSE_COMMAND = "pulse_command"
 CONF_SINGLE_FIRE_COMMAND = "single_fire_command"
 CONF_PULSE_DURATION = "pulse_duration"
